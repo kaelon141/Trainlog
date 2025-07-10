@@ -1,0 +1,340 @@
+{% extends "bootstrap/layout.html" %}
+{% block content %}
+{% include nav %}
+
+<style>
+  :root {
+    --primary-color: #2563eb;
+    --success-color: #059669;
+    --info-color: #0891b2;
+    --background-light: #f8fafc;
+    --border-color: #e2e8f0;
+    --text-muted: #64748b;
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  }
+
+  .dashboard-container {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    min-height: 100vh;
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+  }
+
+  .completion-card {
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+    transition: all 0.2s ease;
+  }
+
+  .completion-card:hover {
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  }
+
+  .card-header-custom {
+    background: linear-gradient(135deg, var(--primary-color) 0%, #3b82f6 100%);
+    color: white;
+    padding: 1.25rem 1.5rem;
+    font-weight: 600;
+    font-size: 1.1rem;
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .card-header-custom i {
+    font-size: 1.2rem;
+    opacity: 0.9;
+  }
+
+  .completion-table {
+    margin: 0;
+  }
+
+  .completion-table thead th {
+    background: var(--background-light);
+    border: none;
+    padding: 1rem 1.5rem;
+    font-weight: 600;
+    color: #374151;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .completion-table tbody tr {
+    border: none;
+    transition: all 0.15s ease;
+  }
+
+  .completion-table tbody tr:not(:last-child) {
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .completion-table tbody tr:hover {
+    background-color: #f8fafc;
+  }
+
+  .completion-table td {
+    padding: 1.25rem 1.5rem;
+    border: none;
+    vertical-align: middle;
+  }
+
+  .country-row[style*="cursor: pointer"]:hover {
+    background-color: #f0f9ff !important;
+    cursor: pointer;
+  }
+
+  .country-flag-name {
+    font-weight: 500;
+    color: #1f2937;
+    font-size: 1rem;
+  }
+
+  .progress-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .progress-bar-container {
+    flex: 1;
+    background-color: #f1f5f9;
+    border-radius: 8px;
+    overflow: hidden;
+    height: 20px;
+    position: relative;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    border-radius: 8px;
+    transition: width 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .progress-bar-country {
+    background: linear-gradient(90deg, var(--success-color) 0%, #10b981 100%);
+  }
+
+  .progress-bar-region {
+    background: linear-gradient(90deg, var(--info-color) 0%, #06b6d4 100%);
+    height: 16px;
+  }
+
+  .progress-text {
+    font-weight: 600;
+    color: #374151;
+    font-size: 0.9rem;
+    min-width: 45px;
+    text-align: right;
+  }
+
+  .region-row {
+    background-color: #fafbfc !important;
+  }
+
+  .region-row td {
+    padding: 1rem 1.5rem;
+  }
+
+  .region-flag-name {
+    padding-left: 2rem;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    font-weight: 400;
+  }
+
+  .region-progress-container {
+    background-color: #e5e7eb;
+    height: 16px;
+  }
+
+  .region-progress-text {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+
+  .chevron {
+    font-size: 0.65rem;
+    vertical-align: middle;
+    display: inline-block;
+    transition: transform 0.2s ease;
+    margin-right: 4px;
+    color: #64748b; /* subtle muted gray */
+    }
+
+    .chevron.down {
+    transform: rotate(90deg);
+    }
+
+    .country-flag-name .chevron {
+    margin-right: 6px;
+    }
+
+    .region-row td {
+    padding-left: 3rem; /* More indentation for visual hierarchy */
+    }
+
+
+  /* Mobile responsiveness */
+  @media (max-width: 768px) {
+    .dashboard-container {
+      padding-top: 1rem;
+      padding-bottom: 1rem;
+    }
+    
+    .card-header-custom {
+      padding: 1rem 1.25rem;
+      font-size: 1rem;
+    }
+    
+    .completion-table thead th {
+      padding: 0.75rem 1rem;
+      font-size: 0.8rem;
+    }
+    
+    .completion-table td {
+      padding: 1rem;
+    }
+    
+    .progress-container {
+      gap: 0.75rem;
+    }
+    
+    .region-flag-name {
+      padding-left: 4rem;
+    }
+    
+    .progress-text,
+    .region-progress-text {
+      min-width: 40px;
+      font-size: 0.8rem;
+    }
+  }
+</style>
+
+<div class="dashboard-container">
+  <div class="container">
+    <div class="completion-card mb-4">
+      <div class="card-header-custom">
+        <i class="bi bi-percent"></i>
+        <span>{{coverage}}</span>
+      </div>
+      <div class="card-body p-0">
+        <table class="table completion-table" id="completion-table">
+          <thead>
+            <tr>
+              <th style="width: 55%">{{ leaderboardCountry }}</th>
+              <th style="width: 45%">{{ leaderboardPercent }}</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const username = "{{ username }}";
+const tableBody = document.querySelector("#completion-table tbody");
+
+fetch(`/api/user_completion/${username}`)
+  .then(res => res.json())
+  .then(data => {
+    const { countries, regions } = data;
+
+    // Map regions by parent code
+    const regionMap = {};
+    regions.forEach(r => {
+      const parent = r.cc.substring(0, 2).toUpperCase();
+      regionMap[parent] = regionMap[parent] || [];
+      regionMap[parent].push(r);
+    });
+    Object.values(regionMap).forEach(regionList => {
+        regionList.sort((b, a) => b.percent - a.percent);
+    });
+
+    // Sort countries by percent descending
+    countries.sort((a, b) => b.percent - a.percent);
+
+    countries.forEach(country => {
+      const { flag, name } = processCountryCode(country.cc);
+
+      const tr = document.createElement("tr");
+      tr.classList.add("country-row");
+      tr.setAttribute("data-cc", country.cc);
+      if (regionMap[country.cc.toUpperCase()]) tr.style.cursor = "pointer";
+
+        const hasRegions = regionMap[country.cc.toUpperCase()];
+        const chevron = hasRegions ? '<span class="chevron">▶</span>' : '&nbsp;&nbsp;&nbsp;';
+
+        tr.innerHTML = `
+        <td class="country-flag-name">${chevron}${flag} ${name}</td>
+        <td>
+            <div class="progress-container">
+            <div class="progress-bar-container">
+                <div class="progress-bar-fill progress-bar-country"
+                    style="width: ${country.percent}%;"
+                    role="progressbar"
+                    aria-valuenow="${country.percent}" 
+                    aria-valuemin="0" 
+                    aria-valuemax="100">
+                </div>
+            </div>
+            <div class="progress-text">${country.percent}%</div>
+            </div>
+        </td>
+        `;
+
+      tr.addEventListener("click", () => {
+  if (!hasRegions) return;
+
+  const subRows = document.querySelectorAll(`.region-of-${country.cc}`);
+  const chevronIcon = tr.querySelector('.chevron');
+
+  if (subRows.length > 0) {
+    subRows.forEach(row => row.remove()); // collapse
+    chevronIcon.classList.remove('down');
+  } else {
+    regionMap[country.cc.toUpperCase()].forEach(region => {
+      const { flag: rFlag, name: rName } = processCountryCode(region.cc, null, "region_only");
+      const subTr = document.createElement("tr");
+      subTr.className = `region-of-${country.cc} region-row`;
+      subTr.innerHTML = `
+        <td class="region-flag-name">${rFlag} ${rName}</td>
+        <td>
+          <div class="progress-container">
+            <div class="progress-bar-container region-progress-container">
+              <div class="progress-bar-fill progress-bar-region"
+                   style="width: ${region.percent}%;"
+                   role="progressbar"
+                   aria-valuenow="${region.percent}" 
+                   aria-valuemin="0" 
+                   aria-valuemax="100">
+              </div>
+            </div>
+            <div class="progress-text region-progress-text">${region.percent}%</div>
+          </div>
+        </td>
+      `;
+      tr.after(subTr);
+    });
+    chevronIcon.classList.add('down');
+  }
+});
+
+      tableBody.appendChild(tr);
+    });
+  });
+</script>
+
+{% endblock %}

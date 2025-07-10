@@ -1,0 +1,28 @@
+.leaflet-div-icon {
+	background: transparent;
+	border: none;
+}
+
+.leaflet-marker-icon .number{
+	position: relative;
+	top: -2.5px;
+	left: -4px;
+	font-size: 15px;
+	width: 25px;
+	text-align: center;
+	color:#898989;
+	font-family: Verdana, Geneva, sans-serif;
+}
+
+.leaflet-marker-icon .numberDecor{ 
+	content: "";
+	position: relative;
+	border-radius: 50%;
+	background: #fff;
+	border: 1px #ccc solid;
+	width: 18px;
+	height: 18px;
+	top: -42px;
+	left: 2.5px;
+ }
+ 

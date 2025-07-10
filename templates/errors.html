@@ -1,0 +1,49 @@
+{% extends "bootstrap/layout.html" %}
+{% block content %}
+
+{% include nav%}
+
+ 
+    <style>
+        #error {
+            text-align: center;
+            margin : 20px;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            color: #ff6347;
+        }
+        .img-container {
+            max-width: 500px;
+            display: inline-block;
+            background: #f4f4f4; /* this should match the page background */
+            border-radius: 50px; /* round the corners of the container */
+            box-shadow: 0 0 8px 16px rgba(0, 0, 0, 0.2); /* increased blur radius and added transparency */
+            margin: 30px; /* this adds some space around the container */
+        }
+
+        .img-container img {
+            display: block;
+            border-radius: 50px; /* this rounds the corners of the image itself */
+            width: 100%; /* ensure the image fills the container */
+            height: auto; /* maintain the image aspect ratio */
+        }
+    </style>
+
+    <br>
+    <br>
+    <br>
+    <div id="error">
+        <h1>{{ errorHeader }}</h1>
+        <p>{{ errorBody }}</p>
+        <div class="img-container">
+            <img src="{{ errorImagePath }}">
+        </div>
+        <p>{{ errorDiscordMail | replace("{supportEmail}", "<a href='mailto:admin@trainlog.me'>admin@trainlog.me</a>") | replace("{discordLink}", "<a href='https://discord.com/invite/2FhrFTQKvU'>Discord</a>") | safe }}</p>
+
+    </div>
+
+{% endblock %}

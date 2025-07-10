@@ -1,0 +1,933 @@
+{% extends "layout.html" %}
+{% block content %}
+<link href="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.css" rel="stylesheet">
+<style>
+/* Additional styles for MapLibre version */
+#map {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 100%;
+    background: #1a1d28;
+}
+
+#sidebar {
+    position: fixed;
+    top: 0;
+    right: -400px;
+    width: 400px;
+    height: 100%;
+    background: white;
+    box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+    transition: right 0.3s ease;
+    z-index: 1000;
+    overflow-y: auto;
+    font-size: 0.8em;
+}
+
+#sidebar.active {
+    right: 0;
+}
+
+.sidebar-tab {
+    position: fixed;
+    top: 105px;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: white;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    border-right: none;
+    border-radius: 8px 0 0 8px;
+    z-index: 1001;
+    transition: transform 0.3s ease;
+    padding: 4px;
+    gap: 6px;
+}
+
+.sidebar-tab i {
+    font-size: 18px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background-color 0.2s;
+}
+
+.sidebar-tab i:hover {
+    background-color: #f0f0f0;
+}
+
+
+/* When sidebar is closed — pin to screen right */
+#sidebar:not(.active) ~ #sidebar-tab {
+    right: 0;
+    left: auto;
+}
+
+/* When sidebar is open — attach to left of sidebar */
+#sidebar.active ~ #sidebar-tab {
+    transform: translateX(-400px); /* match sidebar width */
+}
+
+/* Mobile responsiveness */
+@media (max-width: 600px) {
+    /* #sidebar.active ~ #sidebar-tab {
+        left: 0;
+    }
+
+    #sidebar:not(.active) ~ #sidebar-tab {
+        right: 0;
+    } */
+}
+
+
+.control-button {
+    background: white;
+    border: 2px solid rgba(0,0,0,0.1);
+    border-radius: 4px;
+    padding: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+    transition: background-color 0.2s;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.control-button:hover {
+    background-color: #f0f0f0;
+}
+
+.control-button.buttonSmall {
+    display: none;
+}
+
+@media (max-width: 600px) {
+    
+    .control-button.buttonSmall {
+        display: flex;
+    }
+    
+}
+
+/* Trip popup styles */
+.trip-popup {
+    padding: 5px;
+    font-size: 14px;
+}
+
+/* Loading spinner - move to top */
+.spinner-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+/* Position the spinner at the top */
+.spinner-container .lds-spinner {
+    position: absolute;
+    top: 20%;
+}
+
+/* Snackbar */
+#snackbar {
+    visibility: hidden;
+    min-width: 250px;
+    margin-left: -125px;
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    border-radius: 2px;
+    padding: 16px;
+    position: fixed;
+    z-index: 1001;
+    left: 50%;
+    bottom: 30px;
+    font-size: 17px;
+}
+
+#snackbar.show {
+    visibility: visible;
+    animation: fadein 0.5s, fadeout 0.5s 2.5s;
+}
+
+@keyframes fadein {
+    from {bottom: 0; opacity: 0;}
+    to {bottom: 30px; opacity: 1;}
+}
+
+@keyframes fadeout {
+    from {bottom: 30px; opacity: 1;}
+    to {bottom: 0; opacity: 0;}
+}
+
+.sidebar-close-button {
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: 12px 16px;
+    font-size: 28px;
+    font-weight: bold;
+    color: #666;
+    background: white;
+    z-index: 10;
+    cursor: pointer;
+    text-align: right;
+}
+</style>
+
+<div class="spinner-container"><div class="lds-spinner"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div></div>
+
+<div id="sidebar">
+  <div id="sidebar-content">
+    <div class="sidebar-close-button" onclick="hideSidebar()">
+        &times;
+    </div>
+    <div class="itineraryWrapper">
+      <ul class="events" id="itinerary">
+        <div id="tripDetails">
+        {%if tag_description != None%}
+        <div class="itinerary_tag_description">
+
+        {% if collection_voyage == 'collection' %}
+            <span class="text-nowrap"><i class="fas fa-list"></i> {{tag_description}}</span>
+        {% elif collection_voyage == 'voyage' %}
+            <span class="text-nowrap"><i class="fas fa-route"></i> {{tag_description}}</span>
+        {% endif %}
+
+        </div>
+        
+        {%endif%}
+            <div class="modeProportionContainer">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="modeProportionIcon km"><!--! Font Awesome Free 6.4.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2023 Fonticons, Inc. --><path d="M177.9 494.1c-18.7 18.7-49.1 18.7-67.9 0L17.9 401.9c-18.7-18.7-18.7-49.1 0-67.9l50.7-50.7 48 48c6.2 6.2 16.4 6.2 22.6 0s6.2-16.4 0-22.6l-48-48 41.4-41.4 48 48c6.2 6.2 16.4 6.2 22.6 0s6.2-16.4 0-22.6l-48-48 41.4-41.4 48 48c6.2 6.2 16.4 6.2 22.6 0s6.2-16.4 0-22.6l-48-48 41.4-41.4 48 48c6.2 6.2 16.4 6.2 22.6 0s6.2-16.4 0-22.6l-48-48 50.7-50.7c18.7-18.7 49.1-18.7 67.9 0l92.1 92.1c18.7 18.7 18.7 49.1 0 67.9L177.9 494.1z"/></svg>
+              <div class="modeProportion kmModeProportion"></div>
+            </div>
+            <div class="modeProportionContainer">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="modeProportionIcon time"><!--! Font Awesome Free 6.4.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2023 Fonticons, Inc. --><path d="M256 0a256 256 0 1 1 0 512A256 256 0 1 1 256 0zM232 120V256c0 8 4 15.5 10.7 20l96 64c11 7.4 25.9 4.4 33.3-6.7s4.4-25.9-6.7-33.3L280 243.2V120c0-13.3-10.7-24-24-24s-24 10.7-24 24z"/></svg>
+              <div class="modeProportion timeModeProportion"></div>
+            </div>  
+            <div class="modeProportionContainer currencyContainer">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="modeProportionIcon currencyIcon"><!--!Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2024 Fonticons, Inc.--><path d="M512 80c0 18-14.3 34.6-38.4 48c-29.1 16.1-72.5 27.5-122.3 30.9c-3.7-1.8-7.4-3.5-11.3-5C300.6 137.4 248.2 128 192 128c-8.3 0-16.4 .2-24.5 .6l-1.1-.6C142.3 114.6 128 98 128 80c0-44.2 86-80 192-80S512 35.8 512 80zM160.7 161.1c10.2-.7 20.7-1.1 31.3-1.1c62.2 0 117.4 12.3 152.5 31.4C369.3 204.9 384 221.7 384 240c0 4-.7 7.9-2.1 11.7c-4.6 13.2-17 25.3-35 35.5c0 0 0 0 0 0c-.1 .1-.3 .1-.4 .2l0 0 0 0c-.3 .2-.6 .3-.9 .5c-35 19.4-90.8 32-153.6 32c-59.6 0-112.9-11.3-148.2-29.1c-1.9-.9-3.7-1.9-5.5-2.9C14.3 274.6 0 258 0 240c0-34.8 53.4-64.5 128-75.4c10.5-1.5 21.4-2.7 32.7-3.5zM416 240c0-21.9-10.6-39.9-24.1-53.4c28.3-4.4 54.2-11.4 76.2-20.5c16.3-6.8 31.5-15.2 43.9-25.5V176c0 19.3-16.5 37.1-43.8 50.9c-14.6 7.4-32.4 13.7-52.4 18.5c.1-1.8 .2-3.5 .2-5.3zm-32 96c0 18-14.3 34.6-38.4 48c-1.8 1-3.6 1.9-5.5 2.9C304.9 404.7 251.6 416 192 416c-62.8 0-118.6-12.6-153.6-32C14.3 370.6 0 354 0 336V300.6c12.5 10.3 27.6 18.7 43.9 25.5C83.4 342.6 135.8 352 192 352s108.6-9.4 148.1-25.9c7.8-3.2 15.3-6.9 22.4-10.9c6.1-3.4 11.8-7.2 17.2-11.2c1.5-1.1 2.9-2.3 4.3-3.4V304v5.7V336zm32 0V304 278.1c19-4.2 36.5-9.5 52.1-16c16.3-6.8 31.5-15.2 43.9-25.5V272c0 10.5-5 21-14.9 30.9c-16.3 16.3-45 29.7-81.3 38.4c.1-1.7 .2-3.5 .2-5.3zM192 448c56.2 0 108.6-9.4 148.1-25.9c16.3-6.8 31.5-15.2 43.9-25.5V432c0 44.2-86 80-192 80S0 476.2 0 432V396.6c12.5 10.3 27.6 18.7 43.9 25.5C83.4 438.6 135.8 448 192 448z"/></svg>
+              <div class="currency"></div>
+            </div>
+          <br>
+          <div id="tripDate"></div>              
+        </div>
+      </ul>
+    </div>
+  </div>
+</div>
+<div id="sidebar-tab" class="sidebar-tab">
+  <i id="sidebar-tab-icon" class="fas fa-bars" title="{{toggle}}"></i>
+  <i class="fas fa-arrow-left sidebar-icon" onclick="leave()" title="{{back}}"></i>
+  <i class="fas fa-clipboard sidebar-icon" onclick="copyURL()" title="{{copy}}"></i>
+</div>
+
+<div id="map" class="mapIndiv">
+</div>
+<div id="snackbar">{{copyLink}}</div>
+
+<script src="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.js"></script>
+<script src="{{ url_for('static', filename='js/maplibre-utils.js') }}"></script>
+<script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.0.20/leaflet-maplibre-gl.js"></script>
+
+<script>
+// Global variables
+let map;
+let sidebar;
+let sidebarOpen = false;
+
+// Date formatting options
+const dateOptions = { timeZone: 'UTC', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+const dateOptionsShort = { month: 'short', day: 'numeric' };
+
+function processTrips() {
+    buildItinerary(trips, prices);
+    placePolylines(trips);
+}
+
+// Transport type translations
+const transportTypeText = {
+    "air": "{{air}}",
+    "train": "{{train}}",
+    "tram": "{{tram}}",
+    "metro": "{{metro}}",
+    "bus": "{{bus}}",
+    "ferry": "{{ferry}}",
+    "car": "{{car}}",
+    "cycle": "{{cycle}}",
+    "walk": "{{walk}}",
+    "aerialway": '{{aerialway}}',
+};
+
+// Initialize map
+async function initializeMapAndTrips() {
+    // Initialize map first
+    const params = new URLSearchParams(window.location.search);
+    const serverType = params.get('tileserver') || "{{ tileserver|default('osm') }}";
+    const useGlobe = params.has('globe') ? params.get('globe') === 'true' : {{ 'true' if globe else 'false' }};
+
+    map = await MapLibreUtils.initializeMapLibre({
+        container: 'map',
+        tileserver: serverType,
+        useGlobe: useGlobe,
+        userLanguage: "{{langId}}",
+        center: [10, 50],
+        zoom: 5
+    });
+    
+    // Now load trips
+    var tripIds = {{tripIds|tojson}};
+    $.post({
+        url: '{{url_for("getPublicTrips")}}',
+        contentType: 'application/json',
+        data: JSON.stringify({ tripIds: tripIds }),
+        success: function(data, status) {
+            var trips = data[0];
+            var prices = data[1];
+            trips.reverse();
+            
+            if (map.isStyleLoaded()) {
+                console.log("is loaded");
+                buildItinerary(trips, prices);
+                placePolylines(trips);
+            }
+            else{
+                map.once('load', () => {
+                    console.log("once load");
+                    buildItinerary(trips, prices);
+                    placePolylines(trips);
+                });
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error("Error:", error);
+            $('.spinner-container').hide();
+        }
+    });
+}
+// Build itinerary function (same as original)
+function buildItinerary(trips, prices) {
+    var total_length_per_type = {};
+    var total_duration_per_type = {};
+    var total_length = 0;
+    var total_duration = 0;
+
+{% if 'price' in request.args %}              
+    if (prices.total_price != 0) {
+        $(".currencyContainer").show();
+        $(".currency").text(formatCurrency("{{langId}}", prices.total_price, prices.user_currency));
+    }
+{% endif %}
+
+    if (trips.length > 1) {
+        trips.forEach(function(trip, index) {
+            if (!["accommodation", "restaurant", "poi"].includes(trip.trip.type)) {
+                var tripType = trip.trip.type;
+
+                if (tripType === "helicopter") {
+                    tripType = "air";
+                }
+                total_length += trip.trip.trip_length;
+                total_duration += trip.trip.trip_duration[1];
+
+                if (tripType in total_length_per_type) {
+                    total_length_per_type[tripType] = total_length_per_type[tripType] + trip.trip.trip_length;
+                    total_duration_per_type[tripType] = total_duration_per_type[tripType] + trip.trip.trip_duration[1];
+                } else {
+                    total_length_per_type[tripType] = trip.trip.trip_length;
+                    total_duration_per_type[tripType] = trip.trip.trip_duration[1];
+                }
+            }
+        });
+
+        let sortArray = [];
+        for (let i in total_duration_per_type) {
+            sortArray.push({key: i, value: total_duration_per_type[i]});
+        }
+        sortArray.sort(function(a, b) { return a.value - b.value; }).reverse();
+
+        var kmLeft = 0, timeLeft = 0;
+        for (let i in sortArray) {
+            var km = mToKm(total_length_per_type[sortArray[i].key]);
+            var time = secondsToDhm(sortArray[i].value, "{{langId}}");
+            var type = transportTypeText[sortArray[i].key];
+
+            var km_percent = (total_length_per_type[sortArray[i].key] / total_length) * 100;
+            var time_percent = (total_duration_per_type[sortArray[i].key] / total_duration) * 100;
+            
+            $('.kmModeProportion').append(
+                $("<div>").attr("title", `${type}: ${km} km`).addClass("percent_bar").addClass(sortArray[i].key).css("width", km_percent + "%").css("left", kmLeft + "%")
+            );
+            kmLeft += km_percent;
+
+            $('.timeModeProportion').append(
+                $("<div>").attr("title", `${type}: ${time}`).addClass("percent_bar").addClass(sortArray[i].key).css("width", time_percent + "%").css("left", timeLeft + "%")
+            );
+            timeLeft += time_percent;
+        }
+        $(".percent_bar").tooltip();
+
+        $(".modeProportionIcon.km").attr("title", `{{totalLength}} : ${mToKm(total_length)} km`);
+        $(".modeProportionIcon.time").attr("title", `{{totalDuration}} : ${secondsToDhm(total_duration, "{{langId}}")}`);
+        $(".modeProportionIcon").tooltip();
+    } else {
+        $('.modeProportionContainer').hide();
+    }
+
+    // Build itinerary items (same as original)
+    trips.forEach(function(trip, index) {
+        var dayChangeTrip = false;
+        var dayChangeIntertrip = false;
+        let changeTime = 0;
+        
+        if (trip != trips[trips.length - 1]) {
+            changeTime = timeDifference(
+                trip.trip.utc_filtered_end_datetime,
+                trips[index + 1].trip.utc_filtered_start_datetime
+            );
+            var previousDay = new Date(trip.trip.end_datetime).toISOString().slice(0, 10);
+            var currentDay = new Date(trip.trip.start_datetime).toISOString().slice(0, 10);
+            if (currentDay != previousDay) {
+                dayChangeTrip = true;
+            }
+        }
+        
+        if (index > 0) {
+            let precedingChangeTime = timeDifference(
+                trips[index - 1].trip.utc_filtered_end_datetime,
+                trip.trip.utc_filtered_start_datetime
+            );
+
+            var previousDay = new Date(trips[index - 1].trip.end_datetime).toISOString().slice(0, 10);
+            var currentDay = new Date(trip.trip.start_datetime).toISOString().slice(0, 10);
+            if (currentDay != previousDay && precedingChangeTime <= 43200) {
+                dayChangeIntertrip = true;
+            }
+        }
+
+        if (index == 0) {
+            if (trip.trip.start_date.length > 2) {
+                $('#tripDate').text(capitalizeFirstLetter(new Date(trip.trip.start_date + "T12:00:00Z").toLocaleDateString('{{langId}}', dateOptions)));
+            } else {
+                if (trip.trip.start_datetime == -1) {
+                    $('#tripDate').text("{{past}}");
+                } else {
+                    $('#tripDate').text("{{project}}");
+                }
+            }
+        }
+
+        // Handle operator display (same as original)
+        let operatorContents = [];
+        if (trip.trip.multi_operators) {
+            trip.trip.multi_operators.forEach(multiOperator => {
+                let imgElement = $("<img>")
+                    .attr("src", "/static/" + multiOperator.logo_url)
+                    .attr("class", "itineraryOperatorLogo");
+
+                let divElement = $('<div>')
+                    .attr("class", "popupInfo operator_popupInfo")
+                    .attr("popupInfo_content", multiOperator.operator_name)
+                    .append(imgElement);
+                    
+                operatorContents.push(divElement);
+            });
+        } else if (trip.trip.logo_url) {
+            let imgElement = $("<img>")
+                .attr("src", "/static/" + trip.trip.logo_url)
+                .attr("class", "itineraryOperatorLogo");
+
+            let divElement = $('<div>')
+                .attr("class", "popupInfo operator_popupInfo")
+                .attr("popupInfo_content", trip.trip.operator)
+                .append(imgElement);
+                
+            operatorContents.push(divElement);
+        } else {
+            operatorContents.push(trip.trip.operator);
+        }
+
+        let operatorLogoOrText;
+        if (operatorContents.length) {
+            if (typeof operatorContents[0] === 'string') {
+                operatorLogoOrText = operatorContents.join(', ');
+            } else {
+                operatorLogoOrText = $('<div>').append(operatorContents);
+            }
+        }
+
+        let lineOrNot = trip.trip.line_name != "" ? 
+            (typeof operatorLogoOrText === 'object' ? 
+                operatorLogoOrText.append(" - " + trip.trip.line_name) : 
+                operatorLogoOrText + " - " + trip.trip.line_name) : 
+            operatorLogoOrText;
+        
+        let operatorDisplay = $("<div>").append(trip.trip.operator != "" ? lineOrNot : null);
+
+        let endTimeDisplay, startTimeDisplay;
+        if (dayChangeTrip) {
+            endTimeDisplay = $("<div>").append($('<div>').addClass('arrow_box').append($('<div>').addClass("dayChange").append((capitalizeFirstLetter(new Date(trip.trip.end_datetime).toLocaleDateString('{{langId}}', dateOptionsShort)))))).append(trip.trip.end_time.replace("(+1)", "").padStart(10, '\xa0'));
+        } else {
+            endTimeDisplay = trip.trip.end_time.padStart(10, '\xa0');
+        }
+
+        if (dayChangeIntertrip) {
+            startTimeDisplay = capitalizeFirstLetter(new Date(trip.trip.start_datetime).toLocaleDateString('{{langId}}', dateOptionsShort)).padStart(10, '\xa0') + "<br>" + trip.trip.start_time.padStart(10, '\xa0');
+        } else {
+            startTimeDisplay = trip.trip.start_time.padStart(10, '\xa0');
+        }
+
+{% if 'price' in request.args %}              
+        var formattedTripPrice = null;
+        var formattedTicketPrice = null;
+        var formattedTicketInfo = null;
+        var formattedPrice = null;
+
+        if (trip.trip.ticket_price_in_user_currency) {
+            formattedTicketPrice = trip.trip.ticket + " - " + formatCurrency("{{langId}}", trip.trip.ticket_price_in_user_currency, trip.trip.user_currency);
+            if (trip.trip.user_currency != trip.trip.ticket_currency) {
+                let originalCurrency = formatCurrency("{{langId}}", trip.trip.ticket_price, trip.trip.ticket_currency);
+                formattedTicketPrice += ` (${originalCurrency})`;
+            }
+            formattedTicketInfo = `<div class="popupInfo ticket_popupInfo" popupinfo_content="${formattedTicketPrice}"><i class="bi bi-ticket-perforated-fill ticket-icon"></i></div>`;
+        }
+
+        if (trip.trip.price_in_user_currency) {
+            formattedTripPrice = formatCurrency("{{langId}}", trip.trip.price_in_user_currency, trip.trip.user_currency);
+            if (trip.trip.user_currency != trip.trip.currency) {
+                let originalCurrency = formatCurrency("{{langId}}", trip.trip.price, trip.trip.currency);
+                formattedTripPrice += ` (${originalCurrency})`;
+            }
+        }
+        if (formattedTripPrice || formattedTicketPrice) {
+            formattedPrice = (formattedTicketInfo || '') + (formattedTicketInfo && formattedTripPrice ? ' - ' : '') + (formattedTripPrice || '');
+        }
+{% endif %}
+
+        // Append to itinerary
+        $('#itinerary').append(
+            $('<li>').append(
+                $('<time>').addClass(trip.trip.type).attr("datetime", trip.trip.start_time).html(startTimeDisplay)
+            ).append(
+                $('<span>').attr("class", trip.trip.type).append(
+                    $('<strong>').text(trip.trip.origin_station)
+                ).append('<br>').append(operatorDisplay).append(
+                    $("<div>").attr("class", "duration " + trip.trip.trip_duration[0]).append($('<div>').text(secondsToDhm(trip.trip.trip_duration[1], "{{langId}}") + (trip.trip.trip_length > 0 ? " - " + mToKm(trip.trip.trip_length) + "km" : "")))
+                ).append('<br').append(
+                    {% if 'price' in request.args %}              
+                        $("<div>").append($('<div>').html(formattedPrice))
+                    {% endif %}
+                )
+            )
+        ).append(
+            $('<li>').append(
+                $('<time>').addClass(trip.trip.type).addClass("arrival").attr("datetime", trip.trip.end_time).html(endTimeDisplay)
+            ).append(
+                $('<span>').attr("class", function() {
+                    if (trips.length > 1 && changeTime <= 43200) {
+                        return "trainChange";
+                    } else {
+                        return "tripChange";
+                    }
+                }).append(
+                    $('<strong>').text(trip.trip.destination_station)
+                ).append('<br>').append(function() {
+                    if (trip != trips[trips.length - 1]) {
+                        if (changeTime <= 43200) {
+                            let changeTimeText = changeTime != 0 ? '<br>' + secondsToDhm(changeTime, "{{langId}}") : "";
+                            if (trip.trip.destination_station == trips[index + 1].trip.origin_station) {
+                                return "{{trainChange}}" + changeTimeText;
+                            } else {
+                                return "{{stationChange}}" + changeTimeText;
+                            }
+                        }
+                    }
+                })
+            )
+        );
+        
+        if (trips.length > 1 && changeTime > 43200 && trip != trips[trips.length - 1]) {
+            $('#itinerary').append('<div id="tripDetails">' + capitalizeFirstLetter(new Date(trips[index + 1].trip.start_date + "T12:00:00Z").toLocaleDateString('{{langId}}', dateOptions)) + '</div><br>');
+        }
+    });
+}
+
+// Calculate position for current trips
+function calculatePosition(trip) {
+    const currentTime = new Date().getTime();
+    const tripStartTime = new Date(trip.trip.start_datetime).getTime();
+    const tripEndTime = new Date(trip.trip.end_datetime).getTime();
+    const totalTripDuration = tripEndTime - tripStartTime;
+    const elapsedTime = currentTime - tripStartTime;
+    const progress = elapsedTime / totalTripDuration;
+    return Math.min(Math.max(progress, 0), 1);
+}
+
+// Split polyline for current trips
+function splitPolyline(path, progress) {
+    if (path.length === 2) {
+        // Use geodesic line for two-point paths
+        path = MapLibreUtils.createGeodesicLine(path[0], path[1]);
+    }
+    const totalPoints = path.length;
+    const splitIndex = Math.floor(progress * totalPoints);
+    
+    const pastPath = path.slice(0, splitIndex + 1);
+    const futurePath = path.slice(splitIndex);
+    
+    return { pastPath, futurePath };
+}
+
+// Place polylines using MapLibre
+function placePolylines(trips) {
+    if (trips.length === 0) {
+        $('.spinner-container').hide();
+        return;
+    }
+
+    // Process trips with time status
+    trips.forEach(trip => {
+        trip = MapLibreUtils.computeTimeStatus(trip);
+    });
+
+    // Build trip layers
+    const features = MapLibreUtils.buildTripLayers(map, trips, MapLibreUtils.MapConfig.transportTypes, {
+        onLayerClick: (e) => {
+            e.originalEvent.stopPropagation();
+            showTripPopup(e);
+        },
+        showShadows: true
+    });
+
+    // Handle collection/voyage specific features
+    {% if collection_voyage != 'collection' %}
+    // Add station change lines
+    trips.forEach((trip, index) => {
+        if (index < trips.length - 1 && trip.trip.destination_station !== trips[index + 1].trip.origin_station) {
+            const stationChangePath = [
+                [trip.path[trip.path.length - 1][1], trip.path[trip.path.length - 1][0]],
+                [trips[index + 1].path[0][1], trips[index + 1].path[0][0]]
+            ];
+            
+            // Add station change line
+            map.addLayer({
+                id: `station-change-${index}`,
+                type: 'line',
+                source: {
+                    type: 'geojson',
+                    data: {
+                        type: 'Feature',
+                        geometry: {
+                            type: 'LineString',
+                            coordinates: stationChangePath
+                        }
+                    }
+                },
+                layout: {
+                    'line-join': 'round',
+                    'line-cap': 'round'
+                },
+                paint: {
+                    'line-color': '#888888',
+                    'line-width': 2,
+                    'line-dasharray': [2, 2],
+                    'line-opacity': 0.6
+                }
+            });
+        }
+    });
+
+    // Add numbered markers
+    let markerIndex = 1;
+    trips.forEach((trip, index) => {
+        if (index !== 0) {
+            addNumberedMarker([trip.path[0][1], trip.path[0][0]], markerIndex, trip.trip.origin_station);
+            markerIndex++;
+        }
+        
+        if (index !== 0 && index < trips.length - 1) {
+            if (trips[index + 1].trip.origin_station !== trips[index].trip.destination_station) {
+                addNumberedMarker(
+                    [trip.path[trip.path.length - 1][1], trip.path[trip.path.length - 1][0]], 
+                    markerIndex, 
+                    trip.trip.destination_station
+                );
+                markerIndex++;
+            }
+        }
+    });
+
+    // Add start/end markers
+    const firstTrip = trips[0];
+    const lastTrip = trips[trips.length - 1];
+    
+    if (firstTrip.trip.origin_station !== lastTrip.trip.destination_station) {
+        // Different start and end
+        createCustomMarker([firstTrip.path[0][1], firstTrip.path[0][0]], 'green', firstTrip.trip.origin_station);
+        createCustomMarker(
+            [lastTrip.path[lastTrip.path.length - 1][1], lastTrip.path[lastTrip.path.length - 1][0]], 
+            'red', 
+            lastTrip.trip.destination_station
+        );
+    } else {
+        // Same start and end (round trip)
+        createCustomMarker([firstTrip.path[0][1], firstTrip.path[0][0]], 'red-green', firstTrip.trip.origin_station);
+    }
+    {% endif %}
+
+    // Handle current trips with position markers
+    trips.forEach(trip => {
+        if (trip.time === 'current') {
+            const progress = calculatePosition(trip);
+            const { pastPath, futurePath } = splitPolyline(trip.path, progress);
+            
+            // Update the existing layers to show the split
+            // This would require more complex layer management
+            
+            // Place marker at current position
+            const pegPosition = pastPath[pastPath.length - 1];
+            createCustomMarker([pegPosition[1], pegPosition[0]], 'calc', 'Current Position');
+        }
+    });
+
+    // Set view to show all trips
+    const simpleFilters = {
+        viewMode: 'all',
+        years: [],
+        transportTypes: new Set(MapLibreUtils.MapConfig.transportTypes.map(t => t.id))
+    };
+    
+    // Update visibility to show all layers
+    MapLibreUtils.updateLayerVisibility(map, MapLibreUtils.MapConfig.transportTypes, simpleFilters);
+    
+    // Show sidebar after map is loaded
+    setTimeout(() => {
+    showSidebar();
+    
+    // Simple bounds calculation from trip data
+    if (trips.length > 0) {
+        const bounds = new maplibregl.LngLatBounds();
+        
+        trips.forEach(trip => {
+            trip.path.forEach(coord => {
+                bounds.extend([coord[1], coord[0]]); // [lng, lat]
+            });
+        });
+        
+        const padding = window.innerWidth > 600 ? 
+            { top: 50, bottom: 50, left: 50, right: 450 } : 50;
+            
+        map.fitBounds(bounds, { padding });
+    }
+}, window.innerWidth > 600 ? 500 : 800);
+    
+    
+    $('.spinner-container').hide();
+}
+
+// Show trip popup
+function showTripPopup(e) {
+    const properties = e.features[0].properties;
+    
+    const popupContent = `
+        <div class="trip-popup">
+            <p>${properties.origin} - ${properties.destination}<br>
+            <!-- Add more trip details here -->
+            </p>
+        </div>
+    `;
+    
+    new maplibregl.Popup({ offset: [0, -10] })
+        .setLngLat(e.lngLat)
+        .setHTML(popupContent)
+        .addTo(map);
+}
+
+// Create custom markers
+function createCustomMarker(coordinates, type, popupText) {
+    const el = document.createElement('div');
+    el.className = `marker-icon marker-${type}`;
+    
+    // Set marker styles based on type
+    let anchorY = 41; // Default anchor for bottom-pointed markers
+    switch(type) {
+        case 'green':
+            el.style.backgroundImage = "url('{{ url_for('static',filename='images/icons/marker-icon-2x-green.png') }}')";
+            el.style.width = '25px';
+            el.style.height = '41px';
+            break;
+        case 'red':
+            el.style.backgroundImage = "url('{{ url_for('static',filename='images/icons/marker-icon-2x-red.png') }}')";
+            el.style.width = '25px';
+            el.style.height = '41px';
+            break;
+        case 'red-green':
+            el.style.backgroundImage = "url('{{ url_for('static',filename='images/icons/marker-icon-2x-redGreen.png') }}')";
+            el.style.width = '46px';
+            el.style.height = '41px';
+            break;
+        case 'calc':
+            el.style.backgroundImage = "url('{{ url_for('static',filename='images/icons/calc.png') }}')";
+            el.style.width = '25px';
+            el.style.height = '41px';
+            break;
+    }
+    
+    el.style.backgroundSize = 'cover';
+    el.style.cursor = 'pointer';
+    
+    // Create marker with proper anchor point (bottom center of the icon)
+    const marker = new maplibregl.Marker({ 
+        element: el,
+        anchor: 'bottom' // This ensures the bottom of the marker points to the location
+    })
+        .setLngLat(coordinates)
+        .addTo(map);
+    
+    if (popupText) {
+        marker.setPopup(new maplibregl.Popup({ offset: 25 }).setText(popupText));
+    }
+    
+    return marker;
+}
+
+// Add numbered marker
+function addNumberedMarker(coordinates, number, popupText) {
+    const el = document.createElement('div');
+    el.className = 'numbered-marker';
+    el.innerHTML = `<span>${number}</span>`;
+    el.style.cssText = `
+        width: 25px;
+        height: 25px;
+        background: #3887be;
+        border: 2px solid #fff;
+        border-radius: 50%;
+        color: white;
+        font-size: 12px;
+        line-height: 21px;
+        text-align: center;
+        cursor: pointer;
+        font-weight: bold;
+    `;
+    
+    // For circular markers, use center anchor
+    const marker = new maplibregl.Marker({ 
+        element: el,
+        anchor: 'center'
+    })
+        .setLngLat(coordinates)
+        .addTo(map);
+    
+    if (popupText) {
+        marker.setPopup(new maplibregl.Popup({ offset: 25 }).setText(popupText));
+    }
+    
+    return marker;
+}
+
+// Sidebar functions
+function showSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    sidebar.classList.add('active');
+    sidebarOpen = true;
+    updateSidebarTabIcon();
+
+    if (window.innerWidth > 600) {
+        map.easeTo({
+            padding: { right: 400 },
+            duration: 300
+        });
+    }
+}
+
+function hideSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    sidebar.classList.remove('active');
+    sidebarOpen = false;
+    updateSidebarTabIcon();
+
+    map.easeTo({
+        padding: { right: 0 },
+        duration: 300
+    });
+}
+
+function openSidebar() {
+    if (sidebarOpen) {
+        hideSidebar();
+    } else {
+        showSidebar();
+    }
+}
+
+// Utility functions
+function copyURL() {
+    if (window.AndroidFunction) {
+        AndroidFunction.copyTextToClipboard(window.location.href);
+    } else {
+        navigator.clipboard.writeText(window.location.href);
+    }
+    
+    $('#snackbar').attr('class','show');
+    setTimeout(function(){ $('#snackbar').attr('class',''); }, 2900);
+}
+
+function leave() {
+    history.back();
+}
+
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    initializeMapAndTrips();
+});
+
+
+const tab = document.getElementById('sidebar-tab');
+const tabIcon = document.getElementById('sidebar-tab-icon');
+
+tabIcon.addEventListener('click', () => {
+    if (sidebarOpen) {
+        hideSidebar();
+    } else {
+        showSidebar();
+    }
+    updateSidebarTabIcon();
+});
+
+function updateSidebarTabIcon() {
+    tabIcon.className = sidebarOpen ? 'fas fa-xmark' : 'fas fa-bars';
+}
+
+
+// Handle window resize
+window.addEventListener('resize', () => {
+    if (sidebarOpen && window.innerWidth > 600) {
+        map.easeTo({
+            padding: { right: 400 },
+            duration: 300
+        });
+    } else {
+        map.easeTo({
+            padding: { right: 0 },
+            duration: 300
+        });
+    }
+});
+</script>
+{% endblock %}

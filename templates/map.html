@@ -1,0 +1,408 @@
+{% extends "bootstrap/layout.html" %}
+{% set leaflet = True %}
+{% block content %}
+<script src="{{ url_for('static',filename='js/map.js') }}"></script>
+{% include nav%}
+<div class="spinner-container"><div class="lds-spinner"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div></div>
+
+<div id="map" class="mapUser">
+</div>
+<script>
+
+if (!Cookies.get('cacheCleared')) {
+    // Clear localforage cache
+    localforage.clear().then(function() {
+        // Set "cleared" cookie to prevent further clearing
+        Cookies.set('cacheCleared', 'true', { expires: 30 }); // Expires in 30 days
+    }).catch(function(err) {
+        console.error('Failed to clear localforage cache:', err);
+    });
+}
+
+function deleteTrip(tripId){
+    $.post({
+    url:'{{url_for("deleteTrip", username=username)}}',
+    data:{
+        tripId : tripId
+    },
+    success:function(res){
+        location.href = "{{ url_for('user_home', username=username) }}";
+    },
+    fail:function() {
+        alert( "error" );
+    }
+  });
+}
+
+function getPopupContent(uid, origin_station, destination_station){
+  var popupContent = "<p>" + origin_station + " - " + destination_station + "</p>";
+  if(location.href == "{{ url_for('user_home', username=username, _external=True) }}"){
+      popupContent += `<button onclick=deleteTrip(${uid});>{{delete}}</button>`;
+  }
+  return popupContent
+}
+
+function placePolylines(trips){
+  var group = new L.featureGroup();
+  var years = [];
+  
+  const order = {
+    'past': 1,
+    'plannedFuture': 2,
+    'future': 3
+  };
+
+  trips.sort((a, b) => {
+      // First, sort based on the 'time' key
+      const timeOrder = order[a.time] - order[b.time];
+      if (timeOrder !== 0) {
+          return timeOrder;
+      }
+
+      // If 'time' keys are equal, sort based on 'utc_filtered_start_datetime'
+      const dateA = a.utc_filtered_start_datetime;
+      const dateB = b.utc_filtered_start_datetime;
+
+      // Handle indefinite past and future
+      if (dateA === -1) return 1; // Indefinite past should come last
+      if (dateB === -1) return -1; // Indefinite past should come last
+      if (dateA === 1) return -1; // Indefinite future should come first
+      if (dateB === 1) return 1; // Indefinite future should come first
+
+      // Convert date strings to Date objects for comparison
+      const dateObjA = new Date(dateA);
+      const dateObjB = new Date(dateB);
+
+      // Newest dates should come first
+      return dateObjB - dateObjA;
+  });
+    
+  if(trips.length > 0){
+    trips.forEach(function(trip){
+      trip = computeTimeStatus(trip);
+      $(`#${trip.trip.type}Check`).css("display", "block");
+      $(`#${trip.time}Check`).css("display", "block");
+
+      var year = trip.trip.start_datetime != 1 && trip.trip.start_datetime != -1 ? trip.trip.start_datetime.slice(0,4) : "";
+      if ($.inArray(year, years) < 0 && year != "") years.push(year);
+            
+      // Function to create and bind polylines with popups
+      const createPolyline = (time, type) => {
+        var special = time;
+        if(time.includes('-')){
+          time = time.split('-')[1];
+          special = "plannedFuture";
+        }
+
+        const isAirType = ["air", "helicopter"].includes(type);
+        const polyOptions = isAirType
+            ? { className: `${special} polyline airPolyline ${time}Polyline year${year}`, steps: 8 }
+            : { className: `${special} polyline ${time}Polyline ${type}Polyline year${year}` };
+        
+        const poly = isAirType && trip.path.length == 2
+            ? L.geodesic(trip.path, polyOptions) 
+            : L.polyline(trip.path, polyOptions);
+
+        return poly.bindPopup(getPopupContent(
+            uid = trip.trip.uid,
+            origin_station = trip.trip.origin_station,
+            destination_station = trip.trip.destination_station
+        ), { autoPanPaddingTopLeft: [15, 100] });
+      };
+
+      // Determine which times need polylines
+      const times = trip.time === 'plannedFuture' ? ['special-Past', 'special-plannedFuture'] : [trip.time];
+
+      // Add polylines to the group
+      times.forEach(time => group.addLayer(createPolyline(time, trip.trip.type)));
+    });
+
+    years.sort().reverse();
+
+    // Update year select options
+    $('#yearSelect').empty(); // Clear existing options
+    $.each(years, function(index, value) {
+      if(value != "{{past}}" && value != "{{future}}"){
+        $('#yearSelect')
+            .append($('<option>', { value : value })
+            .text(value));
+      }
+    });
+
+    // Update special select options
+    $('#specialSelect').empty(); // Clear existing options
+    $('#specialSelect')
+      .append($('<option>', { value: "year" }).text("{{year}}"))
+      .append($('<option>', { value: "past" }).text("{{showPast}}"))
+      .append($('<option>', { value: "planned" }).text("{{showPlanned}}"))
+      .append($('<option>', { value: "projects" }).text("{{showProjects}}"))
+      .append($('<option>', { value: "all" }).text("{{all}}"));
+
+    $('#yearSelect').selectpicker();
+
+    group.addTo(map);
+
+    // If there are years, select the first one
+    if (years.length != 0){
+      $("#yearSelect").val(years[0]);
+      $('#yearSelect').selectpicker('destroy'); 
+      $('#yearSelect').selectpicker('render').trigger('change', [true]);
+    }
+    else {
+      $('#specialSelect').val("all");
+      $('#specialSelect').trigger('change', [true]);
+    }
+    
+    map.fitBounds(group.getBounds());
+  }
+  $('.spinner-container').hide();
+}
+
+var map = createMap({
+    map_legend: '{{legendTitle}}',
+    train: '{{train}}',
+    tram: '{{tram}}',
+    metro: '{{metro}}',
+    car: '{{car}}',
+    walk: '{{walk}}',
+    cycle: '{{cycle}}',
+    air: '{{air}}',
+    bus: '{{bus}}',
+    ferry: '{{ferry}}',
+    aerialway: '{{aerialway}}',
+    future: '{{future}}',
+    current: '{{current}}',
+    project: '{{project}}'
+});
+
+L.Control.MyControl = L.Control.extend({
+  onAdd: function(map) {
+    var el = L.DomUtil.create('div', 'leaflet-bar futureToggle');
+
+    el.innerHTML = `
+      <select name="special" id="specialSelect" class="form-select"></select>
+      <div id=yearSelectContainer><select name="years" id="yearSelect" multiple data-selected-text-format="count" title="{{year}}" data-width="100%" data-count-selected-text="{0} {{year}}"></select></div><br>
+
+      <label class="form-check form-switch" id="trainCheck" style="display:none;">
+          <input type="checkbox" class="form-check-input" name="train" checked>{{train}}</input><br>
+      </label>
+      <label class="form-check form-switch" id="tramCheck" style="display:none;">
+          <input type="checkbox" class="form-check-input" name="tram" checked>{{tram}}</input><br>
+      </label>
+      <label class="form-check form-switch" id="metroCheck" style="display:none;">
+          <input type="checkbox" class="form-check-input" name="metro" checked>{{metro}}</input><br>
+      </label>
+      <label class="form-check form-switch" id="airCheck" style="display:none;">
+          <input type="checkbox" class="form-check-input" name="air">{{air}}</input><br>
+      </label>
+      <label class="form-check form-switch" id="busCheck" style="display:none;">
+          <input type="checkbox" class="form-check-input" name="bus">{{bus}}</input><br>
+      </label>
+      <label class="form-check form-switch" id="ferryCheck" style="display:none;">
+          <input type="checkbox" class="form-check-input" name="ferry">{{ferry}}</input><br>
+      </label>
+      <label class="form-check form-switch" id="aerialwayCheck" style="display:none;">
+          <input type="checkbox" class="form-check-input" name="aerialway">{{aerialway}}</input><br>
+      </label>
+      <label class="form-check form-switch" id="carCheck" style="display:none;">
+          <input type="checkbox" class="form-check-input" name="car">{{car}}</input><br>
+      </label>
+      <label class="form-check form-switch" id="walkCheck" style="display:none;">
+          <input type="checkbox" class="form-check-input" name="walk">{{walk}}</input><br>
+      </label>
+      <label class="form-check form-switch" id="cycleCheck" style="display:none;">
+          <input type="checkbox" class="form-check-input" name="cycle">{{cycle}}</input><br>
+      </label>
+    `;
+
+    return el;
+  }
+});
+
+L.control.myControl = function(opts) {
+  return new L.Control.MyControl(opts);
+}
+
+L.control.myControl({
+  position: 'topleft'
+}).addTo(map);
+
+function refreshPolylinesDisplay(){
+  $('.polyline').each(function(index, item){
+      if($(item).hasClass("displaytimes") && $(item).hasClass("displaytypes")){
+        $(item).css("display", "block");
+      }
+      else{
+        $(item).css("display", "none");
+      }
+    });
+}
+
+function displayPolylines(){
+  var times = ["future", "plannedFuture", "past"];
+  var types = ["air", "train", "bus", "ferry"];
+
+  $('input[type="checkbox"]').each(function(index, checkbox){
+    var group = times.includes($(checkbox).attr("name")) ? "times" : "types";
+    if(checkbox.checked) {
+      $(`.${$(checkbox).attr("name")}Polyline`).addClass(`display${group}`);
+    }
+    else{
+      $(`.${$(checkbox).attr("name")}Polyline`).removeClass(`display${group}`);
+    }
+    refreshPolylinesDisplay()
+  })
+}
+
+
+// Integrate changes into existing data.
+function integrateChanges(existingData, changes, currentTripIds) {
+  // Convert existing data to a map for easy lookup
+  let dataMap = new Map();
+  for (let item of existingData) {
+    dataMap.set(item.trip.uid, item);
+  }
+
+  // Integrate changes
+  for (let item of changes) {
+    let trip = item.trip;
+    if (trip === null) {
+      // If the trip is null, remove it from the data
+      dataMap.delete(item.trip.uid);
+    } else {
+      // Otherwise, add or update the trip in the data
+      dataMap.set(item.trip.uid, item);
+    }
+  }
+
+  // Remove outdated trips from the stored data
+  for (let [uid, item] of dataMap) {
+    if (!currentTripIds.includes(uid)) {
+      dataMap.delete(uid);
+    }
+  }
+
+  // Convert data back to an array
+  return Array.from(dataMap.values());
+}
+
+var username = "{{username}}";
+localforage.getItem("lastLocal_" + username, function(error, lastLocal){
+  if (lastLocal === null) {
+    $.get('{{ url_for("public_getTripsPaths", username=username, lastLocal="all") if public else url_for("getTripsPaths", username=username, lastLocal="all") }}', function(data, status){
+      let trips = data.trips;
+      placePolylines(trips);
+      localforage.setItem("trips_" + username, trips);
+      localforage.setItem("lastLocal_" + username, data.lastLocal);
+
+      // Read cookies and update checkboxes and selects
+      updateUIFromCookies();
+      displayPolylines();
+    });
+  } else {
+    $.get('{{ url_for("public_getTripsPaths", username=username, lastLocal="") if public else url_for("getTripsPaths", username=username, lastLocal="") }}'+lastLocal, function(data, status){
+      localforage.getItem("trips_" + username, function(error, storedTrips){
+        let currentTripIds = data.idList;
+        let updatedTrips = integrateChanges(storedTrips, data.trips, currentTripIds);
+        placePolylines(updatedTrips);
+        if (JSON.stringify(storedTrips) != JSON.stringify(updatedTrips))
+        {
+          localforage.setItem("trips_" + username, updatedTrips);
+          localforage.setItem("lastLocal_" + username, data.lastLocal);
+        }
+
+        // Read cookies and update checkboxes and selects
+        updateUIFromCookies();
+        displayPolylines();
+      });
+    });
+  }
+});
+
+function updateUIFromCookies() {
+  // For checkboxes
+  $('input[type="checkbox"]').each(function() {
+      var checkboxName = $(this).attr('name');
+      var isChecked = Cookies.get(checkboxName);
+      if (isChecked !== undefined) {
+          $(this).prop('checked', isChecked === 'true');  // Convert string to boolean
+      }
+  });
+
+  // For selects
+  let savedYearSelect = Cookies.get('yearSelect');
+  let savedSpecialSelect = Cookies.get('specialSelect');
+
+  if (savedSpecialSelect) {
+      $('#specialSelect').val(savedSpecialSelect).trigger('change', [true]);
+  }
+
+  // Only process 'yearSelect' if 'specialSelect' is 'year'
+  if (savedYearSelect && savedSpecialSelect === 'year') {
+    $("#yearSelect").val(savedYearSelect.split(","));
+    $('#yearSelect').selectpicker('destroy'); 
+    $('#yearSelect').selectpicker('render').trigger('change', [true]);
+  }
+}
+
+
+$('input[type="checkbox"]').change(displayPolylines);
+$('input[type="checkbox"]').change(function() {
+    var checkboxName = $(this).attr('name');
+    Cookies.set(checkboxName, $(this).prop('checked'), { expires: 30 });
+});
+
+// Moved the event handlers outside the placePolylines function
+$('#yearSelect').change(function(event, isProgrammatic){
+  var selected = $(this).val();
+  var years = [];
+  selected.forEach((year, index) => {years[index] = `.year${year}`;});
+
+  $(".polyline").not(years.join()).removeClass(`displaytimes`);
+  $(years.join()).addClass(`displaytimes`);
+  refreshPolylinesDisplay();
+  if (!isProgrammatic){
+    Cookies.set('yearSelect', $(this).val(), { expires: 30 }); // Save state for 30 days
+  }
+});
+
+$('#specialSelect').change(function(event, isProgrammatic){
+  var selected = $(this).val();
+  if (selected != "year"){
+    $('#yearSelectContainer').hide();
+    $('#yearSelect').selectpicker("val", "");
+    if(selected == "all"){
+      $(".polyline").addClass(`displaytimes`);
+    }
+    else if (selected == "past"){
+      $(".past").addClass(`displaytimes`);
+      $(".polyline").not(".past").removeClass(`displaytimes`);
+    }
+    else if (selected == "planned"){
+      $(".plannedFuture").addClass(`displaytimes`);
+      $(".polyline").not(".plannedFuture").removeClass(`displaytimes`);
+    }
+    else if (selected == "projects"){
+      $(".future").addClass(`displaytimes`);
+      $(".polyline").not(".future").removeClass(`displaytimes`);
+    }
+  }
+  else{
+    $('#yearSelectContainer').show();
+    // Select the first year if none is selected
+    if (!$('#yearSelect').val()) {
+      $('#yearSelect').selectpicker("val", $('#yearSelect option:first').val());
+    }
+    $('#yearSelect').trigger('change', [true]);
+  }
+  refreshPolylinesDisplay();
+  if (!isProgrammatic){
+    Cookies.set('specialSelect', $(this).val(), { expires: 30 });  // Save state for 30 days
+  }
+});
+
+
+
+</script>
+
+{% endblock %}

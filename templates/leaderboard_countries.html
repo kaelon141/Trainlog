@@ -1,0 +1,108 @@
+{% extends "bootstrap/layout.html" %}
+{% block content %}
+{% include nav%}
+
+<div id="leaderboard-container" class="container mt-3">
+    <h2>
+        {{ countryCountLeaderboard }}
+    </h2>
+    
+    <br>
+    
+    {% include "leaderboardNav.html"%}
+
+    <br>
+
+    <table id="leaderboard" class="table table-bordered display nowrap">
+        <thead class="thead">
+            <tr>
+                <th class="rank-column" style="white-space: nowrap;">{{ leaderboardRank }}</th>
+                <th>{{ leaderboardUsername }}</th>
+                <th>{{ leaderboardCountryCount }}</th>
+                <th class="none" style="max-width: 50%;">{{ leaderboardCountries }}</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+<script>
+var table = $('#leaderboard');
+
+$.get('{{url_for("getLeaderboardUsers", type="country_count")}}', function(countries, status){
+    const users = countries.leaderboard_data;
+
+    users.sort((a, b) => b.country_count - a.country_count); // Sort users by country count in descending order
+
+    users.forEach(function(user, index) {
+        var medalIcon;
+        
+        switch(index + 1) {
+            case 1:
+                medalIcon = '<i class="fa fa-trophy" style="color: gold;"></i>'; // gold trophy for first place
+                break;
+            case 2:
+                medalIcon = '<i class="fa fa-medal" style="color: silver;"></i>'; // silver medal for second place
+                break;
+            case 3:
+                medalIcon = '<i class="fa fa-medal" style="color: #cd7f32;"></i>'; // bronze medal for third place
+                break;
+            default:
+                medalIcon = index + 1; // use the number for other positions
+                break;
+        }
+
+        function generateLink(username) {         
+            if(countries.non_public_users.includes(username)){
+                return `${username}`;
+            }
+            else{
+                return `<a class="leaderboardLink link-dark" href="{{url_for('public', username="")}}${username}">${username}</a>`;
+            }
+        }
+
+        var countriesWithTooltips = user.countries_visited.map(function(country) {
+            return getTooltipNew(country);
+        }).join(' ');
+
+        table.append($('<tr>')
+            .append($('<td>').html(medalIcon))
+            .append($('<td>').html(generateLink(user.username)))
+            .append($('<td>').text(user.country_count))
+            .append($('<td>').addClass('text-wrap').html(countriesWithTooltips))
+        );
+    });
+
+    const dTable = $('#leaderboard').DataTable({
+        paging : false, // Don't want paging                
+        bPaginate : false, // Don't want paging   
+        columnDefs: [
+            {
+                orderable: false,
+                targets: 0
+            },
+            {
+                orderable: false,
+                targets: 1
+            },
+            {
+                targets: 3,
+                render: function(data, type, row) {
+                    return '<div style="white-space: normal; margin:1% 5% 1% 5%; text-align:center;">' + data + '</div>';
+                }
+            }
+        ],
+        responsive: true,
+        order: [[2, 'desc']]  // Order by country count in descending order
+    }).on( 'responsive-display', function ( e, datatable, row, showHide, update ) {
+        $('[data-toggle="tooltip"]').tooltip();
+    }).on( 'draw.dt',   function () {
+        $('[data-toggle="tooltip"]').tooltip();
+    });
+});
+
+// Adjust the size of the rank column to fit the largest rank number
+$('.rank-column').css('width', '1%');
+</script>
+
+{% endblock %}

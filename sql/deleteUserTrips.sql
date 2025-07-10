@@ -1,0 +1,1 @@
+DELETE FROM trip where username = :username

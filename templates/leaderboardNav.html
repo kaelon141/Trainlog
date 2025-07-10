@@ -1,0 +1,57 @@
+<div class="d-flex justify-content-center">    
+    <div class="btn-group d-none d-md-inline-flex">
+        <a href="{{ url_for('leaderboard', type='all') }}" class="btn {{ 'btn-info' if type == 'all' else 'btn-secondary' }}">
+            {{ leaderboardTotal }}
+        </a>
+        <a href="{{ url_for('leaderboard', type='train') }}" class="btn {{ 'btn-info' if type == 'train' else 'btn-secondary' }}">
+            {{ train }}
+        </a>
+        <a href="{{ url_for('leaderboard', type='bus') }}" class="btn {{ 'btn-info' if type == 'bus' else 'btn-secondary' }}">
+            {{ bus }}
+        </a>
+        <a href="{{ url_for('leaderboard', type='air') }}" class="btn {{ 'btn-info' if type == 'air' else 'btn-secondary' }}">
+            {{ air }}
+        </a>
+        <a href="{{ url_for('leaderboard', type='ferry') }}" class="btn {{ 'btn-info' if type == 'ferry' else 'btn-secondary' }}">
+            {{ ferry }}
+        </a>  
+        <a href="{{ url_for('leaderboard', type='aerialway') }}" class="btn {{ 'btn-info' if type == 'aerialway' else 'btn-secondary' }}">
+            {{ aerialway }}
+        </a>
+        <a href="{{ url_for('leaderboard', type='metro') }}" class="btn {{ 'btn-info' if type == 'metro' else 'btn-secondary' }}">
+            {{ metro }}
+        </a>
+        <a href="{{ url_for('leaderboard', type='tram') }}" class="btn {{ 'btn-info' if type == 'tram' else 'btn-secondary' }}">
+            {{ tram }}
+        </a>
+        <a href="{{ url_for('leaderboard', type='train_countries') }}" class="btn {{ 'btn-info' if type == 'train_countries' else 'btn-secondary' }}">
+            {{ leaderboardTrainCountries }}
+        </a>
+        <a href="{{ url_for('leaderboard', type='world_squares') }}" class="btn {{ 'btn-info' if type == 'world_squares' else 'btn-secondary' }}">
+            {{worldSquares}}
+        </a>        
+        <a href="{{ url_for('leaderboard', type='countries') }}" class="btn {{ 'btn-info' if type == 'countries' else 'btn-secondary' }}">
+            {{crossedCountries}}
+        </a>
+    </div>
+
+    <!-- This will be visible on smaller screens -->
+    <div class="dropdown d-md-none">
+        <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+            {{ leaderboardSelectType }}
+        </button>
+        <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+            <li><a href="{{ url_for('leaderboard', type='all') }}" class="dropdown-item">{{ leaderboardTotal }}</a></li>
+            <li><a href="{{ url_for('leaderboard', type='train') }}" class="dropdown-item">{{ train }}</a></li>
+            <li><a href="{{ url_for('leaderboard', type='bus') }}" class="dropdown-item">{{ bus }}</a></li>
+            <li><a href="{{ url_for('leaderboard', type='air') }}" class="dropdown-item">{{ air }}</a></li>
+            <li><a href="{{ url_for('leaderboard', type='ferry') }}" class="dropdown-item">{{ ferry }}</a></li>
+            <li><a href="{{ url_for('leaderboard', type='aerialway') }}" class="dropdown-item">{{ aerialway }}</a></li>
+            <li><a href="{{ url_for('leaderboard', type='metro') }}" class="dropdown-item">{{ metro }}</a></li>
+            <li><a href="{{ url_for('leaderboard', type='tram') }}" class="dropdown-item">{{ tram }}</a></li>
+            <li><a href="{{ url_for('leaderboard', type='train_countries') }}" class="dropdown-item">{{ leaderboardTrainCountries }}</a></li>
+            <li><a href="{{ url_for('leaderboard', type='world_squares') }}" class="dropdown-item">{{worldSquares}}</a></li>
+            <li><a href="{{ url_for('leaderboard', type='countries') }}" class="dropdown-item">{{crossedCountries}}</a></li>
+        </ul>
+    </div>
+</div>

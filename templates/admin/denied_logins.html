@@ -1,0 +1,81 @@
+{% extends "bootstrap/layout.html" %}
+{% block content %}
+
+{% include nav %}
+<div class="container">
+    <h1 class="mt-3">Denied Logins</h1>
+    <table id="deniedLoginsTable" class="table-striped mt-3">
+        <thead>
+            <tr>
+                <th scope="col" data-priority="3">Username</th>
+                <th scope="col" data-priority="1">Type</th>
+                <th scope="col" data-priority="4">Timestamp</th>
+                <th scope="col" data-priority="5">IP</th>
+                <th scope="col" data-priority="6">Details</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for login in denied_logins %}
+                <tr>
+                    <td>{{ login.username }}</td>
+                    <td>{{ login.type }}</td>
+                    <td>{{ login.timestamp }}</td>
+                    <td>
+                        <span class="details text-nowrap" data-details="{{ login.ip_details }}">
+                            <span class="flag">{{ login.ip_emoji }}</span> {{ login.from_ip }}
+                        </span>
+                    </td>
+                    {% if login.details != None %}
+                        <td><span class="details" data-details="{{ login.details }}"> <i class="fa-solid fa-circle-info"></i> </span></td>
+                    {% else %}
+                        <td></td>
+                    {% endif %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="detailsModal" tabindex="-1" aria-labelledby="detailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="detailsModalLabel">Login Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <pre id="detailsContent" class="p-2" style="white-space: pre;"></pre>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Initialize DataTable and Modal -->
+<script>
+    $(document).ready(function() {
+        var table = $('#deniedLoginsTable').DataTable({
+            responsive: true,
+            order: []
+        });
+
+        $('#deniedLoginsTable tbody').on('click', 'span.details', function() {
+            var details = $(this).data('details');
+            $('#detailsContent').text(JSON.stringify(details, null, 4));
+            $('#detailsModal').modal('show');
+        });
+
+        $('#deniedLoginsTable').on('draw.dt', function() {
+            $('#deniedLoginsTable tbody').on('click', 'span.details', function() {
+                var details = $(this).data('details');
+                $('#detailsContent').text(JSON.stringify(details, null, 4));
+                $('#detailsModal').modal('show');
+            });
+        });
+    });
+</script>
+
+{% endblock %}

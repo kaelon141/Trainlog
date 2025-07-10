@@ -1,0 +1,788 @@
+/* Flags */
+
+.popupInfo {
+  font-size: 1.2em;
+  white-space: nowrap; 
+  display: inline;
+  position: relative;
+  cursor: default;
+}
+
+.popupInfo::after {
+  background-color: #333;
+  border-radius: 10px;
+  color: #ffffff;
+  display: none;
+  padding: 10px 15px;
+  position: absolute;
+  text-align: center;
+  z-index: 999;
+}
+
+.popupInfo::before {
+  background-color: #333;
+  content: ' ';
+  display: none;
+  position: absolute;
+  width: 15px;
+  height: 15px;
+  z-index: 999;
+}
+
+.popupInfo:hover::after {
+  display: block;
+}
+
+.popupInfo:hover::before {
+  display: block;
+}
+
+.popupInfo::after {
+  content:  attr(popupInfo_content);
+  top: 0;
+  left: 50%;
+  transform: translate(-20px, calc(-100% - 10px));
+  box-sizing: content-box !important;
+}
+
+.popupInfo::before {
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, calc(-100% - 5px)) rotate(45deg);
+}
+
+/* Operators popupInfos */
+.ticket_popupInfo::after{
+  transform: translate(-100px, calc(-100% - 10px));
+}
+
+.operator_popupInfo::after {
+  top: -10px;
+}
+
+.operator_popupInfo::before {
+  top: -10px;
+}
+
+@media screen and (max-width: 600px) {
+  .operator_popupInfo::after {
+    top: -10px;
+    left: 0;
+    transform: translateX(calc(-100% - 10px));
+  }
+  
+  .operator_popupInfo::before {
+    top: 50%;
+    left: 0;
+    transform: translate(calc(-100% - 5px), -50%) rotate(45deg);
+  }
+}
+
+/* Navbar */
+
+ul.navigation {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #e7e7e7;
+  background-color: #f3f3f3;
+}
+
+ul.navigation li {
+  float: left;
+}
+
+ul.navigation li a {
+  font-family: Arial, Helvetica, sans-serif;
+  display: block;
+  color: #666;
+  text-align: center;
+  padding: 14px 16px;
+  text-decoration: none;
+}
+
+.navLogo {
+	display: inline;
+	height: 43px;
+	text-align: center;
+	margin: 0px 10px 0px 10px;
+}
+
+ul.navigation li a:hover:not(.active) {
+  background-color: #ddd;
+}
+
+ul.navigation li a.active {
+  color: white;
+  background-color: #207cca;
+}
+
+ul.navigation span.rightli {
+  float:right;
+}
+
+nav .mobileOnly{
+  display: none;
+}
+
+nav .current{
+  display:none;
+  animation: blinker 1.5s linear infinite;
+}
+
+@keyframes blinker {
+  50% {
+    background-color: rgb(241, 157, 157);
+  }
+}
+
+
+@media screen and (max-width: 600px) {
+
+  .navLogo {
+    display: none;
+  }
+
+  nav .mobileOnly{
+    display: block;
+    text-align: center;
+    background-color: #f3f3f3;
+    font-size: 40px;
+  }
+
+  nav input.mobileOnly{
+    display: none;
+  }
+  
+  nav input:checked ~ label span:last-child{
+    display:none;
+  }
+  
+  nav input:not(:checked) ~ label span:first-child{
+    display:none;
+  }
+  
+  nav ul{
+    display:block;
+    overflow:hidden;
+    width:0;
+    height:0;
+    padding:0;
+    margin:0;
+    transition:width 0.5s, height 0.5s;
+    list-style:none;
+  }
+  ul.navigation li {
+    display:block;
+    clear:both;
+  }
+  
+  nav input:checked ~ ul{
+    width:100%;
+    height:auto;
+  }
+
+  ul.navigation li {
+    float:none;  
+  } 
+  
+  ul.navigation .current{
+    display:none !important;  
+  }
+  ul.navigation span.rightli {
+    float:none;  
+  }
+}
+
+/* Trips */
+
+.sortTable caption {
+  font-size: 1.7em;
+  margin: .5em 0 .75em;
+}
+
+.button.multiLink{
+  bottom: 30px;
+  width:20%;
+  right:40%;
+  position:fixed;
+  font-size: 1.5em;
+  display:none;
+  z-index: 100;
+  background-color: #207cca;
+  color: #ffffff;
+  text-align:center;
+}
+
+.button{
+    border-radius: 10px;
+    padding: 5px 5px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 13px;
+}
+
+.nonPublic{
+  display:none;
+}
+
+.button+.button{
+  margin-left: 5px;
+}
+
+.deleteButton{
+  background-color: rgb(252, 63, 33);
+}
+
+.deleteButton:hover{
+  background-color: rgb(200, 63, 43);
+}
+
+.sortTable {
+  font-family: Arial, Helvetica, sans-serif;
+  border-collapse: collapse;
+  width: 98%;
+  margin: auto;
+  margin-top: 1%;
+}
+
+.sortTable td, .sortTable th {
+  border: 1px solid #ddd;
+  padding: 8px;
+}
+
+.sortTable td div.length span{
+  display:none;
+}
+
+.sortTable td div.length:after{
+  content: attr(humanLength);
+}
+
+.sortTable td div.duration span{
+  display:none;
+}
+
+.sortTable td div.duration:after{
+  content: attr(humanDuration);
+}
+
+.sortTable td div.speed span{
+  display:none;
+}
+
+.sortTable td div.speed:after{
+  content: attr(humanSpeed);
+}
+
+.sortTable td div.duration:before {
+  content:"\A";
+  width:5px;
+  height:5px;
+  margin-right: 5px;
+  border-radius:50%;
+  vertical-align:middle;
+}
+.sortTable td div.duration.est:before{
+  background-color:#9f58a3;
+  display:inline-block;
+}
+.sortTable td div.duration.man:before{
+  background-color:#4f8d61;
+  display:inline-block;
+}
+
+.sortTable tr:nth-child(even){background-color: #f2f2f2;}
+
+.sortTable th {
+  padding-top: 12px;
+  padding-bottom: 12px;
+  text-align: left;
+  background-color: #207cca;
+  color: white;
+}
+
+.sortTable td.actionButtons{
+  min-width: 110px;
+}
+
+.individualTableSmall {
+  border: 0;
+  width: 100%;
+}
+
+.individualTableSmall thead {
+  border: none;
+  clip: rect(0 0 0 0);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  width: 1px;
+}
+
+.individualTableSmall tr {
+  border-bottom: 3px solid #ddd;
+  display: block;
+  margin-bottom: .625em;
+}
+
+.individualTableSmall td {
+  border-bottom: 1px solid #ddd;
+  display: block;
+  text-align: right;
+}
+
+.individualTableSmall td::before {
+  content: attr(data-label);
+  float: left;
+  font-weight: bold;
+  color: #207cca;
+}
+
+.individualTableSmall {
+  display: block;
+  width: 300px !important;
+}
+
+.individualTableSmall tbody {
+  display: block;
+  width: 300px !important;
+}
+
+@media screen and (min-width: 600px) {
+  .sortTable tr:hover {background-color: #ddd;}
+}
+
+@media screen and (max-width: 600px) {
+  td .operatorLogo{
+    max-height: 15px;
+   }
+
+  .button.multiLink{
+    width:80%;
+    right:10%;
+  }
+
+  .sortTable td.actionButtons{
+    width: unset;
+  }
+
+  .sortTable {
+    border: 0;
+    width: 100%;
+  }
+
+  .sortTable thead {
+    border: none;
+    clip: rect(0 0 0 0);
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    padding: 0;
+    position: absolute;
+    width: 1px;
+  }
+  
+  .sortTable tr {
+    border-bottom: 3px solid #ddd;
+    display: block;
+    margin-bottom: .625em;
+  }
+  
+  .sortTable td {
+    border-bottom: 1px solid #ddd;
+    display: block;
+    text-align: right;
+  }
+  
+  .sortTable td::before {
+    content: attr(data-label);
+    float: left;
+    font-weight: bold;
+    color: #207cca;
+  }
+  
+  table td:last-child {
+    border-bottom: 0;
+  }
+}
+
+
+
+/* Snackbar */
+
+ #snackbar {
+  visibility: hidden;
+  width:250px;
+  left:50%;
+  margin-left: -125px;
+  padding:16px 0px;
+  background-color: #333;
+  color: #fff;
+  text-align: center;
+  border-radius: 25px;
+  position: fixed;
+  z-index: 1000;
+  bottom: 30px; 
+}
+
+#snackbar.show {
+  visibility: visible;
+  -webkit-animation: fadein 0.5s, fadeout 0.5s 2.5s;
+  animation: fadein 0.5s, fadeout 0.5s 2.5s;
+}
+
+/* Itinerary */
+
+.itineraryWrapper{
+  position: absolute;
+  left:-60px;
+  max-width: 100%;
+}
+
+.itineraryOperatorLogo{
+  vertical-align: middle;
+  max-height: 25px;
+  max-width: 100px;
+ }
+
+ .operator_popupInfo + .operator_popupInfo {
+  margin-left: 5px;
+}
+
+#tripDetails {
+  position: relative;
+  left:30px;
+  margin-top: 20px;
+  margin-bottom: 20px;
+  color: #999;
+  font-size: 1.7em;
+}
+
+#tripTotals{
+  font-size: 0.5em;
+}
+
+.events li { 
+  display: flex; 
+  color: #999;
+}
+
+.events time { 
+  position: relative;
+  padding: 0 1.5em;  
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.events time::after { 
+   content: "";
+   position: absolute;
+   z-index: 2;
+   right: 0;
+   top: 0;
+   transform: translateX(50%) translateY(-15%);
+   border-radius: 50%;
+   background: #fff;
+   background-size: 80%;
+   background-repeat: no-repeat;
+   background-position: 50% 50%;
+   border: 1px #ccc solid;
+   width: 2em;
+   height: 2em;
+}
+
+.events time.train::after { 
+  background-image: url("../images/icons/trip_logos/train.png");
+}.events time.tram::after { 
+  background-image: url("../images/icons/trip_logos/tram.png");
+}.events time.metro::after { 
+  background-image: url("../images/icons/trip_logos/metro.png");
+}
+
+.events time.accommodation::after { 
+  background-image: url("../images/icons/trip_logos/accommodation.png");
+}
+.events time.car::after { 
+  background-image: url("../images/icons/trip_logos/car.png");
+}
+.events time.cycle::after { 
+  background-image: url("../images/icons/trip_logos/cycle.png");
+}
+.events time.walk::after { 
+  background-image: url("../images/icons/trip_logos/walk.png");
+}
+.events time.restaurant::after { 
+  background-image: url("../images/icons/trip_logos/restaurant.png");
+}
+.events time.poi::after { 
+  background-image: url("../images/icons/trip_logos/poi.png");
+}
+
+.events time.bus::after { 
+  background-image: url("../images/icons/trip_logos/bus.png");
+}
+
+.events time.air::after { 
+  background-image: url("../images/icons/trip_logos/air.png");
+}
+
+.events time.helicopter::after { 
+  background-image: url("../images/icons/trip_logos/helicopter.png");
+}
+
+.events time.ferry::after { 
+  background-image: url("../images/icons/trip_logos/ferry.png");
+}
+
+.events time.aerialway::after { 
+  background-image: url("../images/icons/trip_logos/aerialway.png");
+}
+
+.events span {
+  padding: 0 1.5em 1.5em 1.5em;
+  position: relative;
+}
+
+.events li:not(:last-child) span::before {
+   content: "";
+   position: absolute;
+   z-index: 1;
+   left: 0;
+   height: 100%;
+   transform: translateX(-50%);
+}
+
+.events li:not(:last-child) .train::before {
+  border-left: 4px var(--train) solid;
+}
+.events li:not(:last-child) .tram::before {
+  border-left: 4px var(--tram) solid;
+}
+.events li:not(:last-child) .metro::before {
+  border-left: 4px var(--metro) solid;
+}
+.events li:not(:last-child) .bus::before {
+  border-left: 4px var(--bus) solid;
+}
+.events li:not(:last-child) .air::before {
+  border-left: 4px var(--air) dashed;
+}
+.events li:not(:last-child) .ferry::before {
+  border-left: 4px var(--ferry) solid;
+}
+
+.events li:not(:last-child) .accommodation::before {
+  border-left: 4px var(--accommodation) solid;
+}
+.events li:not(:last-child) .poi::before {
+  border-left: 4px var(--poi) solid;
+}
+.events li:not(:last-child) .restaurant::before {
+  border-left: 4px var(--restaurant) solid;
+}
+.events li:not(:last-child) .car::before {
+  border-left: 4px var(--car) solid;
+}
+.events li:not(:last-child) .aerialway::before {
+  border-left: 4px var(--aerialway) solid;
+}
+.events li:not(:last-child) .cycle::before {
+  border-left: 4px var(--cycle) dashed;
+}
+.events li:not(:last-child) .walk::before {
+  border-left: 4px var(--walk) dotted;
+}
+.events li:not(:last-child) .helicopter::before {
+  border-left: 4px var(--air) dashed;
+}
+
+.events li:not(:last-child) .trainChange::before {
+  border-left: 4px #ccc dotted;
+}
+.events li:not(:last-child) .tripChange::before {
+  display: none;
+}
+.events li:not(:last-child) .tripEnds::before {
+  border-left: 4px #ccc dotted;
+}
+
+.events strong {
+   display: block;
+   font-weight: bolder;
+}
+
+.events { margin: 1em; width: 100%; }
+.events, 
+.events *::before, 
+.events *::after { box-sizing: border-box;}
+
+.itinerary_tag_description{
+  margin-left:-35px;
+  margin-bottom: 20px;
+  color:#3a3a3a;
+}
+
+.itinerary_tag_description .text-nowrap {
+  display:block;
+  padding: 0 1.5em 0 1.5em;
+}
+
+.dayChange {
+  color: #fff;
+  font-family: arial;
+  margin-right: 10px;
+  margin-left: 10px;
+  font-size: 1.2em;
+}
+
+.arrow_box {
+  top:calc(-50% - 12.5px);
+  height:25px;
+	position: absolute;
+  background-color: #333;
+  border-radius: 10px;
+}
+.arrow_box:after, .arrow_box:before {
+	left: 96%;
+	top: 50%;
+	border: solid transparent;
+	content: "";
+	height: 0;
+	width: 0;
+	position: absolute;
+	pointer-events: none;
+}
+
+.arrow_box:after {
+	border-left-color: #333;
+	border-width: 8px;
+	margin-top: -8px;
+}
+.arrow_box:before {
+	border-width: 9px;
+	margin-top: -9px;
+}
+
+/* Animations to fade the snackbar in and out */
+@-webkit-keyframes fadein {
+  from {bottom: 0; opacity: 0;}
+  to {bottom: 30px; opacity: 1;}
+}
+
+@keyframes fadein {
+  from {bottom: 0; opacity: 0;}
+  to {bottom: 30px; opacity: 1;}
+}
+
+@-webkit-keyframes fadeout {
+  from {bottom: 30px; opacity: 1;}
+  to {bottom: 0; opacity: 0;}
+}
+
+@keyframes fadeout {
+  from {bottom: 30px; opacity: 1;}
+  to {bottom: 0; opacity: 0;}
+} 
+
+.track{
+  display:none;
+}
+
+.modeProportionContainer {
+  margin-top:5px;
+  margin-bottom:5px;
+  max-width: 500px;
+  width:100%;
+}
+
+.modeProportionIcon{
+  position: absolute;
+  height: 15px;
+}
+.modeProportion {
+  margin-left:17px;
+  height: 15px;
+  border-radius: 10px;
+  text-align: center;
+  vertical-align: middle;
+  position: relative;
+  box-shadow: 1px 1px 2px 0px rgba(0,0,0,0.75);
+}
+.currency{
+  font-size: 0.8em;
+  margin-left: 20px;
+}
+.currencyIcon{
+  padding-top:6px;
+}
+
+.currencyContainer{
+  margin-top: -4px;
+  display:none;
+}
+
+.percent_bar {
+  position: absolute;
+  height: 15px;
+  z-index: 2;
+  top: 0;
+ }
+
+ .percent_bar:hover {
+	opacity: .65;
+}
+
+ .percent_bar.air{
+  background-color: var(--air);
+ } 
+ .percent_bar.train{
+  background-color: var(--train);
+ } 
+ .percent_bar.tram{
+  background-color: var(--tram);
+ } 
+ .percent_bar.metro{
+  background-color: var(--metro);
+ } 
+ .percent_bar.bus{
+  background-color: var(--bus);
+ } 
+ .percent_bar.ferry{
+  background-color: var(--ferry);
+ }
+
+ .percent_bar.car{
+  background-color: var(--car);
+ }
+
+ .percent_bar.walk{
+  background-color: var(--walk);
+ }
+
+ .percent_bar.cycle{
+  background-color: var(--cycle);
+ }
+
+ .percent_bar.aerialway{
+  background-color: var(--aerialway);
+ }
+
+.percent_bar:first-child{
+  border-radius: 10px 0px 0px 10px;
+ }
+
+.percent_bar:last-child{
+  border-radius: 0px 10px 10px 0px;
+ }
+
+.percent_bar:only-child{
+  border-radius: 10px 10px 10px 10px;
+ }
+
+.leaflet-sidebar {
+  min-height: 160px;
+}

@@ -1,0 +1,331 @@
+{% extends "bootstrap/layout.html" %}
+
+{% block content %}
+{% include "bootstrap/navigation.html" %}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <h2>{{nav_tickets}}</h2>
+            <table id="ticketsTable" class="mt-3">
+                <thead>
+                    <tr>
+                        <th data-priority="1">{{ticket_name}}</th>
+                        <th>{{price}}</th>
+                        <th data-priority="2">{{purchasing_date}}</th>
+                        <th>{{trips}}</th>
+                        <th>{{price_per_trip}}</th>
+                        <th>{{price_per_km}}</th>
+                        <th data-orderable="false" data-priority="1">{{active}}</th>
+                        <th data-orderable="false">{{ticketCountries}}</th>
+                        <th>{{notes}}</th>
+                        <th data-orderable="false" data-priority="1"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ticket in tickets %}
+                    <tr id="row_{{ ticket.uid }}">
+                        <td>{{ ticket.name }}</td>
+                        <td class="price-format" data-price="{{ ticket.price }}" data-currency="{{ ticket.currency }}" data-user-price="{{ ticket.price_in_user_currency }}" data-user-currency="{{ ticket.user_currency }}">
+                            <span><span style="display:none;" class="price-format-hidden" data-price="{{ ticket.price }}" data-currency="{{ ticket.currency }}" data-user-price="{{ ticket.price_in_user_currency }}" data-user-currency="{{ ticket.user_currency }}">{{ ticket.price_in_user_currency }}</span></span>
+                        </td>
+                        <td>{{ ticket.purchasing_date }}</td>
+                        <td>
+                            {% if ticket.trip_ids %}
+                                <a class="leaderboardLink link-dark" href="{{ url_for('public_trip', ticketId=ticket.uid) }}?price">{{ ticket.trip_count }}</a>
+                            {% else %}
+                                {{ ticket.trip_count }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if ticket.price_per_trip %}
+                                <span class="price-format" data-price="{{ ticket.price_per_trip }}" data-currency="{{ ticket.currency }}" data-user-price="{{ ticket.price_per_trip_in_user_currency }}" data-user-currency="{{ ticket.user_currency }}">
+                                    <span style="display:none;" class="price-format-hidden" data-price="{{ ticket.price_per_trip }}" data-currency="{{ ticket.currency }}" data-user-price="{{ ticket.price_per_trip_in_user_currency }}" data-user-currency="{{ ticket.user_currency }}">{{ ticket.price_per_trip_in_user_currency }}</span>
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if ticket.price_per_km %}
+                                <span class="price-format" data-price="{{ ticket.price_per_km }}" data-currency="{{ ticket.currency }}" data-user-price="{{ ticket.price_per_km_in_user_currency }}" data-user-currency="{{ ticket.user_currency }}">
+                                    <span style="display:none;" class="price-format-hidden" data-price="{{ ticket.price_per_km }}" data-currency="{{ ticket.currency }}" data-user-price="{{ ticket.price_per_km_in_user_currency }}" data-user-currency="{{ ticket.user_currency }}">{{ ticket.price_per_km_in_user_currency }}</span>
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="form-check form-switch form-check-inline">
+                                <input class="form-check-input float-end ticket-active-checkbox"
+                                       type="checkbox"
+                                       role="switch"
+                                       data-ticket-id="{{ ticket.uid }}"
+                                        {% if ticket.active %}
+                                            checked
+                                        {%endif%}
+                                       >
+                            </div>
+                        </td>
+                        <td>
+                            {% if ticket.active_countries %}
+                                <div class="country-flags-container">
+                                    {% for country in ticket.active_countries.split(',') %}
+                                        <span class="flag" data-bs-toggle="tooltip" style="cursor:context-menu;" data-bs-placement="top" title="{{ country }}">{{ country_list[country] }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </td>
+                        <td>{{ ticket.notes }}</td>
+                        <td>
+                            <button class="btn btn-warning editButton" data-ticket-id="{{ ticket.uid }}" data-ticket-name="{{ ticket.name }}" data-ticket-price="{{ ticket.price }}" data-ticket-currency="{{ ticket.currency }}" data-ticket-date="{{ ticket.purchasing_date }}" data-ticket-notes="{{ ticket.notes }}" data-ticket-active-countries="{{ ticket.active_countries }}" ><i class="fa-regular fa-pen-to-square"></i></button>
+                            <button class="btn btn-danger deleteButton" data-ticket-id="{{ ticket.uid }}"><i class="fa-regular fa-trash-can"></i></button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Ticket Modal -->
+<div class="modal fade" id="editTicketModal" tabindex="-1" aria-labelledby="editTicketModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editTicketModalLabel">Edit Ticket</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editTicketForm">
+                    <div class="mb-3">
+                        <label for="editTicketName" class="form-label">Name</label>
+                        <input type="text" class="form-control" id="editTicketName" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editTicketPrice" class="form-label">Price</label>
+                        <input type="number" step="0.01" class="form-control" id="editTicketPrice" name="price" required>
+                    </div>
+                     <div class="mb-3">
+                        <label for="editTicketCurrency" class="form-label">Currency</label>
+                        <select class="form-control" id="editTicketCurrency" name="currency">
+                            {% for currency in currencyOptions %}
+                            <option value="{{ currency['currency'] }}" data-country="{{ currency['country'] }}">
+                                {{ currency['currency'] }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editTicketDate" class="form-label">Purchasing Date</label>
+                        <input type="date" class="form-control" id="editTicketDate" name="purchasing_date" required>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="ticket_countries">{{ticketCountries}} : </label>
+                        <select class="form-control selectpicker" id="ticket_countries" name="active_countries[]" data-none-selected-text="{{countriesNoneSelectedText}}" data-count-selected-text="{{countriesCountSelectedText}}" multiple data-live-search="true" data-selected-text-format="count > 5" title="{{select_countries}}">
+                            {% for code, emoji in country_list.items() %}
+                                <option value="{{ code }}" data-code="{{ code }}">
+                                    {{ emoji }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editTicketNotes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="editTicketNotes" name="notes"></textarea>
+                    </div>
+                    <input type="hidden" id="editTicketId" name="ticket_id">
+                    <button type="submit" class="btn btn-primary">Save changes</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function () {
+    var table = $('#ticketsTable').DataTable({
+        responsive: {
+            details: {
+                renderer: function (api, rowIdx, columns) {
+                    var data = $.map(columns, function (col, i) {
+                        if (col.hidden) {
+                            var orig_content = $(col.data).children();
+                            var content = '';
+                            if (orig_content.hasClass('price-format-hidden')) {
+                                var price = orig_content.data('price');
+                                var currency = orig_content.data('currency');
+                                var userPrice = orig_content.data('user-price');
+                                var userCurrency = orig_content.data('user-currency');
+                                var formattedPrice = formatCurrency("{{ langId }}", price, currency);
+                                var formattedUserPrice = formatCurrency("{{ langId }}", userPrice, userCurrency);
+                                if (Math.abs(price) == 0.0){
+                                    content = '{{free}}';
+                                }
+                                else if (price != userPrice) {
+                                    content = formattedUserPrice + ' (' + formattedPrice + ')';
+                                } else {
+                                    content = formattedPrice;
+                                }
+                            } else {
+                                content = col.data;
+                            }
+
+                            return content ?
+                                '<tr data-dt-row="' + col.rowIndex + '" data-dt-column="' + col.columnIndex + '">' +
+                                '<td><b>' + col.title + '</b>:' + '</td> ' +
+                                '<td>' + content + '</td>' +
+                                '</tr>' :
+                                '';
+                        } else {
+                            return '';
+                        }
+                    }).join('');
+
+                    return data ?
+                        $('<table/>').append(data) :
+                        false;
+                }
+            }
+        }
+    });
+
+    function updateTable() {
+        // Update tooltips with country names
+        $('.flag[data-bs-toggle="tooltip"]').each(function() {
+            const countryCode = $(this).attr('title');
+            $(this).attr('title', regionNames.of(countryCode));
+        });
+        
+        // Initialize tooltips
+        $('[data-bs-toggle="tooltip"]').tooltip();
+
+        // Format price cells
+        $('.price-format').each(function () {
+            var price = $(this).data('price');
+            var currency = $(this).data('currency');
+            var userPrice = $(this).data('user-price');
+            var userCurrency = $(this).data('user-currency');
+            var formattedPrice = formatCurrency("{{ langId }}", price, currency);
+            var formattedUserPrice = formatCurrency("{{ langId }}", userPrice, userCurrency);
+            if (Math.abs(price) == 0.0){
+                $(this).text('{{free}}');
+            }
+            else if (price != userPrice) {
+                $(this).text(formattedUserPrice + ' (' + formattedPrice + ')');
+            } else {
+                $(this).text(formattedPrice);
+            }
+        });
+
+        // Delete button functionality
+        $('.deleteButton').off('click').on('click', function () {
+            var ticketId = $(this).data('ticket-id');
+            var row = $('#row_' + ticketId);
+
+            if (confirm('Are you sure you want to delete this ticket?')) {
+                $.ajax({
+                    url: '/{{ username }}/delete_ticket/' + ticketId,
+                    type: 'GET',
+                    success: function (response) {
+                        if (response.success) {
+                            row.fadeOut(400, function () {
+                                $(this).remove(); // Remove the row from the table after fade out
+                            });
+                        } else {
+                            alert('Error: ' + response.error);
+                        }
+                    },
+                    error: function () {
+                        alert('Failed to delete the ticket. Please try again.');
+                    }
+                });
+            }
+        });
+
+        // Active checkbox functionality
+        $('.ticket-active-checkbox').off('change').on('change', function () {
+            var ticketId = $(this).data('ticket-id');
+            var isActive = $(this).is(':checked');
+
+            $.ajax({
+                url: '/{{ username }}/toggle_ticket_active/' + ticketId,
+                type: 'GET',
+                data: JSON.stringify({ active: isActive }),
+                contentType: 'application/json',
+                success: function (response) {
+                    if (!response.success) {
+                        alert('Error: ' + response.error);
+                        // Revert the checkbox state if the update failed
+                        $(this).prop('checked', !isActive);
+                    }
+                },
+                error: function () {
+                    alert('Failed to update the ticket status. Please try again.');
+                    // Revert the checkbox state if the update failed
+                    $(this).prop('checked', !isActive);
+                }
+            });
+        });
+
+        // Edit button functionality
+        $('.editButton').off('click').on('click', function () {
+            var ticketId = $(this).data('ticket-id');
+            var ticketName = $(this).data('ticket-name');
+            var ticketPrice = $(this).data('ticket-price');
+            var ticketCurrency = $(this).data('ticket-currency');
+            var ticketDate = $(this).data('ticket-date');
+            var ticketNotes = $(this).data('ticket-notes');
+            var ticketActiveCountries = $(this).data('ticket-active-countries');
+
+            $('#editTicketId').val(ticketId);
+            $('#editTicketName').val(ticketName);
+            $('#editTicketPrice').val(ticketPrice);
+            $('#editTicketCurrency').val(ticketCurrency);
+            $('#editTicketDate').val(ticketDate);
+            $('#editTicketNotes').val(ticketNotes);
+            $('#ticket_countries').selectpicker('val', ticketActiveCountries.split(","));
+
+            $('#editTicketModal').modal('show');
+        });
+    }
+
+    updateTable(); // Initial call to format the first page
+
+    table.on('draw', function () {
+        updateTable(); // Call updateTable on each draw event
+    });
+
+    // Submit edit ticket form
+    $('#editTicketForm').on('submit', function (e) {
+        e.preventDefault();
+        var formData = $(this).serialize();
+
+        $.ajax({
+            url: '/{{ username }}/edit_ticket',
+            type: 'POST',
+            data: formData,
+            success: function (response) {
+                if (response.success) {
+                    location.reload(); // Reload the page to see the updated ticket details
+                } else {
+                    alert('Error: ' + response.error);
+                }
+            },
+            error: function () {
+                alert('Failed to update the ticket. Please try again.');
+            }
+        });
+    });
+});
+
+    const ticketCountriesSelect = $("#ticket_countries");
+    updateCountryNames(ticketCountriesSelect.get(0), true);
+    ticketCountriesSelect.selectpicker();
+
+    const currencySelect = document.getElementById('editTicketCurrency');
+    for (let option of currencySelect.options) {
+        const countryCode = option.dataset.country;
+        const emoji = getFlagEmoji(countryCode);
+        option.text = `${option.text} ${emoji}`; // Prepend the emoji to the option text
+    }
+</script>
+
+{% endblock %}

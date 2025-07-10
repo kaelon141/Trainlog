@@ -1,0 +1,252 @@
+{% extends "bootstrap/layout.html" %}
+{% block content %}
+
+{% include "bootstrap/navigation.html"%}
+
+<script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.css">
+
+<div class="container mt-4">
+    <h2>{{ interval }} User Growth</h2>
+    
+    <!-- Selectors for time period and graph type -->
+    <div class="mb-3">
+        <label for="timePeriod" class="form-label">Select Time Period:</label>
+        <select id="timePeriod" class="form-select">
+            <option value="day" {% if interval == 'Dayly' %}selected{% endif %}>Day</option>
+            <option value="week" {% if interval == 'Weekly' %}selected{% endif %}>Week</option>
+            <option value="month" {% if interval == 'Monthly' %}selected{% endif %}>Month</option>
+            <option value="year" {% if interval == 'Yearly' %}selected{% endif %}>Year</option>
+        </select>
+
+        <label for="graphType" class="form-label mt-3">Select Graph Type:</label>
+        <select id="graphType" class="form-select">
+            <option value="normal" selected>Normal</option>
+            <option value="cumulative">Cumulative</option>
+        </select>
+    </div>
+
+    <div id="userGrowthChart" style="width: 100%; height: 600px;"></div>
+</div>
+
+<script>
+
+    function getURLParameter(name) {
+        return new URLSearchParams(window.location.search).get(name);
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        var activeData = {{ data_points | map(attribute='0') | list | tojson }};
+        var inactiveData = {{ data_points | map(attribute='1') | list | tojson }};
+        var extrapolatedData = {{ data_points | map(attribute='2') | list | tojson }};
+        var labels = {{ labels | tojson }};
+    
+        // Compute totals for each date to use in tooltip for percentage calculations
+        var totalData = activeData.map((value, index) => value + inactiveData[index]);
+    
+        var chartDom = document.getElementById('userGrowthChart');
+        var myChart = echarts.init(chartDom);
+        var option;
+
+        function createPattern(color) {
+            return {
+                type: 'pattern',
+                image: createPatternImage(color),
+                repeat: 'repeat'
+            };
+        }
+
+        function createPatternImage(color) {
+            var canvas = document.createElement('canvas');
+            canvas.width = 6;
+            canvas.height = 6;
+            var ctx = canvas.getContext('2d');
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            ctx.moveTo(6, 0);  // Start at the top-right corner
+            ctx.lineTo(0, 6);  // Draw to the bottom-left corner
+            ctx.stroke();
+            return canvas;
+        }
+
+        function updateChart() {
+            var graphType = document.getElementById('graphType').value;
+
+            // Logic to handle data transformation for cumulative graph
+            if (graphType === 'cumulative') {
+                // Calculate cumulative data
+                activeData = activeData.map((sum => value => sum += value)(0));
+                inactiveData = inactiveData.map((sum => value => sum += value)(0));
+                extrapolatedData = extrapolatedData.map((sum => value => sum += value)(0));
+            } else {
+                // Reset to the original data
+                activeData = {{ data_points | map(attribute='0') | list | tojson }};
+                inactiveData = {{ data_points | map(attribute='1') | list | tojson }};
+                extrapolatedData = {{ data_points | map(attribute='2') | list | tojson }};
+            }
+
+            var seriesType = graphType === 'cumulative' ? 'line' : 'bar';
+
+            option = {
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: {
+                        type: 'shadow'
+                    },
+                    formatter: function (params) {
+                        var total = totalData[params[0].dataIndex];
+                        if (total === 0) {
+                            return ''; // Display nothing when total is 0
+                        }
+                        var groupBy = getURLParameter('group_by') || 'month';
+                        var periodLabel = labels[params[0].dataIndex]; // Get the period label
+                        var result = total + ' new users for ' + groupBy + ' ' +  periodLabel + '<br>'; // Display total and period once at the top
+                        params.forEach(function (item) {
+                            if (item.value === 0) {
+                                return; // Don't display if the value is 0
+                            }
+                            var percentage = (item.value / total * 100).toFixed(2);
+                            var valueText = item.value === 1 ? item.seriesName.slice(0, -1) : item.seriesName; // Handle singular and plural
+                            if (item.seriesName != 'Extrapolated Users'){
+                                result += item.marker + item.value + " " + valueText + ' (' + percentage + '%)<br>';
+                            }
+                            else{
+                                var totalExtrapolated = item.value + total;
+                                var extrapolatedPattern = createPattern('rgba(0,0,0,0.5)').image.toDataURL();
+                                result += '<span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background:url(' + extrapolatedPattern + ');"></span>' + item.value + " " + valueText + '<br>';
+                                result += '<span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background:grey;"></span>' + totalExtrapolated + " " + "Total end of " + groupBy + '<br>';
+                            }
+                        });
+                        return result;
+                    }
+                },
+                legend: {
+                    data: ['Active Users', 'Inactive Users', 'Extrapolated Users'],
+                    top: 'top',
+                    left: 'left'
+                },
+                grid: {
+                    top: 100  
+                },
+                xAxis: {
+                    type: 'category',
+                    data: labels
+                },
+                yAxis: {
+                    type: 'value',
+                    title: {
+                        text: 'Users'
+                    }
+                },
+                series: [
+                    {
+                        name: 'Active Users',
+                        type: seriesType,
+                        stack: 'total',
+                        areaStyle: graphType === 'cumulative' ? {} : null,
+                        data: activeData,
+                        itemStyle: {
+                            color: '#00E396'
+                        }
+                    },
+                    {
+                        name: 'Inactive Users',
+                        type: seriesType,
+                        stack: 'total',
+                        areaStyle: graphType === 'cumulative' ? {} : null,
+                        data: inactiveData,
+                        itemStyle: {
+                            color: '#FF4560'
+                        }
+                    },
+                    {
+                        name: 'Extrapolated Users',
+                        type: seriesType,
+                        stack: 'total',
+                        areaStyle: graphType === 'cumulative' ? {} : null,
+                        data: extrapolatedData,
+                        itemStyle: {
+                            color: createPattern('rgb(0,0,0,0.5)')
+                        }
+                    }
+                ],
+                dataZoom: [
+                    {
+                        type: 'slider',
+                        show: true,
+                        xAxisIndex: [0],
+                        start: 0,
+                        end: 100
+                    },
+                    {
+                        type: 'inside',
+                        xAxisIndex: [0],
+                        start: 0,
+                        end: 100
+                    }
+                ]
+            };
+
+            myChart.setOption(option);
+        }
+
+        function debounce(func, delay) {
+            let timer;
+            return function() {
+                clearTimeout(timer);
+                timer = setTimeout(func, delay);
+            };
+        }
+
+        function updateAverage() {
+            var dataZoom = myChart.getOption().dataZoom[0];
+            var start = Math.floor(dataZoom.start / 100 * (labels.length - 1));
+            var end = Math.ceil(dataZoom.end / 100 * (labels.length - 1));
+
+            var totalSums = 0;
+            var visibleCount = 0;
+
+            for (let i = start; i <= end; i++) {
+                var totalForLabel = activeData[i] + inactiveData[i] + extrapolatedData[i];
+                totalSums += totalForLabel;
+                visibleCount++;
+            }
+
+            var average = (visibleCount > 0) ? Math.round(totalSums / visibleCount) : 0;
+
+            myChart.setOption({
+                graphic: {
+                    type: 'text',
+                    left: 'right',
+                    top: 70,
+                    style: {
+                        text: `Average Users: ${average}`,
+                        font: '14px sans-serif',
+                        fill: '#555',  // Subtle color
+                    }
+                }
+            });
+        }
+
+        // Attach event listener for dataZoom event with debounce to update only when zoom interaction ends
+        myChart.on('dataZoom', debounce(updateAverage, 300)); // Adjust the delay as needed
+
+        // Initial chart load
+        updateChart();
+        updateAverage();
+
+        // Reload page with selected time period as query parameter
+        document.getElementById('timePeriod').addEventListener('change', function () {
+            var selectedPeriod = this.value;
+            var queryParams = new URLSearchParams(window.location.search);
+            queryParams.set('group_by', selectedPeriod);
+            window.location.search = queryParams.toString();
+        });
+
+        // Update chart on graph type selector change
+        document.getElementById('graphType').addEventListener('change', updateChart);
+    });
+</script>
+
+{% endblock %}

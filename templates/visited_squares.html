@@ -1,0 +1,128 @@
+{% extends "bootstrap/layout.html" %}
+{% include "bootstrap/leafletLayout.html" %}
+
+{% block content %}
+<script src="{{ url_for('static',filename='js/map.js') }}"></script>
+
+{% include nav %}
+
+<!-- Spinner Overlay -->
+<div class="loading-screen position-relative">
+  <div class="loading-text text-center position-absolute top-0 w-100" style="padding-top: 50px;">Loading...</div>
+  <div class="spinner-container">
+      <div class="lds-spinner">
+          <div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div>
+      </div>
+  </div>
+</div>
+
+<div id="map" class="mapUser"></div>
+
+<script>
+  var map = createMap();
+
+  function fetchVisitedSquaresGeoJSON() {
+    fetch(`/{{username}}/visited_squares_data`)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json();
+      })
+      .then(data => {
+        document.getElementById('percentageLand').textContent = data.land_percentage.toFixed(2) + '%';
+        document.getElementById('percentageAir').textContent = data.air_percentage.toFixed(2) + '%';
+        document.getElementById('percentageTotal').textContent = (data.land_percentage + data.air_percentage).toFixed(2) + '%';
+
+
+        var geoLayer = L.geoJSON(data.geojson, {
+            style: function (feature) {
+                const status = feature.properties.status;
+                let fillColor = "blue";
+                let fillOpacity = 0.5;
+
+                if (status === "stopped") {
+                    fillOpacity = 0.7;
+                }
+
+                if (status === "air") {
+                    fillColor = "green";
+                    fillOpacity = 0.5;
+                }
+
+                return {
+                    fillColor: fillColor,
+                    weight: 2,
+                    opacity: 1,
+                    color: fillColor,
+                    fillOpacity: fillOpacity
+                };
+            }
+        }).addTo(map);
+
+        map.fitBounds(geoLayer.getBounds());
+
+        $('.loading-screen').css('display', 'none');
+      })
+      .catch(error => {
+        alert('There was a problem with the fetch operation:', error.message);
+        $('.loading-screen').css('display', 'none');
+      });
+  }
+
+  fetchVisitedSquaresGeoJSON();
+
+  var PercentageControl = L.Control.extend({
+      options: {
+          position: 'topleft'
+      },
+
+      onAdd: function () {
+          var div = L.DomUtil.create('div', 'percentage-control');
+          div.innerHTML = `
+            <h4><i class="fas fa-percent"></i></h4><br/>
+            <div><i class="fas fa-globe"></i> <span id="percentageLand">...</span></div>
+            <div><i class="fas fa-plane"></i> <span id="percentageAir">...</span></div>
+            <div><i class="fas fa-chart-pie"></i> <span id="percentageTotal">...</span></div>
+
+            <div class="legend mt-2">
+              <div><span class="legend-color" style="background-color: blue; opacity: 0.7;"></span> {{stopped}}</div>
+              <div><span class="legend-color" style="background-color: blue; opacity: 0.5;"></span> {{passed}}</div>
+              <div><span class="legend-color" style="background-color: green; opacity: 0.5;"></span> {{air}}</div>
+            </div>`;
+          return div;
+      }
+  });
+  map.addControl(new PercentageControl());
+</script>
+
+<style>
+    /* Leaflet percentage control style */
+    .percentage-control {
+        padding: 6px 8px;
+        font: 12px/14px Arial, Helvetica, sans-serif;
+        background: white;
+        background: rgba(255,255,255,0.8);
+        box-shadow: 0 0 15px rgba(0,0,0,0.2);
+        border-radius: 5px;
+    }
+    
+    .legend {
+        margin-top: 10px;
+    }
+
+    .legend div {
+        display: flex;
+        align-items: center;
+        margin-bottom: 5px;
+    }
+
+    .legend-color {
+        width: 15px;
+        height: 15px;
+        display: inline-block;
+        margin-right: 5px;
+    }
+</style>
+
+{% endblock %}

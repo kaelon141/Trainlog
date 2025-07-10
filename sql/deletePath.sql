@@ -1,0 +1,1 @@
+DELETE FROM paths where trip_id = :trip_id

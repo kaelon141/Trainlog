@@ -1,0 +1,484 @@
+{% extends "bootstrap/layout.html" %}
+{% block content %}
+{% include "bootstrap/navigation.html" %}
+
+<style>
+    #admin tbody td {
+        vertical-align: middle;
+    }
+
+    th {
+        border-top: 1px solid #dddddd !important;
+    }
+
+    #admin_filter {
+        margin-bottom: 5px;
+    }
+
+    .noborder {
+        border-bottom-width: 0px !important;
+    }
+</style>
+
+<div id="admin-container" class="container">
+    <div id="loadingSpinner" class="text-center my-3" style="display: none;">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p>Loading data, please wait...</p>
+    </div>
+    <br>
+    <div class="container">
+        <div class="row align-items-center justify-content-between">
+            <div class="col">
+                <div id="totals"></div>
+                <div id="languages"></div>
+            </div>
+            <div class="col-auto text-right">
+                <button id="showLangModalBtn" class="btn btn-info">Language Stats</button><br>
+                <button id="loadDateBtn" class="btn btn-primary">
+                    Refresh Currency
+                    <span class="spinner-border spinner-border-sm ml-2" role="status" aria-hidden="true"
+                        style="display: none;"></span>
+                </button><br>
+                <span id="last_date">...</span>
+            </div>
+        </div>
+    </div>
+    <div class="form-check">
+        <input class="form-check-input" type="checkbox" value="" id="showInactiveUsers">
+        <label class="form-check-label" for="showInactiveUsers">
+            Show Inactive Users
+        </label>
+    </div>
+
+    <table id="admin" class="table table-striped table-bordered display nowrap">
+        <thead class="thead">
+            <tr>
+                <th></th>
+                <th>Username</th>
+                <th>Lang</th>
+                <th>Active</th>
+                <th>Share</th>
+                <th>Trips</th>
+                <th>Length</th>
+                <th>Trips/Day</th>
+                <th>Last Login</th>
+                <th>Email</th>
+                <th>Age</th>
+                <th>Actions</th>
+                <th class="none">Admin</th>
+                <th class="none">Delete</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+<div class="modal fade" id="langModal" tabindex="-1" role="dialog" aria-labelledby="langModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="langModalLabel">Languages Sorted by Speakers Per Million</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <table id="langTable">
+                    <thead>
+                        <tr>
+                            <th>Language</th>
+                            <th>Speakers</th>
+                            <th>Global Speakers</th>
+                            <th>Per Million</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    var table = $('#admin');
+    var dataTable;
+    var statsData = null;
+    var showInactive = false;
+
+    function createRoleActionButton(user, role) {
+        const isRoleActive = user[role];
+        const action = isRoleActive ? 'remove' : 'make';
+        const buttonClass = isRoleActive ? 'btn-warning' : 'btn-success';
+        const actionIcon = isRoleActive ? 'fa-minus' : 'fa-plus';
+
+        const roleIcons = {
+            admin: 'fa-chess-rook',
+            alpha: 'fa-flask',
+            translator: 'fa-language',
+            premium: 'fa-gem'
+        };
+
+        return `<button class="btn ${buttonClass} roleButton" 
+                data-uid="${user.uid}" 
+                data-role="${role}" 
+                data-action="${action}">
+                <i class="fa-solid ${roleIcons[role]}"></i> 
+                <i class="fa-solid ${actionIcon}"></i> 
+                ${action === 'make' ? 'Make' : 'Remove'} ${role.charAt(0).toUpperCase() + role.slice(1)}
+                </button>`;
+    }
+
+    // Initialize DataTable with server-side processing
+    dataTable = table.DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: {
+            url: '{{url_for("getAdminUsersData")}}',
+            type: 'POST',
+            data: function(d) {
+                d.showInactive = showInactive;
+            }
+        },
+        columns: [
+            { 
+                data: null, 
+                defaultContent: '', 
+                className: 'dtr-control', 
+                orderable: false 
+            },
+            { 
+                data: 'username',
+                render: function(data, type, row) {
+                    if (type === 'display') {
+                        let html = '';
+                        if (row.premium) html += '<span style="display:none;">premium</span><i class="fa-solid fa-gem" style="color: #00CED1;"></i> ';
+                        if (row.alpha) html += '<span style="display:none;">alpha</span><i class="fas fa-flask" style="color: #9B59B6;"></i> ';
+                        if (row.translator) html += '<span style="display:none;">translator</span><i class="fa-solid fa-language" style="color: #3498DB;"></i> ';
+                        if (row.username != "{{logged_in_user}}") {
+                            if (row.admin) html += '<span style="display:none;">admin</span><i class="fa-solid fa-chess-rook" style="color: #E74C3C;"></i> ';
+                        } else {
+                            html += '<i class="fa-solid fa-crown" style="color: #F39C12;"></i> ';
+                        }
+                        html += row.username;
+                        return html;
+                    }
+                    return data;
+                }
+            },
+            { 
+                data: 'lang',
+                render: function(data, type, row) {
+                    return type === 'display' ? getLangTooltip(data) : data;
+                }
+            },
+            { 
+                data: 'active',
+                render: function(data, type, row) {
+                    if (type === 'display') {
+                        return data ? '<i class="fa fa-check" style="color:green;"></i>' : '<i class="fa fa-times" style="color:red;"></i>';
+                    }
+                    return data ? 1 : 0;
+                }
+            },
+            { 
+                data: 'share_level',
+                render: function(data, type, row) {
+                    if (type === 'display') {
+                        switch(data) {
+                            case 0: return '<i class="fa-solid fa-lock"></i>';
+                            case 1: return '<i class="fa-solid fa-link"></i>';
+                            case 2: return '<i class="fa-solid fa-globe"></i>';
+                        }
+                    }
+                    return data;
+                }
+            },
+            { data: 'trips' },
+            { 
+                data: 'length',
+                render: function(data, type, row) {
+                    return type === 'display' ? mToKm(data).toLocaleString() + " km" : data;
+                }
+            },
+            { data: 'trips_per_day' },
+            { 
+                data: 'last_login',
+                render: function(data, type, row) {
+                    if (type === 'display') {
+                        const date = data ? new Date(data) : new Date(row.creation_date);
+                        const readableAge = getReadableAge(date.toISOString());
+                        const formattedDate = new Intl.DateTimeFormat('en-IE', { 
+                            dateStyle: 'medium', 
+                            timeStyle: 'short' 
+                        }).format(date);
+                        
+                        return `<span data-toggle="tooltip" data-placement="top" title="${formattedDate}">
+                                ${readableAge} ago
+                            </span>`;
+                    }
+                    return data || row.creation_date;
+                }
+            },
+            { data: 'email' },
+            { 
+                data: 'creation_date',
+                render: function(data, type, row) {
+                    if (type === 'display') {
+                        const date = new Date(data);
+                        const readableAge = getReadableAge(date.toISOString());
+                        const formattedDate = new Intl.DateTimeFormat('en-IE', { 
+                            dateStyle: 'medium', 
+                            timeStyle: 'short' 
+                        }).format(date);
+                        
+                        return `<span data-toggle="tooltip" data-placement="top" title="${formattedDate}">
+                                ${readableAge}
+                            </span>`;
+                    }
+                    return data;
+                }
+            },
+            { 
+                data: null,
+                searchable: false,
+                orderable: false,
+                render: function(data, type, row) {
+                    return `<button class="btn btn-primary linkButton" data-url="{{ url_for('public', username='USERNAME') }}".replace('USERNAME', row.username)">Public link</button> 
+                            <button class="btn btn-secondary linkButton" data-url="{{ url_for('public_trips', username='USERNAME', time='trips') }}".replace('USERNAME', row.username)">Trips</button> 
+                            <button class="btn btn-info linkButton" data-url="{{ url_for('public_stats', username='USERNAME') }}".replace('USERNAME', row.username)">Stats</button>`;
+                }
+            },
+            { 
+                data: null,
+                searchable: false,
+                orderable: false,
+                render: function(data, type, row) {
+                    const adminBtn = createRoleActionButton(row, 'admin');
+                    const alphaBtn = createRoleActionButton(row, 'alpha');
+                    const translatorBtn = createRoleActionButton(row, 'translator');
+                    const premiumBtn = createRoleActionButton(row, 'premium');
+                    return `${adminBtn} ${alphaBtn} ${translatorBtn} ${premiumBtn}`;
+                }
+            },
+            { 
+                data: null,
+                searchable: false,
+                orderable: false,
+                render: function(data, type, row) {
+                    return `<button class="btn btn-danger deleteButton" data-uid="${row.uid}" data-username="${row.username}">Delete</button>`;
+                }
+            }
+        ],
+        columnDefs: [
+            {
+                targets: [3, 5, 6, 7], // Active, Trips, Length, Trips/Day columns
+                type: 'num'
+            },
+            {
+                targets: [8, 10], // Last Login and Age columns
+                type: 'date'
+            }
+        ],
+        lengthMenu: [[10, 50, 100, -1], [10, 50, 100, "All"]],
+        responsive: {
+            details: {
+                type: 'column',
+                target: 0
+            }
+        },
+        drawCallback: function() {
+            resetObjects();
+        },
+        initComplete: function() {
+            resetObjects();
+        }
+    });
+
+    // Load stats separately
+    $.get('{{url_for("getAdminStats")}}', function(response) {
+        statsData = response.stats;
+        
+        var totalsString = `<b>Active users :</b> ${statsData.active_users} (${statsData.total_users} total)  -   <b>Total Trips :</b> ${statsData.total_trips.toLocaleString()}   -   <b>Total Km :</b> ${mToKm(statsData.total_km).toLocaleString() + " km"}`;
+        totalsString += `<br><b>Active today :</b> ${statsData.active_today}`;
+        $('#totals').append(totalsString);
+        
+        renderLanguages(statsData, !showInactive);
+    });
+
+    function resetObjects() {
+        // Use event delegation for dynamically created buttons
+        $('#admin tbody').off('click', '.linkButton').on('click', '.linkButton', function() {
+            location.href = $(this).data('url');
+        });
+
+        $('#admin tbody').off('click', '.deleteButton').on('click', '.deleteButton', function() {
+            const uid = $(this).data('uid');
+            const username = $(this).data('username');
+            if (confirm(`Are you sure you want to delete ${username}?`)) {
+                $.post("{{ url_for('delete_user', uid=0) }}".replace(0, uid), function() {
+                    dataTable.ajax.reload();
+                });
+            }
+        });
+
+        $('#admin tbody').off('click', '.roleButton').on('click', '.roleButton', function() {
+            const uid = $(this).data('uid');
+            const role = $(this).data('role');
+            const action = $(this).data('action');
+
+            const actionVerb = action === 'make' ? 'make' : 'remove';
+            const message = `Are you sure you want to ${actionVerb} this user a(n) ${role}?`;
+
+            if (confirm(message)) {
+                const url = "{{ url_for('toggle_role', uid=0, role='role_id', action='action') }}"
+                            .replace(0, uid)
+                            .replace('role_id', role)
+                            .replace('action', action);
+
+                $.post(url, function() {
+                    dataTable.ajax.reload();
+                });
+            }
+        });
+
+        $('[data-toggle="tooltip"]').tooltip();
+    }
+
+    $('#showInactiveUsers').on('change', function() {
+        showInactive = this.checked;
+        dataTable.ajax.reload();
+        if (statsData) {
+            renderLanguages(statsData, !showInactive);
+        }
+    });
+
+    $('#loadDateBtn').click(function() {
+        $(this).find('.spinner-border').show();
+        $.ajax({
+            url: '{{url_for("refreshCurrency")}}',
+            success: function(result) {
+                $('#last_date').text(`New Date: ${result}`);
+                $('#loadDateBtn').removeClass("btn-primary");
+                $('#loadDateBtn').text("Currency Refreshed");
+                $('#loadDateBtn').prop('disabled', true);
+                $('#loadDateBtn').addClass("btn-success");
+            },
+            error: function() {
+                $('#last_date').text("Failed to refresh.");
+                $('#loadDateBtn').removeClass("btn-primary");
+                $('#loadDateBtn').text("Failed to Refresh");
+                $('#loadDateBtn').prop('disabled', true);
+                $('#loadDateBtn').addClass("btn-danger");
+            },
+            complete: function() {
+                $('#loadDateBtn').find('.spinner-border').hide();
+            }
+        });
+    });
+
+    $.ajax({
+        url: '{{url_for("getLastCurrencyDate")}}',
+        type: 'GET',
+        success: function(data) {
+            $('#last_date').text('Last Date : ' + data);
+        },
+        error: function(xhr, status, error) {
+            console.error("Error occurred: " + error);
+        }
+    });
+
+    $('#langModal').on('shown.bs.modal', function () {
+        if ($.fn.dataTable.isDataTable('#langTable')) {
+            $('#langTable').DataTable().destroy();
+        }
+
+        $('#langTable').DataTable({
+            responsive: true,
+            order: [[3, 'desc']]
+        });
+    });
+
+    document.getElementById('showLangModalBtn').addEventListener('click', function() {
+        $('#langModal').modal('show');
+    });
+
+    function renderLanguages(stats, active) {
+        var displayStr = [];
+        var displayUnused = [];
+        var availableLangs = JSON.parse('{{langs|safe}}');
+        var languages = active ? stats.langs.active : stats.langs.total;
+        var unused = availableLangs.filter(key => !Object.keys(languages).includes(key));
+
+        for (var [lang, count] of Object.entries(languages).sort((a, b) => b[1] - a[1])) {
+            displayStr.push(`<div class="col-sm-6 col-md-3 col-lg-2">${getLangTooltip(lang, true)}: ${count}</div>`);
+        }
+        unused.forEach(function(item) {
+            displayUnused.push(`<div class="col-sm-6 col-md-3 col-lg-2">${getLangTooltip(item, true)}</div>`);
+        });
+
+        $('#languages').html(`
+            <br>
+            <b>Languages :</b>
+            <div class="row mb-4">${displayStr.join("")}</div>
+            <b>Unused :</b>
+            <div class="row">${displayUnused.join("")}</div>
+            <br>
+        `);
+
+        var globalSpeakersData = {
+            "en": 1500000000,
+            "zh": 1100000000,
+            "nl": 23000000,
+            "de": 130000000,
+            "fr": 280000000,
+            "fi": 5400000,
+            "es": 580000000,
+            "it": 67000000,
+            "no": 5300000,
+            "sv": 10000000,
+            "cs": 10700000,
+            "pl": 50000000,
+            "tr": 75000000,
+            "hu": 13000000,
+            "da": 5800000,
+            "hr": 5500000,
+            "et": 1100000,
+            "ja": 125000000,
+            "ru": 258000000,
+            "uk": 30000000,
+            "sv-FI": 290000,
+            "gsw": 4400000,
+            "ko": 77000000,
+            "pt": 258000000
+        };
+
+        $('#langTable tbody').empty();
+        
+        var langArray = Object.keys(stats.langs.total).map(function(key) {
+            var lang = {
+                code: key,
+                speakers: stats.langs.total[key],
+                globalSpeakers: globalSpeakersData[key] || 0,
+                perMillion: (stats.langs.total[key] / (globalSpeakersData[key] || 1)) * 1000000
+            };
+            return lang;
+        });
+
+        langArray.sort(function(a, b) {
+            return b.perMillion - a.perMillion;
+        });
+
+        langArray.forEach(function(lang) {
+            $('#langTable tbody').append(
+                '<tr>' +
+                '<td>' + getLangTooltip(lang.code, true) + '</td>' +
+                '<td>' + lang.speakers + '</td>' +
+                '<td>' + (lang.globalSpeakers / 1000000).toLocaleString() + 'M</td>' +
+                '<td>' + lang.perMillion.toFixed(3) + '</td>' +
+                '</tr>'
+            );
+        });
+    }
+</script>
+
+{% endblock %}

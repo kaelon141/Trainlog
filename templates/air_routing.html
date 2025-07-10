@@ -1,0 +1,227 @@
+{% extends "layout.html" %}
+{% block content %}
+<script>
+</script>
+
+<div id="map" class="mapRouting">
+</div>
+
+<div id="sidebar">
+    <div id="sidebar-content">
+    </div>
+</div>
+
+<script>
+
+let currentPolyline = null;
+let useFR24 = true;
+let fr24PathCache = null;
+
+const id = getGetParams().get("id");
+const newTrip = JSON.parse(sessionStorage.getItem(id));
+console.log(newTrip);
+
+let origCoord = newTrip.originStation?.[0] ?? [0, 0];
+let destCoord = newTrip.destinationStation?.[0] ?? [0, 0];
+let origLabel = newTrip.originStation?.[1] ?? "Origin";
+let destLabel = newTrip.destinationStation?.[1] ?? "Destination";
+
+const originalOrigCoord = [...origCoord];
+const originalDestCoord = [...destCoord];
+
+const map = createMap(origCoord);
+
+const sidebar = L.control.sidebar('sidebar', {
+    closeButton: true,
+    position: 'right',
+    autoPan: window.innerWidth > 600
+}).addTo(map);
+
+
+let origMarker = L.marker(origCoord, { icon: markerIconStart, draggable: false }).addTo(map);
+let destMarker = L.marker(destCoord, { icon: markerIconEnd, draggable: false }).addTo(map);
+
+map.fitBounds(L.latLngBounds([origCoord, destCoord]), {
+    padding: [200, 200]
+});
+
+async function updateRoute() {
+    if (currentPolyline) {
+        map.removeLayer(currentPolyline);
+        currentPolyline = null;
+    }
+
+    if (newTrip.fr24_id && useFR24) {
+        if (!fr24PathCache) {
+            showLoadingSidebar();
+            try {
+                const res = await fetch(`{{url_for("flight_tracks", username=username, fr24_id='' )}}${newTrip.fr24_id}`);
+                fr24PathCache = await res.json();
+            } catch (e) {
+                console.warn("FR24 path fetch failed, falling back to geodesic");
+                useFR24 = false;
+                return updateRoute();
+            }
+        }
+
+        if (!Array.isArray(fr24PathCache) || fr24PathCache.length < 2) {
+            useFR24 = false;
+            return updateRoute();
+        }
+
+        const path = normalizeDateLinePath(fr24PathCache);
+
+        currentPolyline = L.polyline(path, {
+            className: "polyline airPolyline pastPolyline",
+            color: "#3388ff",
+            weight: 3,
+            opacity: 0.9
+        }).addTo(map);
+
+        const first = path[0];
+        const last = path[path.length - 1];
+
+        origMarker.setLatLng(first).setIcon(markerIconStart).dragging.disable();
+        destMarker.setLatLng(last).setIcon(markerIconEnd).dragging.disable();
+
+        newTrip["trip_length"] = getDistanceFromLocations(first, last);
+        newTrip["estimated_trip_duration"] = (newTrip["trip_length"] / 235) + 1800;
+
+        updateSidebar(true);
+    } else {
+        origMarker.setLatLng(originalOrigCoord).setIcon(markerIconStart).dragging.enable();
+        destMarker.setLatLng(originalDestCoord).setIcon(markerIconEnd).dragging.enable();
+
+        currentPolyline = new L.Geodesic([
+            [originalOrigCoord[0], originalOrigCoord[1]],
+            [originalDestCoord[0], originalDestCoord[1]]
+        ], {
+            className: "polyline airPolyline pastPolyline",
+            wrap: false,
+            steps: 8
+        }).addTo(map);
+
+        newTrip["trip_length"] = getDistanceFromLocations(origMarker.getLatLng(), destMarker.getLatLng());
+        newTrip["estimated_trip_duration"] = (newTrip["trip_length"] / 235) + 1800;
+
+        const bounds = new L.LatLngBounds([originalOrigCoord, originalDestCoord]);
+
+        updateSidebar(false);
+    }
+}
+
+function updateSidebar(isFr24Active) {
+    let kmRaw, durationRaw;
+
+    if (isFr24Active && newTrip.fr24_id && fr24PathCache?.length >= 2) {
+        kmRaw = getTotalDistanceFromPath(fr24PathCache);
+        durationRaw = newTrip.fr24_duration ?? newTrip.estimated_trip_duration;
+    }else {
+        kmRaw = newTrip.trip_length;
+        durationRaw = newTrip.estimated_trip_duration;
+    }
+
+    // Overwrite trip_length and estimated_trip_duration with current values
+    newTrip.trip_length = kmRaw;
+    newTrip.estimated_trip_duration = durationRaw;
+
+    const km = mToKm(kmRaw);
+    const time = secondsToDhm(durationRaw, "{{langId}}");
+
+    let content = `<h4>${origLabel} to ${destLabel}</h4>`;
+    content += `<p><i>${km} km, ${time}</i></p>`;
+
+    if (newTrip.fr24_id) {
+        content += `<p><button type="button" class="btn btn-sm btn-outline-primary" onclick="toggleRoute()">Switch to ${isFr24Active ? 'Geodesic' : 'FR24'} Path</button></p>`;
+    }
+
+    content += `<p><button id="saveTrip" type="button" onclick="saveTrip()" class="btn btn-success">Submit</button></p>`;
+    sidebar.setContent(content);
+}
+
+
+function toggleRoute() {
+    useFR24 = !useFR24;
+    updateRoute();
+}
+
+origMarker.on('dragend', () => {
+    if (!useFR24) updateRoute();
+});
+destMarker.on('dragend', () => {
+    if (!useFR24) updateRoute();
+});
+
+function showLoadingSidebar(message = "Loading flight path...") {
+    sidebar.setContent(`
+        <h4>${message}</h4>
+        <div class="spinner-container">
+            <div class="lds-spinner">
+                <div></div><div></div><div></div><div></div><div></div><div></div>
+                <div></div><div></div><div></div><div></div><div></div><div></div>
+            </div>
+        </div>
+    `);
+}
+
+
+async function saveTrip() {
+    sidebar.setContent('<div class="spinner-container"><div class="lds-spinner"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div></div>');
+
+    let pathToSave;
+
+    if (useFR24 && Array.isArray(fr24PathCache) && fr24PathCache.length >= 2) {
+        // Save FR24 path
+        pathToSave = fr24PathCache.map(p => ({ lat: p[0], lng: p[1] }));
+        console.log("Saving FR24 path", pathToSave);
+        newTrip["trip_length"] = getTotalDistanceFromPath(fr24PathCache);
+        newTrip["estimated_trip_duration"] = newTrip.fr24_duration ?? newTrip.estimated_trip_duration;
+    } else {
+        // Save Geodesic
+        pathToSave = [
+            { lat: origMarker.getLatLng().lat, lng: origMarker.getLatLng().lng },
+            { lat: destMarker.getLatLng().lat, lng: destMarker.getLatLng().lng }
+        ];
+        newTrip["trip_length"] = getDistanceFromLocations(pathToSave[0], pathToSave[1]);
+        newTrip["estimated_trip_duration"] = (newTrip["trip_length"] / 235) + 1800;
+    }
+
+    $.post({
+        url: '{{url_for("saveFlight", username=username, type=type)}}',
+        data: {
+            newTrip: JSON.stringify(newTrip),
+            jsonPath: JSON.stringify(pathToSave)
+        },
+        success: () => location.href = "{{ url_for('user_home', username=username) }}",
+        error: () => sidebar.setContent("<h4>{{saveError}}</h4><p>{{saveErrorDetails}}</p><p><button onclick='location.reload()'>{{retry}}</button></p>")
+    });
+}
+
+function normalizeDateLinePath(path) {
+    if (!Array.isArray(path) || path.length < 2) return path;
+
+    const normalized = [path[0]];
+
+    for (let i = 1; i < path.length; i++) {
+        const prev = normalized[normalized.length - 1];
+        const curr = path[i];
+
+        let lat = curr[0];
+        let lon = curr[1];
+
+        // Check for date line crossing
+        let delta = lon - prev[1];
+        if (delta > 180) lon -= 360;
+        else if (delta < -180) lon += 360;
+
+        normalized.push([lat, lon]);
+    }
+
+    return normalized;
+}
+
+setTimeout(() => sidebar.show(), 500);
+updateRoute();
+
+</script>
+{% endblock %}

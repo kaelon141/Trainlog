@@ -1,0 +1,38 @@
+{% extends "bootstrap/layout.html" %}
+{% block content %}
+
+
+  <div id="form" >
+    <figure class="logo"><img src="{{ url_for('static',filename='images/logo.png') }}"></figure>
+    <div>
+  <form  action="{{ url_for('login')}}" method="post">
+    {{userName}} :  <input type="text" id="username" name="username" />
+    {{password}} : <input type="password" id="password" name="password" />
+    <div class="d-flex justify-content-center mt-2"> <!-- Flexbox container -->
+      <button type="submit" class="btn btn-primary mx-2">{{login}}</button>
+      <a href='/signup' class="btn btn-secondary mx-2">{{signup}}</a>
+  </div>  
+  </form>
+  
+  
+
+<div class="mt-1 text-center">
+    <a class="forgottenPassword btn btn-link btn-sm" href="{{url_for('password_reset_request')}}">{{forgottenPassword}}</a>
+</div>
+
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+        <div class="alert alert-warning" role="alert">
+            {% for message in messages %}
+                <p>{{ message }}</p>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}
+  
+</div>
+</div>
+
+ 
+
+{% endblock %}

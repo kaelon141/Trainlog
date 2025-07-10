@@ -1,0 +1,942 @@
+{% extends "bootstrap/layout.html" %}
+{% block content %}
+
+{% include nav %}
+
+<style>
+    .ui-front {
+        z-index: 9999999 !important;
+    }
+</style>
+
+<div id="preload" class="d-none"></div>
+
+<div class="multiLink">
+    <button class="btn btn-secondary btn-lg multiCancel" onclick="deselectAll();">✕</button>
+    <button class="btn btn-primary btn-lg multiTrip" onclick="getMultiLink();">{{ shareTrip }}</button>
+    <div class="btn-group dropup">
+        <button type="button" class="btn btn-lg dropdown-toggle btn-secondary multiDropdown" data-bs-toggle="dropdown" aria-expanded="false"></button>
+        <ul class="dropdown-menu" style="min-width: 12rem;">
+            <li class="dropdown-item" ><a onclick="exportSelected();"><i class="fa-solid fa-file-export"></i>  {{export}}</a></li>
+            {% if not isPublic %}
+            <li class="dropdown-item"><a onclick="$('#ticketSearchModal').modal('show');"><i class="bi bi-ticket-perforated-fill"></i>  {{associate_ticket}}</a></li>
+            <li class="dropdown-item tagSearchLink" style="display:none;"><a onclick="$('#tagSearchModal').modal('show');"><i class="fa-solid fa-tags"></i>  {{manage_tags}}</a></li>
+            {% endif %}
+            <li class="dropdown-item"><a onclick="exportGpx();"> <i class="fa-solid fa-route"></i>  {{exportGpx}}</a></li>
+            <li class="dropdown-item"><a onclick="exportGeojson();"><i class="fa-solid fa-draw-polygon"></i>  {{exportGeojson}}</a></li>
+            {% if not isPublic %}
+            <li class="dropdown-item"><a onclick="mergeTrips();"><i class="fa-solid fa-code-merge"></i>  {{mergeTrips}}</a></li>
+            <hr class="dropdown-divider">
+            <li class="dropdown-item"><a onclick="multiDelete();"><i class="fa-solid fa-trash-can" style="color:#c72020;" aria-hidden="true"></i>  {{delete}}</a></li>
+            {% endif %}
+        </ul>
+    </div>
+</div>
+
+<div class="trips">
+    <table id="dataTable" class="display responsive" style="width:100%">
+        <thead>
+            <tr>
+                <th data-priority="100001">Type</th>
+                <th class="all">{{originStation}}</th>
+                <th class="all">{{destinationStation}}</th>
+                <th class="all">{{tripStartDate}}</th>
+                <th>{{tripStartTime}}</th>
+                <th>{{tripEndTime}}</th>
+                <th>{{tripDuration}}</th>
+                <th>{{tripLength}}</th>
+                <th>{{tripSpeed}}</th>
+                <th>{{operator}}</th>
+                <th>{{lineName}}</th>
+                <th>{{crossedCountries}}</th>
+                {% if not isPublic %}
+                <th data-orderable="false">{{price}}</th>
+                {% endif %}
+                <th class="none">{{material_type}}</th>
+                <th class="none">{{reg}}</th>
+                <th class="none">{{seat}}</th>
+                <th class="none">{{notes}}</th>
+                <th class="none">{{tags}}</th>
+                <th data-priority="1" data-orderable="false"></th>
+            </tr>
+        </thead>
+        <tbody id="tripRows">
+        </tbody>
+    </table>
+</div>
+
+<div class="modal fade" id="ticketSearchModal" tabindex="-1" role="dialog" aria-labelledby="ticketSearchModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="ticketSearchModalLabel">{{associate_ticket}}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="ticketSearchInput" class="form-label">{{ select_ticket }}</label>
+          <select id="ticketSearchInput" class="form-select"></select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" onclick="attachSelectedTrips($('#ticketSearchInput').val())">{{submit}}</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="tagSearchModal" tabindex="-1" role="dialog" aria-labelledby="tagSearchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+        <div class="modal-header">
+        <h5 class="modal-title" id="tagSearchModalLabel">{{ manage_tags }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+        <div class="form-group">
+            <input type="text" id="tagSearchInput" placeholder="{{select_tag}}" class="form-control" autocomplete="off">
+            <ul id="autocompleteResults" class="list-group"></ul>
+        </div>
+        <br>
+        <div class="form-group">
+            <div id="tagList" class="d-flex flex-wrap">
+            </div>
+        </div>
+        </div>
+        <div class="modal-footer">
+        <button type="button" class="btn btn-primary" id="submitBtn">{{ submit }}</button>
+        </div>
+    </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/util.js') }}"></script>
+<script type="text/javascript">
+var checkedTrips = [];
+
+function toggleTypeFilter() {
+    const switchState = document.getElementById('filterTypeSwitch').checked;
+    setCookie('filterTypeSwitch', switchState, 7);
+    tableObject.ajax.reload();
+}
+
+function isEllipsisActive(el){
+  const styles = getComputedStyle(el);
+  const widthEl = parseFloat(styles.width);
+  const ctx = document.createElement('canvas').getContext('2d');
+  ctx.font = `${styles.fontSize} ${styles.fontFamily}`;
+  const text = ctx.measureText(el.innerText);
+  return text.width > widthEl;
+}
+
+function processHiddenData(rowIdx, columns){
+    var ellipsedStation = isEllipsisActive(tableObject.cell(rowIdx, 1).node()) || isEllipsisActive(tableObject.cell(rowIdx, 2).node())
+    var isAir = ["air", "helicopter"].includes($(tableObject.cell(rowIdx, 0).node())[0].firstChild.innerText);
+    var isFerry = $(tableObject.cell(rowIdx, 0).node())[0].firstChild.innerText == "ferry";
+    var data = $.map( columns, function ( col, i ) {
+        if (col.title == "{{tags}}" && col.data != ""){
+            tag_list = JSON.parse(col.data).map(tag => tag.tag_id);
+            var tag_container = $('<div>').addClass('tag-container');
+            tag_list.forEach(function(tagId) {
+                var tag = tags.find(t => t.uid == tagId); // Find the tag object by uid
+                if (tag) {
+                var a = $('<a>')
+                    .attr('href', "{{url_for('public_trip', tagId='')}}" + tag.uuid)
+                    .addClass('tag-blob')
+                    .css('background-color', tag.colour)
+                    .css('color', getTextColor(tag.colour))
+                    .text(tag.name);
+                tag_container.append(a);
+                }
+            });
+            col.data = tag_container.html();
+        }
+        if (col.title == "{{reg}}" && col.data != "" && isAir){
+            var reg = col.data;
+            var country = ""
+            
+            var url = `https://api.planespotters.net/pub/photos/reg/${reg}`
+            $.get( url, function( data ) {
+                if(data.photos.length > 0){
+                    var thumbnail = data.photos[0].thumbnail_large.src
+                    var attr = `©${data.photos[0].photographer}/planespotters.net`;
+                    var image = new Image();
+                    image.src = thumbnail;
+                    $('#preload').append(image);
+
+                    var link = data.photos[0].link
+                    $(`#vehiclePhoto${rowIdx}`).attr("data-img", thumbnail);
+                    $(`#vehiclePhoto${rowIdx}`).popover({
+                        html: true,
+                        trigger: 'focus',
+                        "data-container":"body",
+                        placement: 'top',
+                        content: function(){
+                            return `<div class="vehiclePhotoContainer"><img src="${thumbnail}"/><a href="${link}" class="vehiclePhotoAttr">${attr}</a></div>`;
+                        }
+                    });
+                }
+                else{
+                    $(`#vehiclePhoto${rowIdx}`).replaceWith(reg)
+                }
+                
+            });
+
+            $.getJSON("{{ url_for('static',filename='data/registrations.json')}}", function(json) {
+                var registrations = json;
+                for (let i = reg.length; i > 0; i--) {
+                    var testReg = reg.slice(0, i);
+                    if (testReg in registrations){
+                        country = registrations[testReg].iso;
+                        break
+                    }
+                }
+                if (country != ""){
+                    $(getTooltipNew(country)).insertBefore(`#vehiclePhoto${rowIdx}`);
+                    $('[data-toggle="tooltip"]').tooltip();
+                }
+                
+            });
+            col.data = $("<a>", {
+                "id": `vehiclePhoto${rowIdx}`,
+                "class": "myLinks",
+                "text": reg,
+                "rel": "popover",
+                "data-img": "",
+                "href": "javascript:void(0)"
+            })[0].outerHTML;
+        }
+         if (col.title == "{{reg}}" && col.data != "" && isFerry){
+            var reg = col.data;
+            var country = ""
+            
+            var url = `{{url_for('getVesselPhoto')}}?vesselName=${reg}`
+            $.get( url, function( data ) {
+                if(data.length > 0){
+                    country = data[2];
+                    var thumbnail = data[0];
+                    var attr = ''; 
+                    var image = new Image();
+                    image.src = thumbnail;
+                    $('#preload').append(image);                    
+                    var link = data[1];
+                    
+                    if (link && link.length > 0) {
+                        attr = `©Vesselfinder.com`;
+                    }
+
+                    $(`#vehiclePhoto${rowIdx}`).attr("data-img", thumbnail);
+                    $(`#vehiclePhoto${rowIdx}`).popover({
+                        html: true,
+                        trigger: 'focus',
+                        "data-container":"body",
+                        placement: 'top',
+                        content: function(){
+                            return `<div class="vehiclePhotoContainer"><img width=600px src="${thumbnail}"/>${link ? `<a href="${link}" class="vehiclePhotoAttr">${attr}</a>` : ''}</div>`;
+                        }
+                    });
+                    if (country != ""){
+                        $(getTooltipNew(country)).insertBefore(`#vehiclePhoto${rowIdx}`);
+                        $('[data-toggle="tooltip"]').tooltip();
+                    }
+                }
+                else{
+                    $(`#vehiclePhoto${rowIdx}`).replaceWith(reg);
+                }
+            });
+        col.data = $("<a>", {
+                "id": `vehiclePhoto${rowIdx}`,
+                "class": "myLinks",
+                "text": reg,
+                "rel": "popover",
+                "data-img": "",
+                "href": "javascript:void(0)"
+            })[0].outerHTML;
+        }
+        if (col.title == "{{material_type}}" && col.data != "" && isAir){
+            if (col.data.includes('[[') && col.data.includes(']]')) {
+                var start = col.data.indexOf('[[') + 2;
+                var end = col.data.indexOf(']]');
+                iata = col.data.substring(start, end);
+
+                // Extract the part before [[ and after ]]
+                full_name = col.data.substring(0, start - 2) + col.data.substring(end + 2);
+                var airframeUrl = `{{ url_for('static',filename='images/airliners/')}}${iata}.png`;
+                $.get(airframeUrl, function(data, textStatus) {
+                    if (textStatus == "success") {
+                        $('<img />',
+                            {   class: "airframe",
+                                src: airframeUrl, 
+                                height: 50
+                            }).appendTo($(`#airframe${rowIdx}`));
+                    }
+                });
+                col.data = `<span id=airframe${rowIdx} >${full_name}</span>`
+            }
+        }
+        if (col.title != ""){
+            return (col.hidden || ([1,2].includes(col.columnIndex) && ellipsedStation)) && col.data != ""?
+            '<tr data-dt-row="'+col.rowIndex+'" data-dt-column="'+col.columnIndex+'">'+
+                '<td><strong>'+col.title+':</strong>'+'</td> '+
+                '<td>'+col.data+'</td>'+
+            '</tr>' :
+            '';
+        }
+        else if (col.hidden) {
+            var id = $(col.data).attr("data-tripId");
+            return `
+                <tr data-dt-row="${col.rowIndex}" data-dt-column="${col.columnIndex}">
+                    <td><strong>Actions</strong></td>
+                    <td>
+                        <a class="btn btn-primary linkButton" href="{{ url_for('public_trip', tripIds='') }}${id}">
+                            <i class="fa-regular fa-share-from-square"></i>
+                        </a>
+                        {% if not isPublic %}
+                        <a class="btn btn-warning editButton ms-1" href="{{ url_for('edit_copy_trip', username=username, edit_copy_type='edit', tripId='') }}${id}">
+                            <i class="fa-regular fa-pen-to-square"></i>
+                        </a>
+                        <a class="btn btn-success copyButton ms-1" href="{{ url_for('edit_copy_trip', username=username, edit_copy_type='copy', tripId='') }}${id}">
+                            <i class="fa-solid fa-copy"></i>
+                        </a>
+                        <button class="btn btn-danger deleteButton ms-1" id="${id}">
+                            <i class="fa-regular fa-trash-can"></i>
+                        </button>
+                        {% endif %}
+                    </td>
+                </tr>
+            `;
+        }
+        
+    } ).join('')
+   return data 
+}
+
+function renderType(data, type, row) {
+    if (type === 'display') {
+        let logoType = "{{ url_for('static',filename='images/icons/trip_logos')}}/" + `${data}.png`;
+        return `<span style="display:none;">${data}</span><img data-toggle="tooltip" data-placement="top" class="operatorLogo" src="${logoType}" title="${capitalizeFirstLetter(data)}"></img>`;
+    }
+    return data;
+}
+
+function renderStation(data, type, row) {
+    if (type === 'display') {
+        return getTooltipFromStationNew(data);
+    }
+    return data;
+}
+
+function renderDuration(data, type, row) {
+    if (type === 'display') {
+        return `<div class="duration ${row.trip_duration[0]}">${secondsToDhm(row.trip_duration[1], "{{langId}}")}</div>`;
+    }
+    return data;
+}
+
+function renderLength(data, type, row) {
+    if (type === 'display') {
+        if (data == 0) return "";
+
+        let kmText = `${mToKm(data)}\xa0km`;
+
+        if (row.type === 'air' || row.type === 'helicopter') {
+            if (row.is_geodesic === false) {
+                kmText += ` <span style="font-size: 0.6rem; vertical-align: super; color: #888;" title="Flight path included">•</span>`;
+            }
+        }
+
+        return kmText;
+    }
+    return data;
+}
+
+function renderSpeed(data, type, row) {
+    if (type === 'display') {
+        if(row.trip_length==0) return "";
+        else{
+            let speed = (row.trip_length / row.trip_duration[1]) * 3.6;
+            return `${Math.round(speed)}\xa0km/h`;
+        }
+    }
+    return data;
+}
+
+function renderFlags(data, type, row) {
+    if (type === 'display') {
+        return getFlagEmojiListNew(data);
+    }
+    return data;
+}
+
+/* relocated to static/js/util.js
+function renderOperators(data, type, row) {
+    if (type === 'display') {
+        // If there is a logo URL, display the logo, otherwise, display the operator name
+        if (row.logo_url) {
+            return `<img title="" data-toggle="tooltip" data-placement="top" class="operatorLogo" src="/static/${row.logo_url}" data-bs-original-title="${row.operator}" aria-label="${row.operator}">`
+        } else {
+            return row.operator; // Fallback to operator name if no logo is available
+        }
+    }
+    return data;
+}
+ */
+
+function renderButton(data, type, row){
+  var modalId = `actionModal${data.uid}`;
+  var button = $('<button>').attr('class', "btn btn-link link-dark modalButton")
+    .attr('data-tripId', data.uid)
+    .attr('data-bs-toggle', 'modal')
+    .attr('data-bs-target', '#' + modalId)
+    .append($('<i>').attr('class', 'actionKebab fa-solid fa-ellipsis-vertical fa-lg fa-fw'));
+  
+  $('body').append(`
+        <div class="modal fade" id="${modalId}" tabindex="-1" role="dialog" aria-labelledby="${modalId}Label" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="${modalId}Label">${data.origin_station} - ${data.destination_station}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <a class="btn btn-labeled btn-primary linkButton"
+                           href="{{ url_for('public_trip', tripIds='') }}${data.uid}">
+                            <span class="btn-label"><i class="fa-regular fa-share-from-square"></i></span>{{shareTrip}}
+                        </a>
+                        {% if not isPublic %}
+                        <a class="btn btn-labeled btn-warning editButton"
+                           href="{{ url_for('edit_copy_trip', username=username, edit_copy_type='edit', tripId='') }}${data.uid}">
+                            <span class="btn-label"><i class="fa-regular fa-pen-to-square"></i></span>{{edit}}
+                        </a>
+                        <a class="btn btn-labeled btn-success copyButton"
+                           href="{{ url_for('edit_copy_trip', username=username, edit_copy_type='copy', tripId='') }}${data.uid}">
+                            <span class="btn-label"><i class="fa-solid fa-copy"></i></span>{{copy}}
+                        </a>
+                        <button class="btn btn-labeled btn-danger deleteButton" id="${data.uid}">
+                            <span class="btn-label"><i class="fa-regular fa-trash-can"></i></span>{{delete}}
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `);
+    return button.prop("outerHTML")
+}
+
+function renderPrices(data, type, row) {
+        let formattedTicketInfo = null;
+        let formattedPrice = null;
+
+        if (typeof row.ticket_price_in_user_currency !== 'undefined') {
+            let formattedTicketPrice = row.ticket;
+            if(Math.abs(row.ticket_price_in_user_currency) == 0){
+                formattedTicketPrice += ' - {{free}}'
+            }
+            else{
+                formattedTicketPrice += " - " + formatCurrency("{{langId}}", row.ticket_price_in_user_currency, row.user_currency);
+                if (row.user_currency != row.ticket_currency) {
+                    let originalCurrency = formatCurrency("{{langId}}", row.ticket_price, row.ticket_currency);
+                    formattedTicketPrice += ` (${originalCurrency})`;
+                }
+            }
+            formattedTicketInfo =  $('<span>')
+            .append($('<span>').attr("style", "display:none;").text(row.ticket_price_in_user_currency))
+            .append(`<span data-toggle="tooltip" style="cursor:context-menu;" data-placement="top" title="${formattedTicketPrice}"><i style="color:#228B22;" class="bi bi-ticket-perforated-fill"></i></span>`);
+        }
+        if (row.price) {
+            let formattedPriceText = formatCurrency("{{langId}}", row.price_in_user_currency, row.user_currency);
+            if (row.user_currency != row.currency) {
+                let originalCurrency = formatCurrency("{{langId}}", row.price, row.currency);
+                formattedPriceText += ` (${originalCurrency})`;
+            }
+            formattedPrice = $('<span>')
+            .append($('<span>').attr("style", "display:none;").text(row.price_in_user_currency))
+            .append(`<span data-toggle="tooltip" style="cursor:context-menu;" data-placement="top" title="${formattedPriceText}"><i style="color:#D4AF37;" class="fa-solid fa-coins"></i></span>`);
+
+        }
+        return `${formattedTicketInfo ? formattedTicketInfo.prop('outerHTML') : ''} ${formattedPrice ? formattedPrice.prop('outerHTML') : ''}`;
+    }
+
+function renderMaterialType(data, type, row){
+    return row.model ? `[[${row.material_type}]] ${row.manufacturer} ${row.model}` : row.material_type
+}
+
+
+
+var table = $('#tripRows');
+
+    var scroll = new URLSearchParams(window.location.search).get('scroll') === 'true'
+    var tableObject = $('#dataTable').DataTable({
+        processing: true,
+        serverSide: true,
+        scrollY: scroll == true ? $(window).height() - 300 : null,
+        scroller: scroll,
+        dom: '<"toolbar">lfrtip',
+        ajax: {
+            url: '{{ url_for("get_trips_api" if not isPublic else "get_trips_api_public", username=username, projects=projects) }}',
+            "type": "POST",
+            "data": function(d) {
+                d.filterTypes = $('#filterTypeSwitch').is(':checked') ? 0 : 1;
+            }
+        },
+        columns: [
+            { data: 'type', render: renderType },
+            { data: 'origin_station', render: renderStation },
+            { data: 'destination_station', render: renderStation },
+            { data: 'start_date' },
+            { data: 'start_time' },
+            { data: 'end_time' },
+            { data: 'trip_duration', render: renderDuration },
+            { data: 'trip_length', render: renderLength },
+            {
+                data: null, // Explicitly indicate no specific data field
+                render: renderSpeed,
+                defaultContent: "N/A", // Default content if no data is available
+                orderable: true // Allowing ordering based on computed speed
+            },
+            { data: 'operator', render: renderOperators },
+            { data: 'line_name' },
+            { data: 'countries', render: renderFlags },
+            {% if not isPublic %}
+            {
+                data: null,
+                render: renderPrices,
+                defaultContent: "",
+            },
+            {% endif %}
+            {
+                data: null,
+                render: renderMaterialType,
+                defaultContent: "",
+            },
+            { data: 'reg' },
+            { data: 'seat' },
+            { data: 'notes' },
+            { data: 'tags' },
+            {
+                data: null,
+                render: renderButton
+            },
+        ],
+        rowId: 'id',
+        stateSave: false,
+        language: {
+            info: "{{dtInfo}}",
+            paginate: {
+                next: "{{dtNext}}",
+                previous: "{{dtPrevious}}",
+            },
+            emptyTable: "{{dtEmptyTable}}",
+            select: {
+                rows: {
+                    "_": "{{dtMultipleLineSelected}}",
+                    "0": "",
+                    "1": "{{dtOneLineSelected}}"
+                },
+            },
+            lengthMenu: "{{dtLengthMenu}}",
+            search: "{{dtSearch}}"
+        },
+        createdRow: function(row, data, dataIndex) {
+            $(row).attr('id', data.uid).attr("origDest", `${data.origin_station} - ${data.destination_station}`);
+        },
+        order: [],
+        lengthMenu: [[10, 50, 100, -1], [10, 50, 100, "{{dtAll}}"]],
+        paging: true,
+        select: {
+            style: 'multi+shift',
+            selector: 'td:not(:nth-child(2)):not(:last-child):not(:first-child)'
+        },
+        rowId: function(a) {
+            return a.id;
+        },
+        pagingType: $(window).width() < 768 ? "numbers" : "simple_numbers",
+        responsive: {
+            details: {
+                renderer: function(api, rowIdx, columns) {
+                    var data = processHiddenData(rowIdx, columns);
+                    return data ? $('<table/>').append(data) : false;
+                }
+            }
+        }
+    }).on('responsive-display', function(e, datatable, row, showHide, update) {
+    resetObjects();
+}).on('draw', function() {
+    tableObject.rows().every(function(rowIdx, tableLoop, rowLoop) {
+        var row = this.node();
+        var data = this.data();
+        if (checkedTrips.includes(data.uid)) {
+            tableObject.row(row).select();
+        }
+    });
+    resetObjects();
+    updateSelectionMessage();
+}).on('select', function(e, dt, type, indexes) {
+    var selectedRows = tableObject.rows(indexes).data().toArray();
+    selectedRows.forEach(function(row) {
+        if (!checkedTrips.includes(row.uid)) {
+            checkedTrips.push(row.uid);
+        }
+    });
+    showMultilink();
+    updateSelectionMessage();
+}).on('deselect', function(e, dt, type, indexes) {
+    var deselectedRows = tableObject.rows(indexes).data().toArray();
+    deselectedRows.forEach(function(row) {
+        var index = checkedTrips.indexOf(row.uid);
+        if (index !== -1) {
+            checkedTrips.splice(index, 1);
+        }
+    });
+    if (checkedTrips.length == 0) {
+        hideMultilink();
+    }
+    updateSelectionMessage();
+});
+{% if hasUncommonTrips and not isPublic%}
+ // Add the switch to the custom toolbar
+    $("div.toolbar").html(`
+        <div class="toolbar d-flex justify-content-center justify-content-md-start">
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="filterTypeSwitch" onchange="toggleTypeFilter()">
+                <label class="form-check-label" for="filterTypeSwitch">{{showPlaces}}</label>
+            </div>
+        </div>
+    `);
+{% endif %}
+
+function deselectAll(){
+    tableObject.rows( { selected: true }).deselect();
+    checkedTrips = [];
+    hideMultilink();
+    updateSelectionMessage();
+}
+
+function showMultilink() {
+    $('.multiLink').css('display', 'block');
+
+    // Ensure Merge button only appears if checked trips >= 2
+    if (checkedTrips.length >= 2) {
+        $('.multiLink .multiDropdown + .dropdown-menu .dropdown-item:has(i.fa-code-merge)').show();
+    } else {
+        $('.multiLink .multiDropdown + .dropdown-menu .dropdown-item:has(i.fa-code-merge)').hide();
+    }
+    // Add white space to make sure multilink doesn't hide 
+    if ($('.bottom-space').length === 0) {  
+        $('body').append('<div class="bottom-space"></div>');
+        console.log($('.bottom-space'))
+    }
+}
+
+function hideMultilink() {
+    $('.multiLink').css('display', 'none');
+    $('.bottom-space').remove();
+} 
+
+
+function updateSelectionMessage() {
+    if (new URLSearchParams(window.location.search).get('scroll') != 'true') {
+        var message;
+        if (checkedTrips.length === 0) {
+            message = "";
+        } else if (checkedTrips.length === 1) {
+            message = "{{dtOneLineSelected}}";
+        } else {
+            message = "{{dtMultipleLineSelected}}".replace('%d', checkedTrips.length);
+        }
+
+        var $dataTablesInfo = $('.dataTables_info');
+
+        // Check if .select-info class exists
+        if ($dataTablesInfo.find('.select-info').length === 0) {
+            // If it doesn't exist, create a new span with the class .select-info and append it
+            var $selectInfo = $('<span>', { class: 'select-info' }).html(message);
+            $dataTablesInfo.append($selectInfo);
+        } else {
+            // If it exists, update the message
+            $dataTablesInfo.find('.select-info').html(message);
+        }
+    }
+}
+
+resetObjects();
+
+function resetObjects(){
+    // Reenable tooltips in hidden fields
+    $('[data-toggle="tooltip"]').tooltip()
+    // Reenable buttons in hidden fields
+    if ("{{privateButtons}}" == "True"){
+        $('.nonPublic').show();
+    }
+
+$('.deleteButton').off('click').on('click', function() {
+    deleteTrip($(this).prop('id'));
+});
+
+    tableObject.rows().every( function ( rowIdx, tableLoop, rowLoop ) {
+        if ($(this.node()).hasClass("even") || $(this.node()).hasClass("odd")){
+            var hasHidden = false;
+            var controlElement;
+            $(this.node()).children().each(
+                function(index, element){
+                    if ($(element).hasClass("dtr-control"))  
+                    {
+                      controlElement = $(element)
+                    }
+                    if($(element).is(':hidden')){
+                        if($(element).text() != ""){
+                            hasHidden = true;
+                        }
+                    }
+                    
+                }
+            );
+
+            if(!hasHidden) {
+                controlElement.addClass("noHidden");
+            }
+        }
+    });
+    
+}
+
+function getMultiLink(){
+  location.href = "{{ url_for('public_trip', tripIds='')}}"+checkedTrips;
+}
+
+function processDelete(id){
+    $.post({
+            url:'{{url_for("deleteTrip", username=username)}}',
+            data:{
+                tripId : JSON.stringify(id)
+            },
+            success:function(res){
+                location.reload();
+            },
+            fail:function() {
+                alert( "error" );
+            }
+        });
+}
+
+function deleteTrip(tripId){
+    
+    confirmText = '{{confirmDelete}} \n\n';
+    confirmText += $(`#${tripId}`).attr("origDest")
+    if (confirm(confirmText)) {
+        processDelete(tripId);
+    }   
+}
+
+function multiDelete(){
+    var tripNumber = checkedTrips.length;
+    var confirmText = `{{confirmMultiDelete}}`;
+    var confirmConfirm = `{{confirmConfirm}}`;
+    if (confirm(confirmText)) {
+        if (confirm(confirmConfirm)){
+                processDelete(checkedTrips);
+        }
+        
+        
+    }    
+}
+function exportSelected(){
+    url=`{{ url_for('export', username=username, trips="")}}${checkedTrips}`;
+    window.open(url);
+}
+
+function mergeTrips(){
+    url=`{{ url_for('mergeTrips', username=username, tripIds="")}}${checkedTrips}`;
+    window.open(url);
+}
+
+function exportGeojson(){
+    url=`{{ url_for('download_geojson', trip_ids="")}}${checkedTrips}`;
+    window.open(url);
+}
+function exportGpx(){
+    url=`{{ url_for('download_gpx', trip_ids="")}}${checkedTrips}`;
+    window.open(url);
+}
+
+function attachSelectedTrips(ticket_id){
+    url=`{{ url_for('attachSelected', username=username)}}`;
+
+    const urlParams = new URLSearchParams();
+    urlParams.append('trips', checkedTrips);
+    urlParams.append('ticket_id', ticket_id);
+
+    window.open(`${url}?${urlParams.toString()}`);
+}
+
+var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-toggle="tooltip"]'))
+var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+  return new bootstrap.Tooltip(tooltipTriggerEl)
+})
+
+if ("{{privateButtons}}" == "True"){
+    $('.nonPublic').show();
+}
+
+
+
+const ticketSearchModal = document.getElementById('ticketSearchModal');
+ticketSearchModal.addEventListener('show.bs.modal', fetchTickets('{{ url_for("get_all_tickets", username=username) }}', "{{none_t}}"));
+
+let tags = [];
+// Fetch all tags once when the page loads
+fetch(`{{ url_for("get_all_tags", username=username) }}`)
+    .then(response => response.json())
+    .then(data => {
+        tags = data.tags;
+        if(tags.length > 0){
+            $(".tagSearchLink").show();
+        }
+    })
+    .catch(error => console.error('Failed to fetch tags:', error));
+
+function setupAutocomplete(tags) {
+    $("#tagSearchInput").autocomplete({
+        source: function(request, response) {
+            const results = $.ui.autocomplete.filter(tags.map(tag => tag.name).filter(tagName => !isTagAlreadyAttached(tagName)), request.term);
+            response(results);
+        },
+        select: function(event, ui) {
+            const selectedTag = tags.find(tag => tag.name === ui.item.value);
+            if (selectedTag) {
+                selectTag(selectedTag);
+            }
+            return false; // Prevent the widget from updating the input with the selected value
+        }
+    });
+}
+
+function isTagAlreadyAttached(tagName) {
+    return tags.some(tag => {
+        const tagTripIds = tag.trip_ids ? tag.trip_ids.split(',') : [];
+        return tag.name === tagName && tagTripIds.some(tripId => checkedTrips.includes(tripId));
+    });
+}
+
+function selectTag(tag) {
+    $('#tagSearchInput').val(''); // Clear input after selection
+    attachTag(tag.uid); // Attach the tag to all checked trips
+}
+
+function attachTag(tagId) {
+    $.ajax({
+        url: `{{url_for("attach_tag", username=username)}}`,
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            tag_id: tagId,
+            trip_ids: checkedTrips
+        }),
+        success: function() {
+            updateTagList();
+        },
+        error: function(xhr, status, error) {
+            console.error('Failed to attach tag:', error);
+        }
+    });
+}
+
+function detachTag(tagId) {
+    $.ajax({
+        url: `{{url_for("detach_tag", username=username)}}`,
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            tag_id: tagId,
+            trip_ids: checkedTrips
+        }),
+        success: function() {
+            updateTagList();
+        },
+        error: function(xhr, status, error) {
+            console.error('Failed to detach tag:', error);
+        }
+    });
+}
+
+function updateTagList() {
+    fetch(`{{ url_for("get_all_tags", username=username) }}`)
+        .then(response => response.json())
+        .then(data => {
+            tags = data.tags;
+            displayAssociatedTags(tags);
+        })
+        .catch(error => console.error('Failed to update tags:', error));
+}
+
+// Reinitialize autocomplete and display associated tags each time the modal is shown
+$('#tagSearchModal').on('shown.bs.modal', function () {
+    setupAutocomplete(tags);
+    displayAssociatedTags(tags);
+});
+
+function displayAssociatedTags(tags) {
+    $('#tagList').empty(); // Clear the tag list
+    const associatedTags = tags.filter(tag => {
+        const tagTripIds = tag.trip_ids ? tag.trip_ids.split(',').map(id => parseInt(id)) : [];
+        return tagTripIds.some(tripId => checkedTrips.includes(parseInt(tripId)));
+    });
+
+    associatedTags.forEach(tag => {
+        const tagTripIds = tag.trip_ids ? tag.trip_ids.split(',') : [];
+        const allTripsHaveTag = checkedTrips.every(tripId => tagTripIds.includes(String(tripId)));
+        const icon = allTripsHaveTag ? '<i class="fas fa-check-circle"></i>' : '<i class="fas fa-circle-minus"></i>';
+
+        const span = $('<span>')
+            .addClass('tag-blob')
+            .css('background-color', tag.colour)
+            .css('color', getTextColor(tag.colour))
+            .html(tag.name + icon) // Use .html to add the icon
+            .on('click', function() {
+                if (allTripsHaveTag) {
+                    detachTag(tag.uid);
+                } else {
+                    attachTag(tag.uid);
+                }
+            });
+        $('#tagList').append(span);
+    });
+}
+
+$('#submitBtn').on('click', function() {
+        location.reload();
+    });
+
+    // Set a cookie
+    function setCookie(name, value, days) {
+        const date = new Date();
+        date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+        const expires = "expires=" + date.toUTCString();
+        document.cookie = name + "=" + value + ";" + expires + ";path=/";
+    }
+
+    // Get a cookie
+    function getCookie(name) {
+        const nameEQ = name + "=";
+        const decodedCookie = decodeURIComponent(document.cookie);
+        const cookieArray = decodedCookie.split(';');
+        for (let i = 0; i < cookieArray.length; i++) {
+            let cookie = cookieArray[i].trim();
+            if (cookie.indexOf(nameEQ) === 0) {
+                return cookie.substring(nameEQ.length, cookie.length);
+            }
+        }
+        return null;
+    }
+
+    // Initialize the switch based on the cookie state
+    $(document).ready(function () {
+        const savedState = getCookie('filterTypeSwitch') === 'true';
+        document.getElementById('filterTypeSwitch').checked = savedState;
+        toggleTypeFilter();
+    });
+
+</script>
+
+{% endblock %}

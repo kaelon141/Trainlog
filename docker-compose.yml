@@ -1,0 +1,29 @@
+services:
+  trainlog:
+    build: .
+    container_name: trainlog
+    depends_on:
+      - trainlog_db
+    restart: unless-stopped
+    ports:
+      - 5000:5000
+    volumes:
+      - .:/code
+    command: [ "--reload", "--workers=1" ]
+    env_file:
+      - .env
+
+  trainlog_db:
+    image: postgres:17
+    container_name: trainlog_db
+    restart: unless-stopped
+    volumes:
+      - db:/var/lib/postgresql/data
+      - ./.psqlrc:/root/.psqlrc
+    ports:
+      - 5432:5432
+    env_file:
+      - .env
+
+volumes:
+  db:

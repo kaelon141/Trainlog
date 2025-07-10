@@ -1,0 +1,208 @@
+{% extends "bootstrap/layout.html" %}
+{% block content %}
+<style>
+    .action-button {
+        font-size: 0.8rem; /* Smaller font size for buttons */
+    }
+    .friend-name {
+        font-size: 1.2rem; /* Larger font size for names */
+        margin-left: 0.5rem; /* Space between icon and name */
+    }
+    .friendIcon {
+        font-size: 1.5rem; /* Larger size for icons */
+    }
+    .friend-action-group {
+        display: flex;
+        gap: 0.25rem; /* Small gap between buttons */
+    }
+</style>
+{% include nav %}
+
+<!-- Unfriend Confirmation Modal -->
+<div class="modal" id="confirmationModal" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalLabel"></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{cancel}}</button>
+        <button type="button" class="btn btn-primary" onclick="confirmUnfriend()">{{yes}}</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container mt-5">
+    <h2>{{ searchForFriends }}</h2>
+    <div class="input-group mb-3">
+        <input type="text" class="form-control" placeholder="{{ searchForFriends }}..." id="friendSearchInput">
+    </div>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert alert-{{category}}" role="alert">
+                    <p>{{ message }}</p>
+                </div>
+                {% endfor %}            
+        {% endif %}
+    {% endwith %}
+    <br><br>
+    <div class="container mt-5">
+        <!-- Determine the number of friend information types present -->
+        {% set num_sections = 0 %}
+        {% if current_friends %}
+            {% set num_sections = num_sections + 1 %}
+        {% endif %}
+        {% if incoming_requests %}
+            {% set num_sections = num_sections + 1 %}
+        {% endif %}
+        {% if outgoing_requests %}
+            {% set num_sections = num_sections + 1 %}
+        {% endif %}
+        {% if num_sections == 0 %}
+            {% set col_class = "col-md-12" %} {# Default to full width if no sections are present #}
+        {% else %}
+            {% set col_class = "col-md-" ~ (12 // num_sections) %}
+        {% endif %}
+        <div class="row">
+            {% if current_friends %}
+                <!-- Adjusted columns for each type of friend information -->
+                <div class="{{col_class}}">
+                    <!-- Current Friends -->
+                    <h3>{{ friendsList }}</h3>
+                    <div class="friend-table">
+                        {% for current_friend_id, current_friend_username in current_friends %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div class="d-flex align-items-center">
+                                <i class="friendIcon bi bi-person-fill"></i>
+                                <span class="friend-name"><a class="leaderboardLink link-dark" href="{{url_for('public', username=current_friend_username)}}">{{ current_friend_username }}</a></span>
+                            </div>
+                            <div class="friend-action-group">
+                                <button class="btn btn-labeled btn-friend btn-primary btn-danger action-button" onclick="unfriend('{{current_friend_id}}', '{{current_friend_username}}', 'unfriend')"><span class="btn-label "><i class="bi bi-trash3-fill"></i></span>{{remove}}</button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                {% if incoming_requests %}
+                <div class="{{col_class}}">
+                    <!-- Incoming Requests -->
+                    <h3>{{ incomingRequests }}</h3>
+                    <div class="friend-table">
+                        {% for request_userId, request_username in incoming_requests %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div class="d-flex align-items-center">
+                                <i class="friendIcon bi bi-person-fill-down"></i>
+                                <span class="friend-name">{{ request_username }}</span>
+                            </div>
+                            <div class="friend-action-group">
+                                <!-- Accept Button -->
+                                <button onclick="acceptFriend('{{request_userId}}', '{{request_username}}')" class="btn btn-labeled btn-friend btn-success action-button">
+                                    <span class="btn-label"><i class="bi bi-check-lg"></i></span><span class="btn-text">{{ accept }}</span>
+                                </button>
+
+                                <!-- Refuse Button -->
+                                <button onclick="unfriend('{{request_userId}}', '{{request_username}}', 'rejectRequest')" class="btn btn-labeled btn-friend btn-danger action-button">
+                                    <span class="btn-label"><i class="bi bi-x-lg"></i></span><span class="btn-text">{{ refuse }}</span>
+                                </button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                {% if outgoing_requests %}
+                <div class="{{col_class}}">
+                    <!-- Outgoing Requests -->
+                    <h3>{{ outgoingRequests }}</h3>
+                    <div class="friend-table">
+                        {% for request_userId, request_username in outgoing_requests %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div class="d-flex align-items-center">
+                                <i class="friendIcon bi bi-person-fill-up"></i>
+                                <span class="friend-name">{{ request_username }}</span>
+                            </div>
+                            <div class="friend-action-group">
+                                <button class="btn btn-labeled btn-friend btn-primary btn-warning action-button" onclick="unfriend('{{request_userId}}', '{{request_username}}', 'unrequest')">
+                                    <span class="btn-label"><i class="bi bi-arrow-counterclockwise"></i></span><span class="btn-text">{{cancel}}</span>
+                                </button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+        </div>
+    </div>
+
+<script>
+// JavaScript for handling unfriend action
+function unfriend(friendId, friendName, type) {
+    if(type == "unfriend"){
+        $('#modalLabel').text("{{unfriend|safe}}".replace("{friend_name}", friendName));
+    }
+    else if (type == "unrequest"){
+        $('#modalLabel').text("{{unrequest|safe}}".replace("{friend_name}", friendName));
+    }
+    else {
+        $('#modalLabel').text("{{rejectRequest|safe}}".replace("{friend_name}", friendName));
+    }
+    // Set the friend's name in the modal
+    $('#friendToUnfriend').text(friendName);
+    // Save friendId in a hidden input or in data attribute to use in confirmUnfriend
+    $('#confirmationModal').data('friendId', friendId);
+    // Show the modal
+    $('#confirmationModal').modal('show');
+}
+
+function confirmUnfriend() {
+    var friendId = $('#confirmationModal').data('friendId');
+    location.href = `/${encodeURIComponent("{{username}}")}/cancelFriendship/${encodeURIComponent(friendId)}`;
+
+    // Close the modal after the action
+    $('#confirmationModal').modal('hide');
+}
+
+function acceptFriend(friendId){
+    location.href = `/${encodeURIComponent("{{username}}")}/acceptFriendship/${encodeURIComponent(friendId)}`;
+}
+
+function sendFriendRequest(username, friendId) {
+    location.href = `/${encodeURIComponent(username)}/requestFriend/${encodeURIComponent(friendId)}`;
+}
+
+
+$(document).ready(function() {
+    var availableUsers = {{ available_users | tojson | safe }};
+    
+    // Assuming availableUsers is an array of [uid, username] tuples
+    // Convert each tuple into an object { label: username, value: uid }
+    var usersForAutocomplete = availableUsers.map(function(user) {
+        return { label: user[1], value: user[0] };
+    });
+
+    $('#friendSearchInput').autocomplete({
+        source: usersForAutocomplete,
+        focus: function(event, ui) {
+            // Prevent the value (uid) from being inserted into the input on focus
+            return false;
+        },
+        select: function(event, ui) {
+            sendFriendRequest("{{username}}", ui.item.value)
+            // Clear the search input
+            $('#friendSearchInput').val('');
+            return false; // Prevent the value from being inserted into the input
+        }
+    }).autocomplete("instance")._renderItem = function(ul, item) {
+        // Customize the rendering of each item to include an icon next to the username
+        return $("<li>")
+            .append('<div><i class="bi bi-person-fill-add"></i> ' + item.label + "</div>")
+            .appendTo(ul);
+    };    
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,773 @@
+{% extends "layout.html" %}
+{% block content %}
+
+
+<style>
+  #progress-bar {
+    height: 20px;
+  }
+  #progress-label {
+    font-size: 14px;
+    font-weight: bold;
+  }
+</style>
+
+<div id="progress-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 9999; justify-content: center; align-items: center;">
+  <div id="progress-container" style="width: 100%; max-width: 400px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);">
+    <div id="progress-bar"></div>
+    <div id="progress-label" style="text-align: center; margin-top: 5px;">0/n trips complete</div>
+  </div>
+</div>
+
+
+
+<div class="spinner-container"><div class="lds-spinner"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div></div>
+
+<div id="sidebar">
+  <div id="sidebar-content">
+    <div class="itineraryWrapper">
+      <ul class="events" id="itinerary">
+        <div id="tripDetails">
+        {%if tag_description != None%}
+        <div class="itinerary_tag_description">
+
+        {% if collection_voyage == 'collection' %}
+            <span class="text-nowrap"><i class="fas fa-list"></i> {{tag_description}}</span>
+        {% elif collection_voyage == 'voyage' %}
+            <span class="text-nowrap"><i class="fas fa-route"></i> {{tag_description}}</span>
+        {% endif %}
+
+        </div>
+        
+        {%endif%}
+            <div class="modeProportionContainer">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="modeProportionIcon km"><!--! Font Awesome Free 6.4.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2023 Fonticons, Inc. --><path d="M177.9 494.1c-18.7 18.7-49.1 18.7-67.9 0L17.9 401.9c-18.7-18.7-18.7-49.1 0-67.9l50.7-50.7 48 48c6.2 6.2 16.4 6.2 22.6 0s6.2-16.4 0-22.6l-48-48 41.4-41.4 48 48c6.2 6.2 16.4 6.2 22.6 0s6.2-16.4 0-22.6l-48-48 41.4-41.4 48 48c6.2 6.2 16.4 6.2 22.6 0s6.2-16.4 0-22.6l-48-48 41.4-41.4 48 48c6.2 6.2 16.4 6.2 22.6 0s6.2-16.4 0-22.6l-48-48 50.7-50.7c18.7-18.7 49.1-18.7 67.9 0l92.1 92.1c18.7 18.7 18.7 49.1 0 67.9L177.9 494.1z"/></svg>
+              <div class="modeProportion kmModeProportion"></div>
+            </div>
+            <div class="modeProportionContainer">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="modeProportionIcon time"><!--! Font Awesome Free 6.4.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2023 Fonticons, Inc. --><path d="M256 0a256 256 0 1 1 0 512A256 256 0 1 1 256 0zM232 120V256c0 8 4 15.5 10.7 20l96 64c11 7.4 25.9 4.4 33.3-6.7s4.4-25.9-6.7-33.3L280 243.2V120c0-13.3-10.7-24-24-24s-24 10.7-24 24z"/></svg>
+              <div class="modeProportion timeModeProportion"></div>
+            </div>  
+            <div class="modeProportionContainer currencyContainer">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="modeProportionIcon currencyIcon"><!--!Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2024 Fonticons, Inc.--><path d="M512 80c0 18-14.3 34.6-38.4 48c-29.1 16.1-72.5 27.5-122.3 30.9c-3.7-1.8-7.4-3.5-11.3-5C300.6 137.4 248.2 128 192 128c-8.3 0-16.4 .2-24.5 .6l-1.1-.6C142.3 114.6 128 98 128 80c0-44.2 86-80 192-80S512 35.8 512 80zM160.7 161.1c10.2-.7 20.7-1.1 31.3-1.1c62.2 0 117.4 12.3 152.5 31.4C369.3 204.9 384 221.7 384 240c0 4-.7 7.9-2.1 11.7c-4.6 13.2-17 25.3-35 35.5c0 0 0 0 0 0c-.1 .1-.3 .1-.4 .2l0 0 0 0c-.3 .2-.6 .3-.9 .5c-35 19.4-90.8 32-153.6 32c-59.6 0-112.9-11.3-148.2-29.1c-1.9-.9-3.7-1.9-5.5-2.9C14.3 274.6 0 258 0 240c0-34.8 53.4-64.5 128-75.4c10.5-1.5 21.4-2.7 32.7-3.5zM416 240c0-21.9-10.6-39.9-24.1-53.4c28.3-4.4 54.2-11.4 76.2-20.5c16.3-6.8 31.5-15.2 43.9-25.5V176c0 19.3-16.5 37.1-43.8 50.9c-14.6 7.4-32.4 13.7-52.4 18.5c.1-1.8 .2-3.5 .2-5.3zm-32 96c0 18-14.3 34.6-38.4 48c-1.8 1-3.6 1.9-5.5 2.9C304.9 404.7 251.6 416 192 416c-62.8 0-118.6-12.6-153.6-32C14.3 370.6 0 354 0 336V300.6c12.5 10.3 27.6 18.7 43.9 25.5C83.4 342.6 135.8 352 192 352s108.6-9.4 148.1-25.9c7.8-3.2 15.3-6.9 22.4-10.9c6.1-3.4 11.8-7.2 17.2-11.2c1.5-1.1 2.9-2.3 4.3-3.4V304v5.7V336zm32 0V304 278.1c19-4.2 36.5-9.5 52.1-16c16.3-6.8 31.5-15.2 43.9-25.5V272c0 10.5-5 21-14.9 30.9c-16.3 16.3-45 29.7-81.3 38.4c.1-1.7 .2-3.5 .2-5.3zM192 448c56.2 0 108.6-9.4 148.1-25.9c16.3-6.8 31.5-15.2 43.9-25.5V432c0 44.2-86 80-192 80S0 476.2 0 432V396.6c12.5 10.3 27.6 18.7 43.9 25.5C83.4 438.6 135.8 448 192 448z"/></svg>
+              <div class="currency"></div>
+            </div>
+          <br>
+          <div id="tripDate"></div>              
+        </div>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div id="map" class="mapIndiv">
+</div>
+<div id="snackbar">{{copyLink}}</div>
+<script>
+
+var calcIcon = new L.Icon({
+  iconUrl: "{{ url_for('static',filename='images/icons/calc.png') }}",
+  shadowUrl: "{{ url_for('static',filename='images/icons/marker-shadow.png') }}",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+
+const dateOptions = { timeZone: 'UTC', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+const dateOptionsShort = { month: 'short', day: 'numeric' };
+
+var greenIcon = new L.Icon({
+  iconUrl: "{{ url_for('static',filename='images/icons/marker-icon-2x-green.png') }}",
+  shadowUrl: "{{ url_for('static',filename='images/icons/marker-shadow.png') }}",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+
+var redIcon = new L.Icon({
+  iconUrl: "{{ url_for('static',filename='images/icons/marker-icon-2x-red.png') }}",
+  shadowUrl: "{{ url_for('static',filename='images/icons/marker-shadow.png') }}",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+var redGreenIcon = new L.Icon({
+  iconUrl: "{{ url_for('static',filename='images/icons/marker-icon-2x-redGreen.png') }}",
+  shadowUrl: "{{ url_for('static',filename='images/icons/marker-shadow.png') }}",
+  iconSize: [46, 41],
+  iconAnchor: [23, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+
+function buildItinerary(trips, prices){
+  var total_length_per_type = {};
+  var total_duration_per_type = {};
+  var total_length = 0;
+  var total_duration = 0;
+
+  var total_string = []
+
+  var text = {
+    "air" : "{{air}}",
+    "train" : "{{train}}",
+    "bus" : "{{bus}}",
+    "ferry" : "{{ferry}}",
+    "car" : "{{car}}",
+    "cycle" : "{{cycle}}",
+    "walk" : "{{walk}}",
+    "aerialway": '{{aerialway}}',
+  }
+
+{% if 'price' in request.args %}              
+  if (prices.total_price != 0){
+
+    $(".currencyContainer").show();
+    $(".currency").text(formatCurrency("{{langId}}",prices.total_price, prices.user_currency));
+
+  }
+{% endif %}
+
+
+  if(trips.length>1){
+    trips.forEach(function(trip, index){
+    if (!["accommodation", "restaurant", "poi"].includes(trip.trip.type)){
+      var tripType = trip.trip.type;
+
+      if (tripType === "helicopter") {
+            tripType = "air";
+      }
+      total_length += trip.trip.trip_length;
+      total_duration += trip.trip.trip_duration[1];
+
+      if(tripType in total_length_per_type){
+        total_length_per_type[tripType] = total_length_per_type[tripType] + trip.trip.trip_length;
+        total_duration_per_type[tripType] = total_duration_per_type[tripType] + trip.trip.trip_duration[1];
+      }
+      else{
+        total_length_per_type[tripType] = trip.trip.trip_length;
+        total_duration_per_type[tripType] = trip.trip.trip_duration[1];
+      }
+    }    
+   });
+
+    sortArray = [];
+    for(let  i in total_duration_per_type){
+      sortArray.push({key : i, value:total_duration_per_type[i]});
+    }
+    sortArray.sort(function(a,b){return a.value - b.value;}).reverse();  
+  
+    var kmLeft = timeLeft = 0;
+    for(let i in sortArray){ 
+      var km = mToKm(total_length_per_type[sortArray[i].key])
+      var time = secondsToDhm(sortArray[i].value, "{{langId}}")
+      var type = text[sortArray[i].key];
+
+      var km_percent = (total_length_per_type[sortArray[i].key]/total_length)*100
+      var time_percent = (total_duration_per_type[sortArray[i].key]/total_duration)*100
+      $('.kmModeProportion').append(
+        $("<div>").attr("title", `${type}: ${km} km`).addClass("percent_bar").addClass(sortArray[i].key).css("width", km_percent + "%").css("left", kmLeft+"%")
+      )
+      kmLeft += km_percent;
+
+      $('.timeModeProportion').append(
+        $("<div>").attr("title", `${type}: ${time}`).addClass("percent_bar").addClass(sortArray[i].key).css("width", time_percent + "%").css("left", timeLeft+"%")
+      )
+      timeLeft += time_percent;
+    }
+    $(".percent_bar").tooltip();
+
+    $(".modeProportionIcon.km").attr("title", `{{totalLength}} : ${mToKm(total_length)} km`);
+    $(".modeProportionIcon.time").attr("title", `{{totalDuration}} : ${secondsToDhm(total_duration, "{{langId}}")}`);
+    $(".modeProportionIcon").tooltip();
+  }
+  else{
+    $('.modeProportionContainer').hide();
+  }
+
+ 
+
+  trips.forEach(function(trip, index){
+    var dayChangeTrip = false;
+    var dayChangeIntertrip = false;
+    if(trip != trips[trips.length -1]){
+      changeTime = timeDifference(
+        trip.trip.utc_filtered_end_datetime,
+        trips[index + 1].trip.utc_filtered_start_datetime
+      );
+      var previousDay = new Date(trip.trip.end_datetime).toISOString().slice(0, 10)
+      var currentDay = new Date(trip.trip.start_datetime).toISOString().slice(0, 10)
+      if (currentDay != previousDay)
+      {
+        dayChangeTrip = true;
+      }
+      }
+    else{changetime = 0}
+    if(index>0){
+      precedingChangeTime = timeDifference(
+        trips[index - 1].trip.utc_filtered_end_datetime,
+        trip.trip.utc_filtered_start_datetime
+        
+      );
+
+      var previousDay = new Date(trips[index-1].trip.end_datetime).toISOString().slice(0, 10)
+      var currentDay = new Date(trip.trip.start_datetime).toISOString().slice(0, 10)
+      if (currentDay != previousDay && precedingChangeTime <= 43200)
+      {
+        dayChangeIntertrip = true;
+      }
+    }
+
+
+    
+    if (index == 0){
+      if(trip.trip.start_date.length > 2){
+        $('#tripDate').text(capitalizeFirstLetter(new Date(trip.trip.start_date + "T12:00:00Z").toLocaleDateString('{{langId}}', dateOptions))); // "T12:00:00Z" top offset the TZ of ToLocaleDateString
+      }
+      else{
+        console.log(trip.trip);
+        if (trip.trip.start_datetime == -1){
+          $('#tripDate').text("{{past}}");
+        }
+        else {
+          $('#tripDate').text("{{project}}");
+        }
+      }
+      $('#tripTotals').html(total_string.join("<br>"));
+      
+    }
+
+let operatorContents = [];
+if (trip.trip.multi_operators) {
+  console.log(trip.trip.multi_operators);
+  trip.trip.multi_operators.forEach(multiOperator => {
+      console.log(multiOperator);
+      let imgElement = $("<img>")
+        .attr("src", "/static/"+multiOperator.logo_url)
+        .attr("class", "itineraryOperatorLogo");
+
+      let divElement = $('<div>')
+        .attr("class", "popupInfo operator_popupInfo")
+        .attr("popupInfo_content", multiOperator.operator_name)
+        .append(imgElement);
+        
+      operatorContents.push(divElement);
+  });
+}
+else if (trip.trip.logo_url) {
+    let imgElement = $("<img>")
+        .attr("src", "/static/"+trip.trip.logo_url)
+        .attr("class", "itineraryOperatorLogo");
+
+    let divElement = $('<div>')
+        .attr("class", "popupInfo operator_popupInfo")
+        .attr("popupInfo_content", trip.trip.operator)
+        .append(imgElement);
+        
+    operatorContents.push(divElement);
+} else {
+    operatorContents.push(trip.trip.operator);
+}
+
+
+// Join the contents together (either as a single div for images, or as a comma-separated string for operator names)
+let operatorLogoOrText;
+if (operatorContents.length) {
+    if (typeof operatorContents[0] === 'string') {
+        // If the content is a string, join with commas
+        operatorLogoOrText = operatorContents.join(', ');
+    } else {
+        // If the content is a div element (for images), create a new div to wrap them
+        operatorLogoOrText = $('<div>').append(operatorContents);
+    }
+}
+
+    
+      lineOrNot = trip.trip.line_name != "" ? (typeof operatorLogoOrText === 'object' ? operatorLogoOrText.append(" - " + trip.trip.line_name) : operatorLogoOrText + " - " + trip.trip.line_name) : operatorLogoOrText
+    operatorDisplay = $("<div>").append( trip.trip.operator != "" ?  lineOrNot : null);
+      
+      if(dayChangeTrip){
+        endTimeDisplay = $("<div>").append($('<div>').addClass('arrow_box').append($('<div>').addClass("dayChange").append((capitalizeFirstLetter(new Date(trip.trip.end_datetime).toLocaleDateString('{{langId}}', dateOptionsShort)))))).append(trip.trip.end_time.replace("(+1)", "").padStart(10, '\xa0'));
+      }
+      else{
+        endTimeDisplay = trip.trip.end_time.padStart(10, '\xa0');
+      } 
+      
+      if(dayChangeIntertrip){
+        startTimeDisplay = capitalizeFirstLetter(new Date(trip.trip.start_datetime).toLocaleDateString('{{langId}}', dateOptionsShort)).padStart(10, '\xa0') + "<br>" + trip.trip.start_time.padStart(10, '\xa0');
+      }
+      else{
+        startTimeDisplay = trip.trip.start_time.padStart(10, '\xa0');
+      }
+
+      
+{% if 'price' in request.args %}              
+    var formattedTripPrice = null;
+    var formattedTicketPrice = null;
+    var formattedTicketInfo = null;
+    var formattedPrice = null;
+
+    if (trip.trip.ticket_price_in_user_currency){
+      formattedTicketPrice = trip.trip.ticket + " - " + formatCurrency("{{langId}}",trip.trip.ticket_price_in_user_currency, trip.trip.user_currency);
+      if (trip.trip.user_currency != trip.trip.ticket_currency){
+        originalCurrency = formatCurrency("{{langId}}",trip.trip.ticket_price, trip.trip.ticket_currency);
+        formattedTicketPrice += ` (${originalCurrency})`;
+      }
+      formattedTicketInfo = `<div class="popupInfo ticket_popupInfo" popupinfo_content="${formattedTicketPrice}"><i class="bi bi-ticket-perforated-fill ticket-icon"></i></div>`;
+      
+    }
+
+    if(trip.trip.price_in_user_currency)
+    {
+      formattedTripPrice = formatCurrency("{{langId}}",trip.trip.price_in_user_currency, trip.trip.user_currency);
+      if (trip.trip.user_currency != trip.trip.currency){
+        originalCurrency = formatCurrency("{{langId}}",trip.trip.price, trip.trip.currency);
+        formattedTripPrice += ` (${originalCurrency})`;
+      }
+    }
+    if (formattedTripPrice || formattedTicketPrice){
+      formattedPrice = (formattedTicketInfo || '') + (formattedTicketInfo && formattedTripPrice ? ' - ' : '') + (formattedTripPrice || '');
+    }
+{% endif %}
+  
+    $('#itinerary').append(
+    // First LI (departure info)
+    $('<li>').append(
+      // <time> element
+      $('<time>')
+        .addClass(trip.trip.type)
+        .attr("datetime", trip.trip.start_time)
+        .html(startTimeDisplay)
+    ).append(
+      // <span> containing station info, operator, duration, price if any
+      $('<span>')
+        .attr("class", trip.trip.type)
+        .append(
+          $('<strong>').text(trip.trip.origin_station)
+        )
+        .append('<br>')
+        .append(operatorDisplay)
+        .append(
+          $("<div>")
+            .attr("class", "duration " + trip.trip.trip_duration[0])
+            .append(
+              $('<div>').text(
+                secondsToDhm(trip.trip.trip_duration[1], "{{langId}}") + 
+                (trip.trip.trip_length > 0 ? " - " + mToKm(trip.trip.trip_length) + "km" : "")
+              )
+            )
+        )
+        .append('<br>')
+        // Price (only if 'price' in request.args)
+        .append(function() {
+          {% if 'price' in request.args %}
+            return $("<div>").append($('<div>').html(formattedPrice));
+          {% else %}
+            return ""; // No price
+          {% endif %}
+        })
+        // BOOTSTRAP CHECKBOX BUTTON HERE
+        .append(
+          $('<div>')
+            .addClass('btn-group mt-2')     // mt-2 for small top margin
+            .attr('role', 'group')
+            .attr('aria-label', 'Trip selection toggle')
+            .append(
+              // The actual checkbox
+              $('<input>')
+                .attr('type', 'checkbox')
+                .addClass('btn-check')
+                .attr('id', 'tripSelect_' + index)
+                .attr('autocomplete', 'off')
+            )
+            .append(
+              // Label that looks like a button
+              $('<label>')
+                .addClass('btn btn-outline-primary')
+                .attr('for', 'tripSelect_' + index)
+                .text('Select Trip')
+            )
+        )
+    )
+  ).append(
+    // Second LI (arrival/change info)
+    $('<li>').append(
+      $('<time>')
+        .addClass(trip.trip.type)
+        .addClass("arrival")
+        .attr("datetime", trip.trip.end_time)
+        .html(endTimeDisplay)
+    ).append(
+      $('<span>')
+        .attr("class", function() {
+          if (trips.length > 1 && changeTime <= 43200) {
+            return "trainChange";
+          } else {
+            return "tripChange";
+          }
+        })
+        .append(
+          $('<strong>').text(trip.trip.destination_station)
+        )
+        .append('<br>')
+        .append(function() {
+          if (trip != trips[trips.length -1]) {
+            if (changeTime <= 43200) {
+              let changeTimeText = "";
+              if (changeTime !== 0) {
+                changeTimeText = '<br>' + secondsToDhm(changeTime, "{{langId}}");
+              }
+              if (trip.trip.destination_station === trips[index + 1].trip.origin_station) {
+                return "{{trainChange}}" + changeTimeText;
+              } else {
+                return "{{stationChange}}" + changeTimeText;
+              }
+            }
+          }
+        })
+    )
+  );
+
+  // If multi-day change
+  if (trips.length > 1 && changeTime > 43200 && trip != trips[trips.length -1]) {
+    $('#itinerary').append(
+      '<div id="tripDetails">' + 
+        capitalizeFirstLetter(
+          new Date(trips[index + 1].trip.start_date + "T12:00:00Z")
+            .toLocaleDateString('{{langId}}', dateOptions)
+        ) +
+      '</div><br>'
+    );
+  }
+});
+$('.itineraryWrapper').append('<button id="saveButton" style="margin-left:100px" disabled>Save</button>');
+}
+
+function getPopupContent(uid, origin_station, destination_station, start_date, start_time, end_time){
+  var popupContent = "<p>" + origin_station + " - " + destination_station + "<br>";
+  popupContent += start_date + " : " + start_time + " - " + end_time + "</p>";
+  return popupContent
+}
+
+function calculatePosition(trip) {
+    const currentTime = new Date().getTime(); // Get current time in ms
+    const tripStartTime = new Date(trip.trip.start_datetime).getTime(); // Trip start time in ms
+    const tripEndTime = new Date(trip.trip.end_datetime).getTime(); // Trip end time in ms
+    const totalTripDuration = tripEndTime - tripStartTime;
+    const elapsedTime = currentTime - tripStartTime;
+
+    // Calculate progress as a percentage
+    const progress = elapsedTime / totalTripDuration;
+
+    // Ensure progress is between 0 and 1
+    return Math.min(Math.max(progress, 0), 1);
+}
+
+function splitPolyline(path, progress) {
+    if (path.length === 2) {
+      const geodesic = new L.Geodesic([path], { steps: 8 });
+      path = geodesic.getLatLngs()[0].map(latlng => [latlng.lat, latlng.lng]);
+    }
+    const totalPoints = path.length;
+    const splitIndex = Math.floor(progress * totalPoints); // Index of the split point
+
+    // Split path into past and future sections
+    const pastPath = path.slice(0, splitIndex + 1); // Past section
+    const futurePath = path.slice(splitIndex); // Future section
+    console.log(pastPath, futurePath);
+
+    return { pastPath, futurePath };
+}
+
+function placeCurrentMarker(pastPath, futurePath) {
+    const pegPosition = pastPath[pastPath.length - 1]; // The last point in the past path is the current position
+    const pegMarker = L.marker(pegPosition, {icon: calcIcon}).addTo(map)
+}
+
+
+
+function placePolylines(trips) {
+  var group = new L.featureGroup();
+  var markerIndex = 1;
+
+  if (trips.length > 0) {
+    trips.forEach(function(trip, index) {
+      {% if collection_voyage != 'collection'%}
+      // Handle station changes
+      if (trip != trips[trips.length - 1] && trip.trip.destination_station != trips[index + 1].trip.origin_station) {
+        stationChangePath = [trip.path[trip.path.length - 1], trips[index + 1].path[0]];
+        group.addLayer(L.polyline(stationChangePath, { className: `polyline selfConnectionPolyline` }));
+      }
+      
+      // Add numbered markers at the start and end of trips
+      if (index != 0) {
+        group.addLayer(L.marker(trip.path[0], {icon: new L.NumberedDivIcon({number: markerIndex})}).bindPopup(trip.trip.origin_station));
+        markerIndex++;
+      }
+      
+      if (index != 0 && index < trips.length - 1) {
+        if (trips[index + 1].trip.origin_station != trips[index].trip.destination_station) {
+          group.addLayer(L.marker(trip.path[trip.path.length - 1], {icon: new L.NumberedDivIcon({number: markerIndex})}).bindPopup(trip.trip.destination_station));
+          markerIndex++;
+        }
+      }
+      {% endif %}
+
+      // Function to create and bind polylines with popups
+      const createPolyline = (time, type, path) => {
+        const isAirType = ["air", "helicopter", "airCurrent"].includes(type);
+        const isAirCurrent = type == "airCurrent";
+
+        const polyOptions = isAirType
+          ? { className: `polyline airPolyline ${time}Polyline`, steps: isAirCurrent ? undefined : 8 }
+          : { className: `polyline ${time}Polyline ${type}Polyline` };
+
+        const poly = (isAirType)
+          ? L.geodesic(path, polyOptions) 
+          : L.polyline(path, polyOptions);
+        return poly.bindPopup(getPopupContent(
+          uid = trip.trip.uid,
+          origin_station = trip.trip.origin_station,
+          destination_station = trip.trip.destination_station,
+          start_date = trip.trip.start_date,
+          start_time = trip.trip.start_time,
+          end_time = trip.trip.end_time,
+        ), { autoPanPaddingTopLeft: [15, 100] });
+      };
+
+      // For "current" trips, calculate progress and split the polyline
+      if (trip.time === 'current') {
+        const progress = calculatePosition(trip); // Calculate position based on time
+        const { pastPath, futurePath } = splitPolyline(trip.path, progress); // Split the polyline
+
+        // Add the past and future polylines
+        if (["air", "helicopter"].includes(trip.trip.type)) {
+          group.addLayer(createPolyline('past', 'airCurrent', pastPath));
+          group.addLayer(createPolyline('past', 'airCurrent', futurePath));
+          group.addLayer(createPolyline('plannedFuture', 'airCurrent', futurePath));
+        } else {
+          group.addLayer(createPolyline('past', trip.trip.type, trip.path));
+          group.addLayer(createPolyline('plannedFuture', trip.trip.type, futurePath));
+        }
+
+        // Place a peg marker at the current position
+        placeCurrentMarker(pastPath);
+      } else {
+        // Add polylines for non-current trips (plannedFuture, past, etc.)
+        const times = trip.time === 'plannedFuture' ? ['past', 'plannedFuture'] : [trip.time];
+        times.forEach(time => group.addLayer(createPolyline(time, trip.trip.type, trip.path)));
+      }
+    });
+    
+    {% if collection_voyage != 'collection'%}
+    // Handle first and last station markers
+    if (trips[0].trip.origin_station != trips[trips.length - 1].trip.destination_station) {
+      group.addLayer(L.marker(trips[0].path[0], {icon: greenIcon}).bindPopup(trips[0].trip.origin_station));
+      group.addLayer(L.marker(trips[trips.length - 1].path[trips[trips.length - 1].path.length-1], {icon: redIcon}).bindPopup(trips[trips.length - 1].trip.destination_station));
+    } else {
+      group.addLayer(L.marker(trips[0].path[0], {icon: redGreenIcon}).bindPopup(trips[0].trip.origin_station));
+    }
+    {% endif %}
+
+    // Set up the map sidebar and display the group
+    var autoPan = window.innerWidth > 600;
+    sidebar = L.control.sidebar('sidebar', {
+      closeButton: true,
+      position: 'right',
+      autoPan: autoPan,
+    }).addTo(map);
+
+    $(".leaflet-sidebar").css("height", "100%");
+    group.addTo(map);
+    map.fitBounds(group.getBounds());
+
+    setTimeout(function () {
+      sidebar.show();
+    }, window.innerWidth > 600 ? 500 : 800);
+  }
+
+  $('.spinner-container').hide();
+}
+
+
+function copyURL(){
+
+  if (window.AndroidFunction) {
+    AndroidFunction.copyTextToClipboard(window.location.href);
+  } else {
+    navigator.clipboard.writeText(window.location.href);
+  }
+  
+  $('#snackbar').attr('class','show');
+  setTimeout(function(){ $('#snackbar').attr('class',''); }, 2900);
+}
+
+function leave(){
+  history.back();
+}
+
+function openSidebar(){
+  sidebar.show();
+}
+var map = createMap({
+    map_legend: '{{legendTitle}}',
+    train: '{{train}}',
+    tram: '{{tram}}',
+    metro: '{{metro}}',
+    car: '{{car}}',
+    walk: '{{walk}}',
+    cycle: '{{cycle}}',
+    air: '{{air}}',
+    bus: '{{bus}}',
+    ferry: '{{ferry}}',
+    aerialway: '{{aerialway}}',
+    future: '{{future}}',
+    current: '{{current}}',
+    project: '{{project}}'
+},center=null);
+
+L.Control.MyControl = L.Control.extend({
+  onAdd: function(map) {
+    var el = L.DomUtil.create('div', 'leaflet-bar futureToggle');
+
+    el.innerHTML = '<button class="button" onclick="leave()">↩️</button>';
+    el.innerHTML += '<button class="button" onclick="copyURL()">📋</button>';
+    el.innerHTML += '<button class="button buttonSmall" onclick="openSidebar()">📖</button>';
+
+    return el;
+  }
+});
+
+L.control.myControl = function(opts) {
+  return new L.Control.MyControl(opts);
+}
+
+L.control.myControl({
+  position: 'topright'
+}).addTo(map);
+
+
+
+  var trips = JSON.parse(`{{ trips_json|safe }}`);
+  trips.reverse();
+  buildItinerary(trips, []);
+  placePolylines(trips);
+  $('.futurePolyline').show();
+
+  $('#itinerary').on('change', 'input.btn-check[type=checkbox]', function() {
+  if ($('#itinerary input.btn-check:checked').length > 0) {
+    // At least one checkbox is checked
+    $('#saveButton')
+      .prop('disabled', false);
+  } else {
+    // No checkboxes are checked
+    $('#saveButton')
+      .prop('disabled', true);
+  }
+});
+
+$('#saveButton').on('click', function () {
+  // Collect all trips that have their checkbox checked
+  const checkedTrips = [];
+
+  $('#itinerary input.btn-check:checked').each(function () {
+    const index = parseInt($(this).attr('id').split('_')[1], 10);
+    const selectedTrip = trips[index];
+    checkedTrips.push(selectedTrip);
+  });
+
+  if (checkedTrips.length === 0) {
+    alert("No trips selected!");
+    return;
+  }
+
+  // Show the overlay with the progress bar
+  $('#progress-overlay').css("display", "flex")
+    .hide()
+    .fadeIn();
+
+  const url = '{{url_for("scottySaveTrip", username=username)}}';
+
+  $("#progress-bar").progressbar({
+    value: 0,
+    max: checkedTrips.length
+  });
+  $("#progress-label").text(`0/${checkedTrips.length} trips saved`);
+
+  let completedTrips = 0; // Counter for completed trips
+
+  const savePromises = checkedTrips.map(function (trip, idx) {
+    const origin_wp = { "lat": trip.trip.origin_coords[0], "lng": trip.trip.origin_coords[1] };
+    const destination_wp = { "lat": trip.trip.destination_coords[0], "lng": trip.trip.destination_coords[1] };
+    const updatedWaypoints = [origin_wp, ...trip.trip.waypoints, destination_wp];
+
+    const formData = new FormData();
+    formData.append("jsonPath", JSON.stringify(updatedWaypoints));
+    formData.append("routerPolyline", JSON.stringify(trip.path))
+
+    formData.append("newTrip", JSON.stringify({
+      "type": trip.trip.type,
+      "originStation": [trip.trip.origin_coords, trip.trip.origin_station],
+      "destinationStation": [trip.trip.destination_coords, trip.trip.destination_station],
+      "newTripStart": trip.trip.start_datetime.replace(' ', 'T').slice(0, -3),
+      "newTripEnd": trip.trip.end_datetime.replace(' ', 'T').slice(0, -3),
+      "operator": trip.trip.operator,
+      "lineName": trip.trip.line_name,
+      "waypoints": JSON.stringify(trip.trip.waypoints),
+      "price": "",
+      "purchasing_date": "2025-01-18",
+      "currency": "EUR",
+      "destinationManualLat": "",
+      "destinationManualLng": "",
+      "destinationManualName": "",
+      "estimated_trip_duration": 0,
+      "manDurationHours": "",
+      "manDurationMinutes": "",
+      "material_type": "",
+      "onlyDate": "",
+      "onlyDateDuration": "",
+      "originManualLat": "",
+      "originManualLng": "",
+      "originManualName": "",
+      "reg": "",
+      "seat": "",
+      "ticket_id": "",
+      "trip_length": 0,
+      "precision": "preciseDates"
+    }));
+
+    return fetch(url, {
+      method: "POST",
+      body: formData
+    })
+      .then(res => res.text()) // or res.json() if you return JSON
+      .then(() => {
+        completedTrips++;
+        $("#progress-bar").progressbar("value", completedTrips);
+        $("#progress-label").text(`${completedTrips}/${checkedTrips.length} trips saved`);
+      })
+      .catch(() => {
+        completedTrips++;
+        $("#progress-bar").progressbar("value", completedTrips);
+        $("#progress-label").text(`${completedTrips}/${checkedTrips.length} trips saved`);
+      });
+  });
+
+  Promise.allSettled(savePromises).then(() => {
+    $("#progress-label").text("All trips processed!");
+    $("#progress-bar").progressbar("value", checkedTrips.length);
+
+    // Hide the overlay after a short delay
+    setTimeout(() => {
+      $('#progress-overlay').fadeOut();
+    }, 1000);
+    location.href="{{url_for('dynamic_trips', username=username, time='projects')}}"
+  });
+});
+
+</script>
+
+{% endblock %}
