@@ -1,0 +1,100 @@
+{% extends "bootstrap/layout.html" %}
+{% block content %}
+
+{% include nav %}
+
+<div class="container">
+    <h1 class="mt-3">Suspicious Activities</h1>
+    <table id="suspiciousTable" class="table-striped mt-3">
+        <thead>
+            <tr>
+                <th scope="col" data-priority="3">URL</th>
+                <th scope="col" data-priority="1">Type</th>
+                <th scope="col" data-priority="2">Offending Part</th>
+                <th scope="col" data-priority="4">Timestamp</th>
+                <th scope="col" data-priority="5">IP</th>
+                <th scope="col" data-priority="6">Details</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for activity in activities %}
+                <tr>
+                    <td>
+                        <span class="url" title="{{ activity.url }}">
+                            {{ activity.url }}
+                        </span>
+                    </td>
+                    <td>{{ activity.type }}</td>
+                    <td>{{ activity.offending_part }}</td>
+                    <td>{{ activity.timestamp }}</td>
+                    <td>
+                        <span class="details text-nowrap" data-details="{{ activity.ip_details }}">
+                            <span class="flag">{{ activity.ip_emoji }}</span> {{ activity.from_ip }}
+                        </span>
+                    </td>
+                    {% if activity.details != None %}
+                        <td><span class="details" data-details="{{ activity.details }}"> <i class="fa-solid fa-circle-info"></i> </span></td>
+                    {% else %}
+                        <td></td>
+                    {% endif %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="detailsModal" tabindex="-1" aria-labelledby="detailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="detailsModalLabel">Activity Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <pre id="detailsContent" class="p-2" style="white-space: pre;"></pre>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Initialize DataTable and Modal -->
+<script>
+    $(document).ready(function() {
+        var table = $('#suspiciousTable').DataTable({
+            responsive: true,
+            order: []
+        });
+
+        $('#suspiciousTable tbody').on('click', 'span.details', function() {
+            var details = $(this).data('details');
+            console.log(details)
+            $('#detailsContent').text(JSON.stringify(details, null, 4));
+            $('#detailsModal').modal('show');
+        });
+
+        $('#suspiciousTable').on('draw.dt', function() {
+            $('#suspiciousTable tbody').on('click', 'span.details', function() {
+                var details = $(this).data('details');
+                $('#detailsContent').text(JSON.stringify(details, null, 4));
+                $('#detailsModal').modal('show');
+            });
+        });
+    });
+</script>
+
+<style>
+    .url {
+        display: inline-block;
+        max-width: 200px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        cursor: pointer;
+    }
+</style>
+
+{% endblock %}

@@ -1,0 +1,114 @@
+{% extends "bootstrap/layout.html" %}
+{% include "bootstrap/leafletLayout.html" %}
+
+{% block content %}
+<script src="{{ url_for('static',filename='js/map.js') }}"></script>
+
+
+{% include nav %}
+
+<!-- Spinner Overlay -->
+<div class="loading-screen position-relative">
+  <div class="loading-text text-center position-absolute top-0 w-100" style="padding-top: 50px;">
+    <div id="computed-flags" class="flags" style="margin-bottom: 10px;"></div>
+    <div id="computed-name" class="name" style="font-size: 2em; font-weight: bold; margin-bottom: 20px;"></div>
+    {{countriesLoadingMessage | safe}}
+  </div>
+  <br><br><br><br><br><br>
+  <div class="spinner-container">
+      <div class="lds-spinner">
+          <div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div>
+      </div>
+  </div>
+</div>
+
+<div id="map" class="mapUser"></div>
+
+<script>
+  var map = createMap();
+
+  // Display flags and name above the loading message
+  var countryInfo = processCountryCode('{{cc}}');
+
+  // Insert flags HTML into a temporary container
+  var tempDiv = document.createElement('div');
+  tempDiv.innerHTML = countryInfo.flag;
+  
+  // Add the largeFlag class to all flagPNG elements in the tempDiv
+  var flags = tempDiv.querySelectorAll(".flagPNG");
+  flags.forEach(flag => flag.classList.add("largeFlag"));
+  
+  // Set the innerHTML of the computed-flags element to the modified tempDiv content
+  document.getElementById('computed-flags').innerHTML = tempDiv.innerHTML;
+  
+  document.getElementById('computed-name').innerHTML = countryInfo.name;
+
+  // Create a Leaflet control for the percentage display
+  var PercentageControl = L.Control.extend({
+      options: {
+          position: 'topleft'
+      },
+
+      onAdd: function () {
+          var div = L.DomUtil.create('div', 'percentage-control');
+          div.innerHTML = countryInfo.flag + ' ' + countryInfo.name + ' <span id="percentageValue">Loading...</span>';
+          return div;
+      }
+  });
+  map.addControl(new PercentageControl());
+
+  // Fetch GeoJSON data for a given country code from the Flask endpoint
+  function fetchCountryGeoJSON(cc) {
+    fetch(`/{{username}}/countryGeoJSON/${cc}`)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json();
+      })
+      .then(data => {
+        // Display the percentage in the panel
+        document.getElementById('percentageValue').textContent = data[0] + '%';
+
+        // Add GeoJSON to the map with custom styling
+        var geoLayer = L.geoJSON(data[1], {
+            style: function (feature) {
+                return {
+                    fillColor: feature.properties.traveled ? 'green' : 'red',
+                    weight: 2,
+                    opacity: 1,
+                    color: feature.properties.traveled ? 'green' : 'red',
+                    fillOpacity: 0.7
+                };
+            }
+        }).addTo(map);
+
+        // Center and zoom the map to fit the GeoJSON layer
+        map.fitBounds(geoLayer.getBounds());
+
+        // Remove the spinner once loading is complete
+        $('.loading-screen').css('display', 'none');
+      })
+      .catch(error => {
+        alert('There was a problem with the fetch operation:', error.message);
+        $('.loading-screen').css('display', 'none');
+         // also hide spinner in case of error
+      });
+}
+
+  fetchCountryGeoJSON('{{cc}}');
+</script>
+
+<style>
+    /* Leaflet percentage control style */
+    .percentage-control {
+        padding: 6px 8px;
+        font: 12px/14px Arial, Helvetica, sans-serif;
+        background: white;
+        background: rgba(255,255,255,0.8);
+        box-shadow: 0 0 15px rgba(0,0,0,0.2);
+        border-radius: 5px;
+    }
+</style>
+
+{% endblock %}

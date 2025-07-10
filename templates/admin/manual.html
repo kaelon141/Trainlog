@@ -1,0 +1,46 @@
+
+{% extends "bootstrap/layout.html" %}
+{% block content %}
+
+{% include nav%}
+  
+   <div class="container">
+        <h1 class="mt-3">Stations</h1>
+        <table id="manual" class="mt-3">
+            <thead>
+                <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Latitude</th>
+                    <th scope="col">Longitude</th>
+                    <th scope="col">Creator</th>
+                    <th scope="col">Station Type</th>
+                    <th scope="col">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for station in stationsList %}
+                    <tr>
+                        <td>{{ station.name }}</td>
+                        <td>{{ station.lat }}</td>
+                        <td>{{ station.lng }}</td>
+                        <td>{{ station.creator }}</td>
+                        <td>{{ station.station_type }}</td>
+                        <td>
+                            <div class="d-flex">
+                                <a href="{{ url_for('editManual', id=station.uid) }}" class="btn btn-warning"><i class="fas fa-edit"></i></a>
+                                <form action="{{ url_for('deleteManual', id=station.uid) }}" method="POST" class="d-inline" style="margin-left: 5px;">
+                                    <button type="submit" class="btn btn-danger ml-2"><i class="fa-solid fa-trash"></i></button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+<script>
+
+$('#manual').DataTable();
+</script>
+	
+{% endblock %}

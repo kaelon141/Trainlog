@@ -1,0 +1,105 @@
+{% extends "bootstrap/layout.html" %}
+{% block content %}
+{% include nav %}
+<style>
+
+    th {
+        color: #000;
+    }
+
+</style>
+<div class="container py-4">
+
+  <!-- Page Title -->
+  <h2 class="text-center mb-4">
+    <span class="me-2">🌍</span>Country Timeline for 
+    <span class="text-primary">{{ username }}</span>
+  </h2>
+
+  <!-- Timeline Container -->
+  <div id="timeline-container" class="border rounded p-3 bg-white mb-4" style="min-height: 300px;"></div>
+
+  <!-- Days Spent Abroad Section -->
+  <div class="card shadow-sm">
+    <div class="card-header bg-primary text-white">
+      <i class="bi bi-table me-2"></i> Days Spent Abroad Per Year
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead class="table-light" >
+            <tr>
+              <th scope="col">Year</th>
+              <th scope="col">Residence</th>
+              <th scope="col">Days Abroad</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for year, days in days_abroad_by_year.items() %}
+              <tr>
+                <td class="fw-bold">{{ year }}</td>
+                <td class="fs-4">{{ residence_country_by_year[year] }}</td>
+                <td>{{ days }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Vis.js Timeline Library -->
+<link
+  href="https://unpkg.com/vis-timeline@latest/styles/vis-timeline-graph2d.min.css"
+  rel="stylesheet"
+  type="text/css"
+/>
+<script
+  type="text/javascript"
+  src="https://unpkg.com/vis-timeline@latest/standalone/umd/vis-timeline-graph2d.min.js"
+></script>
+
+<!-- Custom CSS for Vis.js (Optional) -->
+<style>
+  .vis-item {
+    border-radius: 4px !important;
+    border: 1px solid rgba(0, 0, 0, 0.2) !important;
+  }
+  .vis-item .vis-item-overflow {
+    overflow: visible !important; /* Prevent clipping of flag emojis */
+  }
+</style>
+
+<!-- Initialize Vis.js Timeline -->
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    const timelineContainer = document.getElementById("timeline-container");
+
+    const items = [
+      {% for item in country_blocks %}
+        {
+          id: '{{ loop.index }}',
+          content: '<span style="font-size: 1.5rem;">{{ item.flag }}</span>',
+          start: '{{ item.start }}',
+          end: '{{ item.end }}',
+          style: 'background-color: {{ item.color }};'
+        },
+      {% endfor %}
+    ];
+
+    const options = {
+      showCurrentTime: true,
+      stack: false,
+      horizontalScroll: true,
+      zoomKey: 'ctrlKey',
+      margin: { item: 10 },
+      minHeight: '200px'
+    };
+
+    const timeline = new vis.Timeline(timelineContainer, items, options);
+  });
+</script>
+
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends "bootstrap/layout.html" %}
+{% block content %}
+
+{% if username != "public" %}
+    {% include "bootstrap/navigation.html" %}
+{% else %}
+    {% include "bootstrap/no_user_nav.html" %}
+{% endif %}
+
+{% macro render_flattened_list(base_key) %}
+    <ul>
+    {% for key, value in translations.items() if key.startswith(base_key) %}
+        {% set parts = key[(base_key|length):].split('_') %}
+        {% if parts|length == 1 %}
+            <!-- Render top-level item -->
+            <li>{{ value|safe }}</li>
+        {% elif parts|length == 2 %}
+            <!-- Render second-level nested list -->
+            <ul>
+                <li>{{ value|safe }}</li>
+            </ul>
+        {% elif parts|length == 3 %}
+            <!-- Render third-level nested list -->
+            <ul>
+                <ul>
+                    <li>{{ value|safe }}</li>
+                </ul>
+            </ul>
+        {% elif parts|length == 4 %}
+            <!-- Render fourth-level nested list -->
+            <ul>
+                <ul>
+                    <ul>
+                        <li>{{ value|safe }}</li>
+                    </ul>
+                </ul>
+            </ul>
+        {% endif %}
+    {% endfor %}
+    </ul>
+{% endmacro %}
+
+<div id="form" class="aboutForm">
+    <h2 class="header">{{ translations['about'] }}</h2>
+    <div>
+        <p>{{ translations['aboutText'] }}</p><br>
+        <h4>{{ translations['aboutHeader'] }}</h4>
+        {{ render_flattened_list('aboutItems') }}<br>
+        <h4>{{ translations['helpHeader'] }}</h4>
+        {{ render_flattened_list('helpItems') }}<br>
+        <br><br>
+        <center>
+            <span>
+                <a href="https://www.buymeacoffee.com/Trainlog">
+                    <img src="https://img.buymeacoffee.com/button-api/?text={{ translations['supportTrainlog'] }}&emoji=&slug=Trainlog&button_colour=5F7FFF&font_colour=ffffff&font_family=Arial&outline_colour=000000&coffee_colour=FFDD00" />
+                </a>
+            </span>
+            <span>
+                <a href="https://discord.com/invite/2FhrFTQKvU">
+                    <img src="{{ url_for('static', filename='images/discord.png') }}" />
+                </a>
+            </span>
+        </center>
+    </div>
+</div>
+
+{% endblock %}

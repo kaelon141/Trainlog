@@ -1,0 +1,84 @@
+{% extends "bootstrap/layout.html" %}
+{% include "bootstrap/leafletLayout.html" %}
+
+{% block content %}
+<script src="{{ url_for('static',filename='js/map.js') }}"></script>
+
+{% include nav %}
+
+<!-- Spinner Overlay -->
+<div class="spinner-container">
+    <div class="lds-spinner">
+        <div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div>
+    </div>
+</div>
+<div id="map" class="mapUser"></div>
+
+<button id="processPolygons">Remove Marked Polygons</button>
+
+<script>
+  var map = createMap();
+
+  var clickedPolygons = new Set();
+
+  function onEachFeature(feature, layer) {
+    layer.on({
+      click: function (e) {
+        if (e.target.options.fillColor === 'green') {
+          e.target.setStyle({ fillColor: 'red' });
+          e.target.setStyle({ color: 'red' });
+          clickedPolygons.add(feature.properties.id);
+        } else {
+          e.target.setStyle({ fillColor: 'green' });
+		  e.target.setStyle({ color: 'green' });
+          clickedPolygons.delete(feature.properties.id);
+        }
+      }
+    });
+  }
+  fetch('{{url_for("get_full_geojson", cc=cc)}}') // replace with your endpoint
+    .then(response => response.json())
+    .then(data => {
+		var geoLayer = L.geoJSON(data, {
+            style: {
+                fillColor: 'green',
+                weight: 2,
+                opacity: 1,
+                color: 'green',
+                fillOpacity: 0.7
+            },
+            onEachFeature: onEachFeature
+        }).addTo(map);
+		console.log(geoLayer)
+        map.fitBounds(geoLayer.getBounds());
+        document.querySelector('.spinner-container').style.display = 'none';
+    });
+
+  document.getElementById('processPolygons').addEventListener('click', function () {
+    // Here, send the clickedPolygons to your backend to process and remove from the file
+    fetch('{{url_for("remove_polygons", cc=cc)}}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(Array.from(clickedPolygons))
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert("Successfully processed polygons!");
+		location.reload();
+      } else {
+        alert("Error processing polygons.");
+      }
+    });
+  });
+</script>
+
+<style>
+  #map {
+    height: 800px;
+  }
+</style>
+
+{% endblock %}

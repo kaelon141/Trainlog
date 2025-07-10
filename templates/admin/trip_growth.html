@@ -1,0 +1,196 @@
+{% extends "bootstrap/layout.html" %}
+{% block content %}
+
+{% include "bootstrap/navigation.html"%}
+
+<script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.css">
+
+<div class="container mt-4">
+    <h2>{{ interval }} Trip Growth</h2>
+    
+    <!-- Selectors for time period and graph type -->
+    <div class="mb-3">
+        <label for="timePeriod" class="form-label">Select Time Period:</label>
+        <select id="timePeriod" class="form-select">
+            <option value="day" {% if interval == 'Daily' %}selected{% endif %}>Day</option>
+            <option value="week" {% if interval == 'Weekly' %}selected{% endif %}>Week</option>
+            <option value="month" {% if interval == 'Monthly' %}selected{% endif %}>Month</option>
+            <option value="year" {% if interval == 'Yearly' %}selected{% endif %}>Year</option>
+        </select>
+
+        <label for="graphType" class="form-label mt-3">Select Graph Type:</label>
+        <select id="graphType" class="form-select">
+            <option value="normal" selected>Normal</option>
+            <option value="cumulative">Cumulative</option>
+        </select>
+    </div>
+
+    <div id="tripGrowthChart" style="width: 100%; height: 600px;"></div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var dataPoints = {{ data_points | tojson }};
+        var labels = {{ labels | tojson }};
+        var tripTypes = {{ trip_types | tojson }};
+    
+        var chartDom = document.getElementById('tripGrowthChart');
+        var myChart = echarts.init(chartDom);
+        var option;
+
+        // Function to fetch color from CSS variables
+        function getCSSColor(variableName) {
+            return getComputedStyle(document.documentElement).getPropertyValue(variableName).trim();
+        }
+
+        // Prepare colors based on trip types using CSS variables
+        var colors = tripTypes.map(type => getCSSColor(`--${type}`));
+
+        function updateChart() {
+            var graphType = document.getElementById('graphType').value;
+            var seriesType = graphType === 'cumulative' ? 'line' : 'bar';
+
+            // Prepare data for each type and handle cumulative transformation dynamically
+            var series = tripTypes.map(function(type, index) {
+                var data = dataPoints[type] || [];
+                if (graphType === 'cumulative') {
+                    data = data.map((sum => value => sum += value)(0));  // Cumulative sum
+                }
+                return {
+                    name: type.charAt(0).toUpperCase() + type.slice(1),
+                    type: seriesType,
+                    stack: 'total',
+                    areaStyle: graphType === 'cumulative' ? {} : null,
+                    data: data,
+                    itemStyle: {
+                        color: colors[index]  // Use the color from CSS variables
+                    }
+                };
+            });
+
+            option = {
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: {
+                        type: 'shadow'
+                    },
+                    formatter: function (params) {
+                        let total = 0;
+                        params.forEach(param => {
+                            total += param.value || 0;
+                        });
+
+                        // Create the tooltip content
+                        let content = `${params[0].axisValueLabel}<br/>`;
+                        params.forEach(param => {
+                            content += `${param.marker} ${param.seriesName}: ${param.value}<br/>`;
+                        });
+                        content += `<strong>Total: ${total}</strong>`;
+                        return content;
+                    }
+                },
+                legend: {
+                    data: tripTypes.map(type => type.charAt(0).toUpperCase() + type.slice(1)),
+                    top: 'top',
+                    left: 'left'
+                },
+                grid: {
+                    top: 100  
+                },
+                xAxis: {
+                    type: 'category',
+                    data: labels
+                },
+                yAxis: {
+                    type: 'value',
+                    title: {
+                        text: 'Trips'
+                    }
+                },
+                series: series,
+                dataZoom: [
+                    {
+                        type: 'slider',
+                        show: true,
+                        xAxisIndex: [0],
+                        start: 0,
+                        end: 100
+                    },
+                    {
+                        type: 'inside',
+                        xAxisIndex: [0],
+                        start: 0,
+                        end: 100
+                    }
+                ]
+            };
+
+            myChart.setOption(option);
+        }
+
+        function debounce(func, delay) {
+            let timer;
+            return function() {
+                clearTimeout(timer);
+                timer = setTimeout(func, delay);
+            };
+        }
+
+        // Modify the updateAverage function call to trigger only when zoom interaction ends
+        function updateAverage() {
+            var displayedData = myChart.getModel().getSeriesByIndex(0).getData();
+            var dataZoom = myChart.getOption().dataZoom[0];
+            var start = Math.floor(dataZoom.start / 100 * (labels.length - 1));
+            var end = Math.ceil(dataZoom.end / 100 * (labels.length - 1));
+
+            var visibleTotals = [];
+            var totalSums = 0;
+            var visibleCount = 0;
+
+            for (let i = start; i <= end; i++) {
+                let totalForLabel = tripTypes.reduce((sum, type) => sum + (dataPoints[type][i] || 0), 0);
+                visibleTotals.push(totalForLabel);
+            }
+
+            totalSums = visibleTotals.reduce((acc, value) => acc + value, 0);
+            visibleCount = visibleTotals.length;
+
+            var average = (visibleCount > 0) ? Math.round(totalSums / visibleCount) : 0;
+
+            myChart.setOption({
+                graphic: {
+                    type: 'text',
+                    left: 'right',
+                    top: 70,
+                    style: {
+                        text: `Average {{ interval }}: ${average}`,
+                        font: '14px sans-serif',
+                        fill: '#555',  // Subtle color
+                    }
+                }
+            });
+        }
+
+        // Attach event listener for dataZoom event with debounce to update only when zoom interaction ends
+        myChart.on('dataZoom', debounce(updateAverage, 300)); // Adjust the delay as needed
+
+
+        // Initial chart load
+        updateChart();
+        updateAverage();
+
+        // Reload page with selected time period as query parameter
+        document.getElementById('timePeriod').addEventListener('change', function () {
+            var selectedPeriod = this.value;
+            var queryParams = new URLSearchParams(window.location.search);
+            queryParams.set('group_by', selectedPeriod);
+            window.location.search = queryParams.toString();
+        });
+
+        // Update chart on graph type selector change
+        document.getElementById('graphType').addEventListener('change', updateChart);
+    });
+</script>
+
+{% endblock %}

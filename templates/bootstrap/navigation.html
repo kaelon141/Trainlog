@@ -1,0 +1,401 @@
+{% set friendsIcon = getFriendsRequestsNumber() %}
+<nav class="navbar navbar-expand-xl navbar-light bg-light">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="#">
+      <img src="{{ url_for('static',filename='images/logo_square.png') }}" width="30" height="30" alt="">
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNavDropdown">
+      <ul class="navbar-nav mr-auto">
+        {% if is_admin %}
+          <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-expanded="false">
+                  <i class="bi bi-wrench-adjustable"></i> Admin
+              </a>
+              <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                  {% if is_owner %}
+                  <a class="dropdown-item" href="{{ url_for('admin') }}"><i class="bi bi-wrench-adjustable"></i> Users</a>
+                  <a class="dropdown-item" href="https://analytics.maahl.net"><i class="fa-solid fa-chart-line"></i> Analytics</a>
+                  <a class="dropdown-item" href="{{ url_for('admin_user_growth') }}"><i class="fa-solid fa-chart-simple"></i><i class="fa-solid fa-users"></i> User growth </a>
+                  <a class="dropdown-item" href="{{ url_for('admin_trip_growth') }}"><i class="fa-solid fa-chart-simple"></i><i class="fa-solid fa-route"></i> Trip growth </a>
+                  <a class="dropdown-item" href="{{ url_for('admin.suspicious_activity') }}"><i class="fa-solid fa-robot"></i> Suspicious Activity </a>
+                  <a class="dropdown-item" href="{{ url_for('admin.denied_logins') }}"><i class="fa-solid fa-ban"></i> Denied Logins </a>
+                  <a class="dropdown-item" href="{{ url_for('admin_stats') }}"><i class="bi bi-bar-chart-line"></i> Global stats </a>
+                  <a class="dropdown-item" href="{{ url_for('ships') }}"><i class="fa fa-ship"></i> Ships </a>
+                  <a class="dropdown-item" href="{{ url_for('active_users') }}"><i class="fa fa-chart-area"></i> Active Users </a>
+                  {% endif %}
+                  <a class="dropdown-item" href="{{ url_for('finances') }}"><i class="fa-solid fa-coins"></i> Finances </a>
+                  <a class="dropdown-item" href="{{ url_for('adminManual') }}"><i class="bi bi-sign-stop-lights"></i> Manual Stations</a>
+                  <a class="dropdown-item" href="{{ url_for('stations') }}"><i class="fa-solid fa-globe"></i> Stations</a>
+                  <a class="dropdown-item" href="{{ url_for('editCountriesList') }}"><i class="bi bi-flag"></i> Coverage edit</a>
+                  <a class="dropdown-item" href="{{ url_for('show_operators') }}"><i class="bi bi-images"></i> Operators</a>
+                  <a class="dropdown-item" href="{{ url_for('airliners') }}"><i class="bi bi-airplane"></i></i> Airliners</a>
+              </div>
+          </li>
+      {% endif %}
+      {% if is_translator %}
+          <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-expanded="false">
+                  <i class="bi bi-translate"></i> Translator
+              </a>
+              <div class="dropdown-menu" aria-labelledby="translatorDropdown">
+                  {% for lang in available_languages %}
+                      <a class="dropdown-item" href="{{ url_for('edit_translations', langid=lang['id']) }}">
+                          {{ lang['name'] }}
+                      </a>
+                  {% endfor %}
+              </div>
+          </li>
+      {% endif %}
+
+
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-map"></i> {{ username.title() }}
+          </a>
+          <ul class="dropdown-menu" aria-labelledby="userDropdown">
+            <li>
+              <a class="dropdown-item" href="{{ url_for('user_home', username=username) }}">
+                <i class="bi bi-map"></i> {{map}}
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item" href="{{ url_for('new_map', username=username) }}">
+                <i class="bi bi-globe-europe-africa"></i> {{map}} ᵦ
+              </a>
+            </li>
+          </ul>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-expanded="false">
+            <i class="bi bi-plus-circle"></i> {{new}}
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+            <a class="dropdown-item" href="{{ url_for('new', username=username, vehicle_type='train') }}"><i class="fa-solid fa-train"></i> {{ train }}</a>
+            <a class="dropdown-item" href="{{ url_for('new', username=username, vehicle_type='tram') }}"><i class="fa-solid fa-train-tram"></i> {{ tram }}ᵦ</a>
+            <a class="dropdown-item" href="{{ url_for('new', username=username, vehicle_type='metro') }}"><i class="fa-solid fa-train-subway"></i> {{ metro }}ᵦ</a>
+            <hr class="dropdown-divider">
+            <a class="dropdown-item" href="{{ url_for('new_flight', username=username) }}"><i class="fa-solid fa-plane-up"></i>{{air}}</a>
+            <a class="dropdown-item" href="{{ url_for('new', username=username, vehicle_type="bus") }}"><i class="fa-solid fa-bus"></i>{{bus}}</a>
+            <a class="dropdown-item" href="{{ url_for('new', username=username, vehicle_type="ferry") }}"><i class="fa-solid fa-ship"></i> {{ferry}}</a>
+            <a class="dropdown-item" href="{{ url_for('new', username=username, vehicle_type="helicopter") }}"><i class="fa-solid fa-helicopter"></i> {{helicopter}}</a>
+            <a class="dropdown-item" href="{{ url_for('new', username=username, vehicle_type="aerialway") }}"><i class="fa-solid fa-cable-car"></i> {{aerialway}}</a>
+            <hr class="dropdown-divider">
+            <a class="dropdown-item" href="{{ url_for('new', username=username, vehicle_type="walk") }}"><i class="fa-solid fa-person-hiking"></i> {{walk}}</a>
+            <a class="dropdown-item" href="{{ url_for('new', username=username, vehicle_type="cycle") }}"><i class="fa-solid fa-bicycle"></i> {{cycle}}</a>
+            <a class="dropdown-item" href="{{ url_for('new', username=username, vehicle_type="car") }}"><i class="fa-solid fa-car-side"></i> {{car}}</a>
+            <hr class="dropdown-divider">
+            <a class="dropdown-item" href="{{ url_for('new', username=username, vehicle_type="accommodation") }}"><i class="fa-solid fa-bed"></i> {{accommodation}} ᵦ</a>
+            <a class="dropdown-item" href="{{ url_for('new', username=username, vehicle_type="poi") }}"><i class="fa-solid fa-map-location-dot"></i> {{poi}} ᵦ</a>
+            <a class="dropdown-item" href="{{ url_for('new', username=username, vehicle_type="restaurant") }}"><i class="fa-solid fa-utensils"></i> {{restaurant}} ᵦ</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-expanded="false">
+            <i class="bi bi-card-list"></i> {{trips}}
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+            <a class="dropdown-item" href="{{ url_for('dynamic_trips', time='trips', username=username) }}"><i class="bi bi-clock"></i> {{past}}</a>
+            <a class="dropdown-item" href="{{ url_for('dynamic_trips', time='projects', username=username) }}"><i class="bi bi-clock-history"></i> {{Projects}}</a>
+          </div>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-expanded="false">
+            <i class="bi bi-percent"></i> {{coverage}}
+          </a>
+          <ul class="dropdown-menu scrollable-dropdown countries_menu">
+            <input type="text" class="form-control dropdown-search" placeholder="{{searchRegion}}">
+            {% set continent_names = {
+              "EU": EU,
+              "AF": AF,
+              "AS": AS,
+              "NA": NA,
+              "CA": CA,
+              "SA": SA,
+              "OC": OC
+          } %}
+            {% set continents = get_country_codes_from_files() %}
+            {% set continent_list = continents.keys() | list %}
+            {% for continent, codes in continents.items() %}
+                {% if continent in continent_names %}
+                <h6 class="dropdown-header">{{continent_names[continent]}}</h6>
+                {% else %}
+                <h6 class="dropdown-header"><script>document.write(regionNames.of('{% print(continent).split("_")[1] %}'));</script> ({{subdivisions}})</h6>
+                {% endif %}
+                {% for cc in codes %}
+                    <a class="dropdown-item countryLink" data-country="{{cc}}" href="{{ url_for('pCountries', cc=cc, username=username) }}">
+                        {{ cc }}
+                    </a>
+                {% endfor %}
+                {% if not loop.last %}
+                    <div class="dropdown-divider"></div>
+                {% endif %}
+            {% endfor %}
+            <div class="dropdown-divider"></div>
+            <h6 class="dropdown-header">{{special}}</h6>
+            <a class="dropdown-item countryLink" data-country="UN" href="{{ url_for('visited_squares', username=username) }}">
+                World Squares
+            </a>
+        </ul>
+      </li>
+      <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-expanded="false">
+          <i class="bi bi-three-dots"></i> {{tools}}
+        </a>
+        <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+          <!-- Tickets Section -->
+          <h6 class="dropdown-header">{{nav_tickets}}</h6>
+          <a class="dropdown-item" href="{{ url_for('new_ticket', username=username) }}">
+            <i class="bi bi-ticket-perforated"></i><i class="plus-icon bi bi-plus"></i> <span class="after-plus-icon">{{new_ticket}}</span>
+          </a>
+          <a class="dropdown-item" href="{{ url_for('ticket_list', username=username) }}">
+            <i class="bi bi-ticket-detailed"></i> {{ticket_list}}
+          </a>
+          <div class="dropdown-divider"></div>
+          <!-- Tags Section -->
+          <h6 class="dropdown-header">{{tags}}</h6>
+          <a class="dropdown-item" href="{{ url_for('new_tag', username=username) }}">
+            <i class="bi bi-tag"></i><i class="plus-icon bi bi-plus"></i> <span class="after-plus-icon">{{new_tag_nav}}</span>
+          </a>
+          <a class="dropdown-item" href="{{ url_for('tag_list', username=username) }}">
+            <i class="bi bi-tags"></i> {{tag_list_nav}}
+          </a>
+          <div class="dropdown-divider"></div>
+          <!-- GPX Section -->
+          <h6 class="dropdown-header">GPX</h6>
+          <a class="dropdown-item" href="{{ url_for('upload_gpx', username=username) }}">
+            <i class="bi bi-cloud-upload"></i> {{upload_gpx_files}}
+          </a>
+          <a class="dropdown-item" href="{{ url_for('list_gpx', username=username) }}">
+            <i class="bi bi-list"></i> {{manage_gpx_files}}
+          </a>
+          <div class="dropdown-divider"></div>
+          <a class="dropdown-item" href="{{ url_for('live_map') }}"><i class="fa-solid fa-globe"></i> {{ live_map }}</a>
+          {% if is_alpha %}
+          <div class="dropdown-divider"></div>
+          <!-- GPX Section -->
+          <h6 class="dropdown-header">{{automatedRouters}}</h6>
+            <a class="dropdown-item" href="{{ url_for('new_auto', username=username, type='here') }}"><i class="fa-solid fa-caret-down"></i> Autorouting (Here)α</a>
+            <a class="dropdown-item" href="{{ url_for('new_auto', username=username, type='google') }}"><i class="fa-brands fa-google"></i> Autorouting (Google)α</a>
+          {% endif %}
+      </div>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="{{ url_for('leaderboard') }}"><i class="bi bi-trophy"></i> {{leaderboard}}</a>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-bar-chart-line"></i> {{ stats }}
+          </a>
+          <ul class="dropdown-menu">
+            {% for type, data in distinctTypes.items() %}
+              <li>
+                <a class="dropdown-item" href="{{ url_for('stats', username=username, tripType=type) }}">
+                  <i class="{{ data.icon }}"></i> {{ data.label }}
+                </a>
+              </li>
+            {% endfor %}
+          </ul>
+        </li>
+      <li class="nav-item">
+        <a class="nav-link" href="{{ url_for('friends', username=username) }}"><i class="bi bi-people"></i>{{friendsIcon | safe}} {{friends}}</a>
+      </li>
+        <li  class="nav-item tripCurrent">
+          <a class="nav-link" href="{{ url_for('current', username=username) }}"><i class="bi bi-broadcast"></i> {{current}}</a>
+        </li>
+      </ul>
+      <ul class="navbar-nav ms-auto">
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('user_settings', username=username) }}"><i class="bi bi-gear"></i> {{user_settings}}</a>
+        </li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="infoDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-info-circle"></i> {{ about }}
+          </a>
+          <ul class="dropdown-menu" aria-labelledby="infoDropdown">
+            <li><a class="dropdown-item" href="{{ url_for('about') }}">{{ about }}</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('privacy') }}">{{ privacy_title }}</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('router_status')}}">{{router_status}}</a></li>
+          </ul>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('logout', username=username) }}"><i class="bi bi-power"></i> {{logout}}</a>
+        </li>
+      </ul>
+    </div>
+
+  </div>
+</nav>
+
+<style>
+  .scrollable-dropdown {
+    max-height: 320px;
+    overflow-y: auto;
+}
+</style>
+
+<script type="text/javascript">
+ $(".countries_menu").each(function () {
+    // Store the sorted groups here
+    var sortedGroups = [];
+    var currentGroup = null;
+
+    // Loop through each continent group
+    $(this).children("h6, .dropdown-divider, .countryLink").each(function () {
+      if ($(this).is("h6")) {
+        // If it's a continent header, start a new group
+        currentGroup = { header: $(this), countries: [] };
+        sortedGroups.push(currentGroup);
+      } else if ($(this).hasClass("countryLink")) {
+        // If it's a country link, add it to the current group
+        var originalText = $(this).data('country');
+        var flag, name;
+        if (originalText.includes("-")) {
+          var { flag, name } = processCountryCode(originalText, flagPositions);
+        } else if($(this).data('country') != 'UN') {
+          flag = getTooltipSprite(originalText, flagPositions);
+          name = regionNames.of(originalText.toUpperCase());
+        }else{
+          flag = getTooltipSprite(originalText, flagPositions);
+          name = '{{worldSquares}}';
+        }
+
+        currentGroup.countries.push({ name: name, iso: originalText.toLowerCase(), element: $(this), html: flag + ' ' + name });
+      } else if ($(this).hasClass("dropdown-divider")) {
+        // If it's a separator, add it to the current group
+        if (currentGroup) {
+          currentGroup.separator = $(this);
+        }
+      }
+    });
+
+    // Sort the countries within each group
+    sortedGroups.forEach(function (group) {
+      group.countries.sort(function (a, b) {
+        return a.name.localeCompare(b.name);
+      });
+    });
+
+    // Reattach the sorted groups to the DOM
+    sortedGroups.forEach(function (group, index) {
+      group.header.appendTo(group.header.parent());
+      group.countries.forEach(function (country) {
+        country.element.html(country.html);
+        country.element.appendTo(country.element.parent());
+      });
+      if (group.separator) {
+        group.separator.appendTo(group.separator.parent());
+      }
+    });
+  });
+
+
+   $(function(){
+      var current = location.pathname;
+      $('.navbar li a').each(function(){
+            if($(this).attr('href') == current){
+              $(this).addClass('active');
+            }
+            else if ($(this).hasClass("dropdown-toggle")){
+              $(this).parent().children("div").children("a").each(function(){
+                if($(this).attr('href') == current){
+                  $(this).addClass('active');
+                  $($(this).parent()[0].previousElementSibling).addClass('active');
+                }
+              });
+            }
+          })
+    });
+
+    $(".countries_menu").width("280px");
+
+    $('.dropdown-search').on('input', function() {
+      var searchVal = $(this).val().toLowerCase();
+
+      // Loop through each continent group
+      $(".countries_menu").each(function () {
+        var anyVisible = false; // Flag to check if any countries are visible
+
+        $(this).find('.countryLink').each(function() {
+          var countryText = $(this).text().toLowerCase();
+          var isoCode = $(this).data('country').toLowerCase();
+          if (countryText.includes(searchVal) || isoCode.includes(searchVal)) {
+            $(this).show();
+            anyVisible = true;
+          } else {
+            $(this).hide();
+          }
+        });
+
+        // Handling visibility of headers and dividers based on visible countries
+        var header = null;
+        var lastVisibleDivider = null;
+        $(this).children().each(function() {
+          if ($(this).is('h6')) {
+            if (header && !header.nextUntil('h6', '.countryLink:visible').length) {
+              header.hide();
+              if (lastVisibleDivider) lastVisibleDivider.hide();
+            }
+            header = $(this);
+            header.show(); // Assume visible until proven otherwise
+          } else if ($(this).hasClass('dropdown-divider')) {
+            $(this).show(); // Assume visible until proven otherwise
+            if (anyVisible) {
+              lastVisibleDivider = $(this);
+            }
+          } else if ($(this).hasClass('countryLink')) {
+            if ($(this).is(':visible')) {
+              anyVisible = true;
+            }
+          }
+        });
+
+        // Check the last header after loop
+        if (header && !header.nextUntil('h6', '.countryLink:visible').length) {
+          header.hide();
+          if (lastVisibleDivider) lastVisibleDivider.hide();
+        }
+      });
+    });
+
+document.addEventListener('DOMContentLoaded', function () {
+    const navbar = document.querySelector('.navbar');
+    const navLinks = document.querySelectorAll('.navbar-nav .nav-link');
+
+    // Function to check if navbar is overflowing
+    function isOverflowing(element) {
+        return element.scrollWidth > element.clientWidth;
+    }
+
+    // Function to adjust font size
+    function adjustFontSize() {
+        let currentFontSize = parseFloat(window.getComputedStyle(navLinks[0], null).getPropertyValue('font-size'));
+        while (isOverflowing(navbar) && currentFontSize > 10) { // Limit the font size reduction to a minimum of 10px
+            currentFontSize -= 1;
+            navLinks.forEach(link => {
+                link.style.fontSize = `${currentFontSize}px`;
+            });
+        }
+    }
+
+    // Adjust font size on load
+    adjustFontSize();
+
+    // Re-adjust font size on window resize
+    window.addEventListener('resize', function () {
+        navLinks.forEach(link => link.style.fontSize = ''); // Reset font size
+        adjustFontSize();
+    });
+});
+
+
+</script>
+
+{% if isCurrent %}
+    <script>
+        $(document).ready(function(){
+            $('.tripCurrent').attr('style', 'display:block !important');
+        });
+    </script>
+{% endif %}

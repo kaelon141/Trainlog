@@ -1,0 +1,605 @@
+{% extends "bootstrap/layout.html" %}
+{% block content %}
+{% include "bootstrap/navigation.html" %}
+
+<style>
+  .form-control {
+    width: 100%;
+  }
+  #progress-bar {
+    height: 20px;
+    background: linear-gradient(to right, #007bff, #0056b3);
+    width: 0%;
+    border-radius: 10px;
+    transition: width 0.3s ease;
+  }
+  #progress-label {
+    font-size: 14px;
+    font-weight: bold;
+  }
+  td.editable:hover {
+    cursor: pointer;
+    background-color: #f7f7f7;
+  }
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 48px;
+    height: 24px;
+  }
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+  input:checked + .slider {
+    background-color: #007bff;
+  }
+  input:checked + .slider:before {
+    transform: translateX(24px);
+  }
+  .routing-options {
+    margin-bottom: 15px;
+  }
+</style>
+
+<div class="container mt-4">
+  <div class="row">
+    <div>
+      <h2 class="mb-3 text-center">{{ manage_gpx_files }}</h2>
+      
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <button id="saveSelectedButton" class="btn btn-labeled btn-primary" disabled>
+          <span class="btn-label"><i class="fa-regular fa-save"></i></span>{{ save_selected }}
+        </button>
+        {% if is_alpha %}
+        <div class="routing-options">
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="useRoutingToggle" checked>
+            <label class="form-check-label" for="useRoutingToggle">{{ use_routing }}</label>
+            <i class="fa-regular fa-circle-question" data-bs-toggle="tooltip" title="{{ routing_tooltip }}"></i>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+      
+      <table id="gpxTable" width="100%">
+        <thead>
+          <tr>
+            <th data-orderable="false"><input type="checkbox" id="headerCheckbox" class="form-check-input"></th>
+            <th>{{ source }}</th>
+            <th>{{ tOrigin }}</th>
+            <th>{{ tDestination }}</th>
+            <th>{{ newTripStart }}</th>
+            <th>{{ newTripEnd }}</th>
+            <th>{{ actions }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for gpx in gpxList %}
+          <tr data-gpx-id="{{ gpx.uid }}">
+            <!-- Row checkbox -->
+            <td>
+              <input type="checkbox" class="rowCheckbox form-check-input" data-gpx-id="{{ gpx.uid }}">
+            </td>
+
+            <!-- Source (not editable) -->
+            <td>{{ gpx.source }}</td>
+
+            <!-- Origin (Editable) -->
+            <td class="editable"
+                data-field="origin"
+                data-original-value="{{ gpx.origin if gpx.origin else 'None' }}">
+              {{ gpx.origin if gpx.origin else 'None' }}
+            </td>
+
+            <!-- Destination (Editable) -->
+            <td class="editable"
+                data-field="destination"
+                data-original-value="{{ gpx.destination if gpx.destination else 'None' }}">
+              {{ gpx.destination if gpx.destination else 'None' }}
+            </td>
+
+            <!-- Start time (Editable) -->
+            <td class="editable"
+                data-field="start_time"
+                data-original-value="{{ gpx.start_time if gpx.start_time else 'None' }}">
+              {{ gpx.start_time if gpx.start_time else 'None' }}
+            </td>
+
+            <!-- End time (Editable) -->
+            <td class="editable"
+                data-field="end_time"
+                data-original-value="{{ gpx.end_time if gpx.end_time else 'None' }}">
+              {{ gpx.end_time if gpx.end_time else 'None' }}
+            </td>
+
+            <!-- Actions -->
+            <td>
+                <!-- Delete button -->
+                <button class="btn btn-sm btn-danger" 
+                        data-bs-toggle="modal" 
+                        data-bs-target="#deleteGPXModal" 
+                        data-gpx-id="{{ gpx.uid }}">
+                    <i class="fa-regular fa-trash-can"></i>
+                </button>
+
+                <!-- Single-save trip type button (disable if row is changed) -->
+                <button class="btn btn-sm btn-primary trip-type-btn"
+                        data-bs-toggle="modal" 
+                        data-bs-target="#tripTypeModal" 
+                        data-gpx-id="{{ gpx.uid }}">
+                    <i class="fa-regular fa-save"></i>
+                </button>
+
+                <!-- Save Edits button (hidden by default) -->
+                <button class="btn btn-sm btn-success save-edits-button"
+                        style="display: none;"
+                        data-gpx-id="{{ gpx.uid }}">
+                    <i class="fa-solid fa-check"></i>
+                </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Progress Bar Overlay -->
+<div id="progress-overlay" 
+     style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0, 0, 0, 0.5); z-index: 9999; justify-content: center; align-items: center;">
+  <div id="progress-container" 
+       style="width: 100%; max-width: 400px; background: white; padding: 20px; 
+              border-radius: 10px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);">
+    <div id="progress-bar"></div>
+    <div id="progress-label" style="text-align: center; margin-top: 5px;">
+      {{ progress_label }}
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteGPXModal" tabindex="-1" aria-labelledby="deleteGPXModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="deleteGPXModalLabel">{{ confirm_deletion }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>{{ confirm_delete_gpx }}</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ cancel }}</button>
+        <form id="deleteGPXForm" action="" method="post">
+          <button type="submit" class="btn btn-danger">{{ delete }}</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Trip Type Selection Modal -->
+<div class="modal fade" id="tripTypeModal" tabindex="-1" aria-labelledby="tripTypeModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="tripTypeModalLabel">{{ select_trip_type }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-center">
+        <p>{{ select_trip_type_instruction }}</p>
+        {% if is_alpha %}
+        <div class="routing-option-modal mb-3">
+          <div class="form-check form-switch d-flex justify-content-center align-items-center">
+            <input class="form-check-input" type="checkbox" id="modalRoutingToggle">
+            <label class="form-check-label ms-2" for="modalRoutingToggle">{{ use_routing }}</label>
+          </div>
+        </div>
+        {% endif %}
+        <div class="d-flex flex-wrap justify-content-center">
+          {% for type, name in trip_types.items() %}
+          <button 
+            class="btn btn-outline-primary m-2 trip-type-button" 
+            data-type="{{ type }}" 
+            data-bs-dismiss="modal">
+            <img src="{{ url_for('static', filename='images/icons/trip_logos/' + type + '.png') }}" 
+                 alt="{{ name }}" width="24" height="24">
+            {{ name }}
+          </button>
+          {% endfor %}
+        </div>
+      </div>      
+    </div>
+  </div>
+</div>
+
+<script>
+  function updateProgress(completed, total) {
+    const progress = (completed / total) * 100;
+    $('#progress-bar').css('width', progress + '%');
+    $('#progress-label').text(`${completed} / ${total} {{ trips_complete }}`);
+
+    if (completed === total) {
+      setTimeout(() => {
+        $('#progress-overlay').fadeOut();
+        location.reload();
+      }, 1000);
+    }
+  }
+
+  $(document).ready(function() {
+    // Initialize tooltips
+    $('[data-bs-toggle="tooltip"]').tooltip();
+    
+    // ==========================
+    // DataTable initialization
+    // ==========================
+    const table = $('#gpxTable').DataTable({
+      order: [],
+      responsive: true,
+      paging: false,
+      lengthMenu: [[10, 50, 100, -1], [10, 50, 100, "All"]]
+    });
+
+    // Sync modal toggle with main toggle
+    $('#useRoutingToggle').on('change', function() {
+      $('#modalRoutingToggle').prop('checked', $(this).prop('checked'));
+    });
+
+    // Regex for validating "YYYY-MM-DD HH:MM"
+    const dateTimeRegex = /^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}$/;
+
+    // =========================================
+    // Row checkbox (Save Selected) logic
+    // =========================================
+    const updateSaveButtonState = () => {
+      const anyChecked = $('.rowCheckbox:checked').length > 0;
+      $('#saveSelectedButton').prop('disabled', !anyChecked);
+    };
+
+    const updateSelectAllState = () => {
+      const totalCheckboxes = $('.rowCheckbox').length;
+      const checkedCheckboxes = $('.rowCheckbox:checked').length;
+      const selectAll = $('#headerCheckbox');
+      selectAll.prop('checked', totalCheckboxes === checkedCheckboxes);
+      selectAll.prop('indeterminate', checkedCheckboxes > 0 && checkedCheckboxes < totalCheckboxes);
+    };
+
+    $('.rowCheckbox').on('change', function() {
+      updateSaveButtonState();
+      updateSelectAllState();
+    });
+
+    $('#headerCheckbox').on('change', function() {
+      const isChecked = $(this).is(':checked');
+      $('.rowCheckbox').prop('checked', isChecked).trigger('change');
+    });
+
+    // ==================================
+    // Delete Modal logic
+    // ==================================
+    $('#deleteGPXModal').on('show.bs.modal', function (event) {
+      const button = $(event.relatedTarget);
+      const gpxId = button.data('gpx-id');
+      const form = $('#deleteGPXForm');
+      const actionUrl = "{{ url_for('delete_gpx', username=username, gpx_id='') }}" + gpxId;
+      form.attr('action', actionUrl);
+    });
+
+    // ==================================
+    // Trip Type Modal for multi/single
+    // ==================================
+    const openTypeModal = () => {
+      return new Promise((resolve) => {
+        const typeModal = $('#tripTypeModal');
+        
+        // Sync routing toggle with main toggle
+        $('#modalRoutingToggle').prop('checked', $('#useRoutingToggle').prop('checked'));
+        
+        typeModal.modal('show');
+
+        $('.trip-type-button').off('click').on('click', function() {
+          const selectedType = $(this).data('type');
+          const useRouting = $('#modalRoutingToggle').prop('checked');
+          typeModal.modal('hide');
+          resolve({ type: selectedType, useRouting: useRouting });
+        });
+      });
+    };
+
+    /**
+     * Helper function:
+     * Shows or hides a row's "save edits" button and also
+     * disables/enables that row's "trip type" button based on changes.
+     */
+    function toggleRowChangedState($row, changed) {
+      // Show or hide the green button
+      $row.find('.save-edits-button').toggle(changed);
+      // Disable or enable the row's trip-type button
+      $row.find('.trip-type-btn').prop('disabled', changed);
+    }
+
+    // ===========================
+    // Inline Editing Logic
+    // ===========================
+    // 1. On click of .editable, turn it into <input>
+    $(document).on('click', 'td.editable', function() {
+      const $cell = $(this);
+      // If already editing, do nothing
+      if ($cell.find('input').length > 0) return;
+
+      const originalValue = $cell.attr('data-original-value') || 'None';
+      const displayValue = (originalValue === 'None') ? '' : originalValue;
+
+      // Provide a placeholder if date/time
+      const field = $cell.data('field');
+      const placeholder = (field === 'start_time' || field === 'end_time')
+        ? 'YYYY-MM-DD HH:MM or None'
+        : '';
+
+      // Create input
+      const $input = $('<input type="text" class="form-control form-control-sm">')
+        .attr('placeholder', placeholder)
+        .val(displayValue)
+        .data('original-value', originalValue);
+
+      // Clear and append input
+      $cell.empty().append($input);
+      $input.focus();
+    });
+
+    // 2. On blur/focusout or Enter: validate & finalize
+    $(document).on('keydown focusout', 'td.editable input', function(e) {
+      const $input = $(this);
+      const $cell = $input.closest('td');
+      const field = $cell.data('field');
+
+      // If user pressed Enter or user clicked out
+      if (e.type === 'focusout' || e.key === 'Enter') {
+        e.preventDefault();
+        let newValue = $input.val().trim();
+        const originalValue = $input.data('original-value');
+
+        // If empty, treat as "None"
+        if (!newValue) {
+          newValue = 'None';
+        }
+
+        // Validate date/time if needed
+        if ((field === 'start_time' || field === 'end_time') && newValue !== 'None') {
+          if (!dateTimeRegex.test(newValue)) {
+            alert('Please enter date/time as "YYYY-MM-DD HH:MM" or "None".');
+            // Keep focus on the input if invalid
+            $input.focus();
+            return;
+          }
+        }
+
+        // Finalize edit
+        $cell.empty().text(newValue);
+        $cell.attr('data-new-value', newValue);
+        $cell.attr('data-changed', (newValue !== originalValue));
+
+        // Check if row has unsaved changes
+        const $row = $cell.closest('tr');
+        const rowChanged = $row.find('td[data-changed="true"]').length > 0;
+        toggleRowChangedState($row, rowChanged);
+      } 
+      else if (e.key === 'Escape') {
+        // Revert on Escape
+        e.preventDefault();
+        const originalValue = $input.data('original-value');
+        $cell.empty().text(originalValue);
+      }
+    });
+
+    // 3. On "Save Edits" button click, send AJAX
+    $('.save-edits-button').on('click', function() {
+      const $btn = $(this);
+      const gpxId = $btn.data('gpx-id');
+      const $row = $btn.closest('tr');
+
+      // Gather new or original values
+      const origin = $row.find('td[data-field="origin"]').attr('data-new-value')
+                   || $row.find('td[data-field="origin"]').attr('data-original-value');
+      const destination = $row.find('td[data-field="destination"]').attr('data-new-value')
+                        || $row.find('td[data-field="destination"]').attr('data-original-value');
+      const startTime = $row.find('td[data-field="start_time"]').attr('data-new-value')
+                      || $row.find('td[data-field="start_time"]').attr('data-original-value');
+      const endTime = $row.find('td[data-field="end_time"]').attr('data-new-value')
+                    || $row.find('td[data-field="end_time"]').attr('data-original-value');
+
+      // Convert "None" to null
+      const sanitize = (val) => (val === 'None') ? null : val;
+
+      const payload = {
+        gpx_id: gpxId,
+        origin: sanitize(origin),
+        destination: sanitize(destination),
+        start_time: sanitize(startTime),
+        end_time: sanitize(endTime),
+      };
+
+      $.ajax({
+        url: "{{ url_for('update_gpx', username=username) }}",
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(payload),
+        success: function(response) {
+          if (response.success) {
+            // Update each cell's original-value
+            $row.find('td.editable').each(function() {
+              const $cell = $(this);
+              const newVal = $cell.attr('data-new-value');
+              if (newVal) {
+                $cell.attr('data-original-value', newVal);
+                $cell.removeAttr('data-new-value');
+                $cell.removeAttr('data-changed');
+              }
+            });
+            // Now no row changes remain, so hide green button & enable trip-type button
+            toggleRowChangedState($row, false);
+          }
+        },
+        error: function() {
+          alert("{{ failed_to_save_trip }}");
+        }
+      });
+    });
+
+    $('#saveSelectedButton').on('click', async function() {
+      const selectedIds = $('.rowCheckbox:checked').map(function() {
+        return $(this).data('gpx-id');
+      }).get();
+
+      if (!selectedIds.length) {
+        alert("{{ no_gpx_selected }}");
+        return;
+      }
+
+      // Check if any row in the selection has a green button visible
+      let anyUnsaved = false;
+      selectedIds.forEach(id => {
+        const $row = $('tr[data-gpx-id="'+id+'"]');
+        if ($row.find('.save-edits-button').is(':visible')) {
+          anyUnsaved = true;
+        }
+      });
+      if (anyUnsaved) {
+        alert("Some selected rows have unsaved changes. Save or revert them first.");
+        return;
+      }
+
+      const selectedOptions = await openTypeModal();
+      if (!selectedOptions) return;
+
+      $('#progress-overlay').css("display", "flex").fadeIn();
+      let completed = 0;
+
+      for (const gpxId of selectedIds) {
+        try {
+          const response = await fetch(
+            `{{ url_for('saveTripFromGPX', username=username, gpx_id='') }}${gpxId}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ 
+                type: selectedOptions.type,
+                use_routing: {% if is_alpha %} selectedOptions.useRouting {%else%} false {%endif%}
+              })
+            }
+          );
+          if (!response.ok) throw new Error("{{ failed_to_save_trip }}");
+          completed++;
+          updateProgress(completed, selectedIds.length);
+        } catch (error) {
+          alert(error.message);
+        }
+      }
+      $('#progress-overlay').fadeOut();
+    });
+
+
+    $('.trip-type-btn[data-bs-target="#tripTypeModal"]').on('click', function(event) {
+      event.preventDefault();
+      const gpxId = $(this).data('gpx-id');
+
+      // If you also want to block single save if row has unsaved changes:
+      const $row = $(this).closest('tr');
+      if ($row.find('.save-edits-button').is(':visible')) {
+        alert("This row has unsaved changes. Please save or revert them first.");
+        return;
+      }
+
+      openTypeModal().then((selectedOptions) => {
+        if (!selectedOptions) return;
+
+        $('#progress-overlay').css("display", "flex").fadeIn();
+
+        fetch(`{{ url_for('saveTripFromGPX', username=username, gpx_id='') }}${gpxId}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ 
+            type: selectedOptions.type,
+            use_routing: selectedOptions.useRouting
+          })
+        })
+        .then(response => {
+          if (!response.ok) throw new Error("{{ failed_to_save_trip }}");
+          return response.json();
+        })
+        .then(() => {
+          updateProgress(1, 1);
+        })
+        .catch(error => alert(error.message))
+        .finally(() => $('#progress-overlay').fadeOut());
+      });
+    });
+    
+    // Initialize the modal routing toggle to match main toggle when opening modal
+    $('#tripTypeModal').on('show.bs.modal', function() {
+      $('#modalRoutingToggle').prop('checked', $('#useRoutingToggle').prop('checked'));
+    });
+    
+    // Update main toggle when modal toggle changes (for consistency)
+    $('#modalRoutingToggle').on('change', function() {
+      const isChecked = $(this).prop('checked');
+      $('#useRoutingToggle').prop('checked', isChecked);
+    });
+    
+    // Store user preference in localStorage
+    $('#useRoutingToggle').on('change', function() {
+      localStorage.setItem('useRoutingPreference', $(this).prop('checked'));
+    });
+    
+    // Load user preference from localStorage
+    const savedRoutingPreference = localStorage.getItem('useRoutingPreference');
+    if (savedRoutingPreference !== null) {
+      const useRouting = savedRoutingPreference === 'true';
+      $('#useRoutingToggle').prop('checked', useRouting);
+      $('#modalRoutingToggle').prop('checked', useRouting);
+    }
+    
+    // Make routing options more clear visually when disabled
+    $('#useRoutingToggle, #modalRoutingToggle').on('change', function() {
+      const isChecked = $(this).prop('checked');
+      const $label = $(this).next('label');
+      
+      if (isChecked) {
+        $label.removeClass('text-muted');
+      } else {
+        $label.addClass('text-muted');
+      }
+    });
+    
+    // Trigger change event to apply styles on load
+    $('#useRoutingToggle, #modalRoutingToggle').trigger('change');
+  });
+</script>
+{% endblock %}

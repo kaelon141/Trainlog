@@ -1,0 +1,45 @@
+{% extends "bootstrap/layout.html" %}
+{% block content %}
+
+<div id="form">
+    <figure class="logo"><img src="{{ url_for('static',filename='images/logo.png') }}"></figure>
+    <div>
+        <form id="signup" action="{{ url_for('signup')}}" method="post">
+            <p class="lh-sm">
+                {{ email }} <br> 
+                <small class="small text-muted" style="font-size: 0.65rem;">{{ email_title }}</small>
+                <input type="text" id="email" name="email" required />
+            </p>
+           
+            {{ userName }} <input type="text" id="username" name="username" required />
+            {{ password }} <input type="password" id="password" name="password" required />
+            
+            <!-- FriendlyCaptcha widget -->
+            <div class="frc-captcha" style="display: none" data-sitekey="FCMJ2QRSAP6ABT9B"></div>
+            
+            <div class="d-flex justify-content-center mt-2">
+                <button type="submit" class="btn btn-primary">{{ signup }}</button>
+            </div>
+
+            <p class="text-center mt-3 mb-0" style="font-size: 0.8rem;">
+                {{ privacy_notice|safe }}
+            </p>
+
+        </form>
+        
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <div class="alert alert-warning" role="alert">
+                {% for message in messages %}
+                    <p>{{ message }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+        {% endwith %}
+    </div>
+</div>
+
+<!-- Include FriendlyCaptcha script -->
+<script src="https://cdn.jsdelivr.net/npm/friendly-challenge@0.9.18/widget.module.min.js" async defer></script>
+
+{% endblock %}

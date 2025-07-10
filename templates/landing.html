@@ -1,0 +1,118 @@
+<!DOCTYPE HTML>
+<html lang="{{langId}}">
+	<head>
+		<title>Trainlog</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width,initial-scale=1" />
+		<meta name="color-scheme" content="light only" />
+		<meta name="description" content="Your go-to app for storing and sharing public transport trips. Use Trainlog to create, edit, share routes using OSM data, and more." />
+		<meta property="og:site_name" content="Trainlog" />
+		<meta property="og:title" content="Trainlog" />
+		<meta property="og:type" content="website" />
+		<meta property="og:description" content="Your go-to app for storing and sharing public transport trips. Use Trainlog to create, edit, share routes using OSM data, and more." />
+		<link href="https://fonts.googleapis.com/css2?display=swap&family=Inter:ital,wght@0,400;0,500;0,700;1,400;1,500;1,700" rel="stylesheet" type="text/css" />
+		<link rel="shortcut icon" href="/static/favicon/favicon.ico" type="image/x-icon">
+		<link rel="stylesheet" href="static/landingassets/main.css" />
+		<noscript><link rel="stylesheet" href="static/landingassets/noscript.css" /></noscript>
+	</head>
+	<body class="is-loading">
+		<div id="wrapper">
+			<div id="main">
+				<div class="inner">
+					<div id="container06" class="style1 container default">
+						<div class="wrapper">
+							<div class="inner">
+								<h1 id="text01" class="style1"><strong>Trainlog</strong></h1>
+								<p id="text02" class="style4">{{landingSlogan}}</p>
+								<ul id="buttons03" class="style1 buttons">
+									<li>
+										<a href="{{url_for('login')}}" class="button n01">{{signupLogin}}</a>
+									</li><li>
+										<a href="#moreinfo" class="button n02">{{landingLearnmore}}</a>
+									</li>
+								</ul>
+							</div>
+						</div>
+					</div>
+					<div id="container02" data-scroll-id="moreinfo" data-scroll-behavior="center" data-scroll-offset="0" data-scroll-speed="3" data-scroll-invisible="1" class="style2 container columns">
+						<div class="wrapper">
+							<div class="inner">
+								<div>
+									<div id="image03" class="style2 image">
+										<span class="frame"><img src="static/landingassets/images/image03.jpg" alt="" /></span>
+									</div>
+								</div>
+								<div>
+									<h2 id="text03" class="style2">{{landingVisualize}}</h2>
+									<p id="text06" class="style4">{{landingVisualizeDesc}}</p>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div id="container04" class="style2 container columns">
+						<div class="wrapper">
+							<div class="inner" data-reorder="1,0">
+								<div>
+									<h2 id="text20" class="style2">{{landingStats}}</h2>
+									<p id="text21" class="style4"><span class="p">{{landingStatsDesc1}}</span><span class="p">{{landingStatsDesc2}}</span></p>
+								</div>
+								<div>
+									<div id="image11" class="style2 image">
+										<span class="frame"><img src="static/landingassets/images/image11.jpg" alt="" /></span>
+									</div>
+									<div id="image04" class="style2 image">
+										<span class="frame deferred"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHg9IjAiIHk9IjAiIHZpZXdCb3g9IjAgMCA3NzAgNzk0IiB3aWR0aD0iNzcwIiBoZWlnaHQ9Ijc5NCIgcHJlc2VydmVBc3BlY3RSYXRpbz0ibm9uZSI%2BPHJlY3QgZmlsbD0iI2EyYjg5YyIgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIvPjwvc3ZnPg%3D%3D" data-src="static/landingassets/images/image04.jpg" alt="" /></span>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div id="container01" class="style2 container columns">
+						<div class="wrapper">
+							<div class="inner">
+								<div>
+									<div id="image01" class="style2 image">
+										<span class="frame"><img src="static/landingassets/images/image01.jpg" alt="" /></span>
+									</div>
+								</div>
+								<div>
+									<h2 id="text04" class="style2">{{landingShare}}</h2>
+									<p id="text05" class="style4">{{landingShareDesc}}</p>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div id="container03" class="style2 container columns">
+						<div class="wrapper">
+							<div class="inner">
+								<div>
+									<div id="image05" class="style2 image">
+										<span class="frame"><img src="static/landingassets/images/image05.jpg" alt="" /></span>
+									</div>
+								</div>
+								<div>
+									<h2 id="text07" class="style2">{{landingLeaderboards}}</h2>
+									<p id="text08" class="style4">{{landingLeaderboardsDesc}}</p>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div id="container05" class="style1 container default">
+						<div class="wrapper">
+							<div class="inner">
+								<h2 id="text22" class="style2">{{landingInterested}}</h2>
+								<p id="text23" class="style4">{{landingInterestedDesc}}</p>
+								<ul id="buttons02" class="style1 buttons">
+									<li>
+										<a href="{{url_for('login')}}" class="button n01">{{signup}}</a>
+									</li>
+								</ul>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<script src="static/landingassets/main.js"></script>
+	</body>
+</html>

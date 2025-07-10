@@ -1,0 +1,108 @@
+{% extends "bootstrap/layout.html" %}
+{% block content %}
+
+{% include "bootstrap/navigation.html" %}
+<style>
+  .form-control {
+      width: 100%; /* Ensures that each form control takes up the full width of its parent column */
+  }
+  #progress-bar {
+    height: 20px;
+    background: linear-gradient(to right, #007bff, #0056b3);
+    width: 0%;
+    border-radius: 10px;
+    transition: width 0.3s ease;
+  }
+  #progress-label {
+    font-size: 14px;
+    font-weight: bold;
+  }
+</style>
+
+<div id="progress-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 9999; justify-content: center; align-items: center;">
+  <div id="progress-container" style="width: 100%; max-width: 400px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);">
+    <div id="progress-bar"></div>
+    <div id="progress-label" style="text-align: center; margin-top: 5px;">{{ progress_label }}</div>
+  </div>
+</div>
+
+<div class="container mt-4">
+  <div class="row">
+    <div class="col-md-6 offset-md-3">
+      <h2 class="mb-3 text-center">{{ upload_gpx_files }}</h2>
+      <form id="uploadGPXForm" action="{{ url_for('upload_gpx', username=username) }}" method="post" enctype="multipart/form-data" autocomplete="off">
+
+        <div class="form-group mb-3">
+          <label for="gpx_files">{{ select_gpx_files }} :</label>
+          <input type="file" class="form-control" id="gpx_files" name="gpx_files" accept=".gpx" multiple required>
+          <small class="form-text text-muted">{{ gpx_file_help_text }}</small>
+        </div>
+
+        <div class="form-group mb-3">
+          <label for="notes">{{ notes }} :</label>
+          <textarea class="form-control" id="notes" name="notes" placeholder="{{ additional_notes }}"></textarea>
+        </div>
+
+        <button type="button" id="submit-btn" class="btn btn-primary w-100">{{ submit }}</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+$(document).ready(function () {
+    const fileInput = document.getElementById('gpx_files');
+    const progressOverlay = document.getElementById('progress-overlay');
+    const progressBar = document.getElementById('progress-bar');
+    const progressLabel = document.getElementById('progress-label');
+    const submitButton = document.getElementById('submit-btn');
+
+    submitButton.addEventListener('click', async function () {
+      const files = fileInput.files;
+      if (files.length === 0) {
+        alert("{{ alert_no_file_selected }}");
+        return;
+      }
+
+      progressOverlay.style.display = 'flex';
+      const totalFiles = files.length;
+      let allSuccessful = true; 
+
+      for (let i = 0; i < totalFiles; i++) {
+        const formData = new FormData();
+        formData.append('gpx_files', files[i]);
+        formData.append('notes', document.getElementById('notes').value);
+
+        try {
+          const response = await fetch("{{ url_for('handle_gpx_upload', username=username, source='Trainlog') }}", {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (!response.ok) {
+            allSuccessful = false;
+            throw new Error("{{ failed_upload }}: " + files[i].name);
+          }
+        } catch (error) {
+          alert(error.message);
+          allSuccessful = false;
+        }
+
+        const progress = ((i + 1) / totalFiles) * 100;
+        progressBar.style.width = progress + '%';
+        progressLabel.textContent = `${i + 1}/${totalFiles} {{ trips_complete }}`;
+      }
+
+      progressOverlay.style.display = 'none';
+
+      if (allSuccessful) {
+        window.location.href = "{{ url_for('list_gpx', username=username) }}";
+      } else {
+        alert("{{ processing_error_message }}"); // Show a generic error message
+      }
+    });
+    });
+
+</script>
+
+{% endblock %}

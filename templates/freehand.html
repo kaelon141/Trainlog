@@ -1,0 +1,219 @@
+{% extends "layout.html" %}
+{% block content %}
+<script>
+
+</script>
+
+<div class="mapRouting" id="map">
+</div>
+
+<div id="sidebar">
+    <div id="sidebar-content">
+    </div>
+</div>
+
+
+<script>
+
+    var markerIconStart = L.icon({
+        iconUrl: '/static/images/icons/marker-icon-2x-green.png',
+        iconRetinaUrl: '/static/images/icons/marker-icon-2x-green.png',
+        iconSize:    [25, 41],
+        iconAnchor:  [12, 41],
+        popupAnchor: [1, -34],
+        tooltipAnchor: [16, -28],
+    });
+    var markerIconEnd = L.icon({
+        iconUrl: '/static/images/icons/marker-icon-2x-red.png',
+        iconRetinaUrl: '/static/images/icons/marker-icon-2x-red.png',
+        iconSize:    [25, 41],
+        iconAnchor:  [12, 41],
+        popupAnchor: [1, -34],
+        tooltipAnchor: [16, -28],
+    });
+
+    var id = getGetParams().get("id");
+    var newTrip = JSON.parse(sessionStorage.getItem(id));
+    var type = getGetParams().get("type");
+    newTrip["type"] = type;
+
+    var origCoord = newTrip["originStation"][0];
+    var destCoord = newTrip["destinationStation"][0];
+    var origLabel = newTrip["originStation"][1];
+    var destLabel = newTrip["destinationStation"][1];
+
+    var wplist = [ origCoord, destCoord ];
+    var currentRoute;
+
+    var spinnerContent = '<div class="spinner-container"><div class="lds-spinner"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div></div>';
+    var errorContent = "<h4> {{routingError}} <h4>";
+        errorContent += "<p> {{routingErrorDetails}} </p>";
+        errorContent += `<p><button onclick="location.reload()"> {{retry}} </button></p>`;
+
+    var saveErrorContent = "<h4> {{saveError}} </h4>";
+        saveErrorContent += "<p> {{saveErrorDetails}} </p>";
+        saveErrorContent += `<p><button onclick="location.reload();"> {{retry}} </button></p>`;
+
+    var map = createMap(origCoord);
+    var sidebar;
+
+    if (window.innerWidth > 600){
+        var autoPan = true;
+    } else {
+        var autoPan = false;
+    }
+
+    sidebar = L.control.sidebar('sidebar', {
+        closeButton: true,
+        position: 'right',
+        autoPan: autoPan
+    }).addTo(map);
+    sidebar.setContent(spinnerContent);
+
+    L.Control.MyControl = L.Control.extend({
+        onAdd: function(map) {
+            var el = L.DomUtil.create('div', 'leaflet-bar');
+
+            el.innerHTML += '<button class="button" onclick="sidebar.show()">⬅️</button>';
+
+            return el;
+        }
+    });
+
+    L.control.myControl = function(opts) {
+        return new L.Control.MyControl(opts);
+    }
+
+    L.control.myControl({
+        position: 'topright'
+    }).addTo(map);
+
+    const origLocation = {lat: origCoord[0], lng: origCoord[1]};
+    const destLocation = {lat: destCoord[0], lng: destCoord[1]};
+
+    var content = `<h4>${origLabel} to ${destLabel}</h4>`;
+    var distance = getDistanceFromLocations(origLocation, destLocation);
+    var km = mToKm(distance);
+    var sailingTime = (distance / 30) * 3.6;
+    var time = secondsToDhm(sailingTime, "{{langId}}");
+    content += `<p><i>${km} km, ${time}</i></p>`;
+    content += `<p><button id="saveTrip" type="button" onclick="saveTrip()"> Submit </button></p>`;
+
+    sidebar.setContent(content);
+
+    var points = [origLocation, destLocation];
+
+    let geodesic = new L.Geodesic(points, { className: "polyline ferryPolyline pastPolyline", wrap:false, steps:8 }).addTo(map);
+    refreshPolyline();
+
+    var geodesicPath = geodesic.getLatLngs()[0];
+    var geodesicLimits = [geodesicPath[0], geodesicPath[geodesicPath.length - 1]];
+
+    var origMarker = L.marker(geodesicLimits[0], {icon:markerIconStart, draggable: true}).addTo(map);
+    var destMarker = L.marker(geodesicLimits[1], {icon:markerIconEnd, draggable: true}).addTo(map);
+
+    origMarker.on('dragend', () => {
+        points[0] = origMarker.getLatLng();
+        refreshPolyline();
+    });
+
+    destMarker.on('dragend', () => {
+        points[points.length - 1] = destMarker.getLatLng();
+        refreshPolyline();
+    });
+
+    var bounds = new L.LatLngBounds(geodesicLimits);
+    map.fitBounds(bounds, {padding: [50,50]});
+
+    var waypointMarkers = [];
+    var segmentIndices = [];
+    var finalPath;
+
+    function getClosestSegmentIndex(points, clickedPoint) {
+        var minDistance = Infinity;
+        var closestSegmentIndex = -1;
+
+        for (var i = 0; i < points.length - 1; i++) {
+            var segmentStart = points[i];
+            var segmentEnd = points[i + 1];
+
+            // This line calculates the minimum distance between a point and a line segment
+            var distance = L.GeometryUtil.length([clickedPoint, L.GeometryUtil.closest(map, [segmentStart, segmentEnd], clickedPoint)]);
+
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestSegmentIndex = i;
+            }
+        }
+        return closestSegmentIndex;
+    }
+
+    function refreshPolyline() {
+        map.removeLayer(geodesic);
+        geodesic = new L.Geodesic(points, { className: "polyline ferryPolyline pastPolyline", wrap:false, steps:8 }).addTo(map);
+        geodesic.on('click', function (e) {
+            var waypointMarker = L.marker(e.latlng, {draggable: true}).addTo(map);
+            waypointMarkers.push(waypointMarker);
+
+            var clickedPoint = e.latlng;
+            var closestSegmentIndex = getClosestSegmentIndex(points, clickedPoint);
+
+            // Insert the new point in the middle of the closest segment
+            points.splice(closestSegmentIndex + 1, 0, clickedPoint);
+            segmentIndices.push(closestSegmentIndex + 1);
+
+            waypointMarker.on('dragend', function () {
+                var marker = this;
+                var position = marker.getLatLng();
+                var markerIndex = waypointMarkers.indexOf(marker);
+
+                // Update the corresponding point in the points array
+                points[segmentIndices[markerIndex]] = position;
+
+                // Refresh the polyline
+                refreshPolyline();
+            });
+        });
+
+        distance = 0;
+        for (let i = 1; i < points.length; i++) {
+            distance += getDistanceFromLocations(points[i-1], points[i]);
+        }
+        content = `<h4>${origLabel} to ${destLabel}</h4>`;
+        km = mToKm(distance);
+        sailingTime = (distance / 30) * 3.6;
+        time = secondsToDhm(sailingTime, "{{langId}}");
+        content += `<p><i>${km} km, ${time}</i></p>`;
+        content += `<p><button id="saveTrip" type="button" onclick="saveTrip()"> Submit </button></p>`;
+
+        newTrip["trip_length"] = distance;
+        newTrip["estimated_trip_duration"] = sailingTime;
+        path = geodesic.getLatLngs()[0];
+        console.log(path)
+        sidebar.setContent(content);
+    }
+
+    async function saveTrip(){
+        sidebar.setContent(spinnerContent);
+        $.post({
+            url:'{{url_for("saveTrip", username=username)}}',
+            data:{
+                newTrip:JSON.stringify(newTrip),
+                jsonPath:JSON.stringify(path)
+            },
+            success: function(res) {
+                location.href = "{{ url_for('user_home', username=username) }}";
+            },
+            error: function() {
+                sidebar.setContent(saveErrorContent);
+            }
+        });
+    }
+
+    setTimeout(function () {
+        sidebar.show();
+    }, 500);
+</script>
+{% endblock %}
+
+   

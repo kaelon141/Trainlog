@@ -1,0 +1,665 @@
+{% extends "bootstrap/layout.html" %}
+{% block content %}
+{% include "bootstrap/navigation.html" %}
+<div class="container py-5">
+  <div class="card shadow-sm">
+    <div class="card-header bg-primary text-white">
+      <h2 class="mb-0">Trainlog Logger GPX Uploader</h2>
+    </div>
+    <div class="card-body">
+      <div class="form-group mb-3">
+        <label for="notes" class="form-label">Notes (optional):</label>
+        <textarea id="notes" class="form-control" rows="3" placeholder="Enter any notes about this activity"></textarea>
+      </div>
+      
+      <div class="d-flex gap-2 mb-4">
+        <button id="connect-btn" class="btn btn-primary">
+          <i class="bi bi-bluetooth"></i> Connect Device
+        </button>
+        <button id="delete-btn" class="btn btn-danger" disabled>
+          <i class="bi bi-trash"></i> Delete Selected Files
+        </button>
+      </div>
+      
+      <div id="progress-container" class="progress mb-3 d-none">
+        <div id="progress-bar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+      </div>
+      
+      <div id="files-container" class="mb-3 d-none">
+        <h5>GPX Files on Device</h5>
+        <div class="alert alert-info" id="no-files-message" style="display:none">
+          No GPX files found on the device.
+        </div>
+        <div class="list-group" id="file-list"></div>
+      </div>
+      
+      <div class="card mt-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">Activity Log</h5>
+          <button id="clear-log" class="btn btn-sm btn-outline-secondary">Clear</button>
+        </div>
+        <div class="card-body">
+          <div id="log" class="small overflow-auto" style="max-height: 300px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  // UART constants
+  const UART_SERVICE = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
+  const RX_CHAR = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
+  const TX_CHAR = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
+  
+  // DOM elements
+  const logElement = document.getElementById("log");
+  const connectBtn = document.getElementById("connect-btn");
+  const deleteBtn = document.getElementById("delete-btn");
+  const progressContainer = document.getElementById("progress-container");
+  const progressBar = document.getElementById("progress-bar");
+  const filesContainer = document.getElementById("files-container");
+  const fileList = document.getElementById("file-list");
+  const noFilesMessage = document.getElementById("no-files-message");
+  const clearLogBtn = document.getElementById("clear-log");
+  
+  // Global variables
+  let bluetoothDevice = null;
+  let bluetoothServer = null;
+  let rxCharacteristic = null;
+  let txCharacteristic = null;
+  let selectedFiles = new Set();
+  
+  // Logging with timestamp and auto-scroll
+  function log(message, type = "info") {
+    const timestamp = new Date().toLocaleTimeString();
+    const iconClass = type === "error" ? "text-danger bi-exclamation-triangle-fill" :
+                      type === "success" ? "text-success bi-check-circle-fill" :
+                      type === "warning" ? "text-warning bi-exclamation-circle-fill" :
+                      "text-info bi-info-circle-fill";
+    
+    const logItem = document.createElement("div");
+    logItem.className = "mb-2";
+    logItem.innerHTML = `
+      <span class="text-muted">[${timestamp}]</span>
+      <i class="bi ${iconClass} me-1"></i>
+      <span class="${type === 'error' ? 'text-danger' : ''}">${message}</span>
+    `;
+    
+    logElement.appendChild(logItem);
+    logElement.scrollTop = logElement.scrollHeight;
+  }
+  
+  // Show progress
+  function updateProgress(value, max) {
+    const percent = Math.round((value / max) * 100);
+    progressContainer.classList.remove("d-none");
+    progressBar.style.width = `${percent}%`;
+    progressBar.textContent = `${percent}%`;
+    progressBar.setAttribute("aria-valuenow", percent);
+  }
+  
+  // Reset progress
+  function resetProgress() {
+    progressContainer.classList.add("d-none");
+    progressBar.style.width = "0%";
+    progressBar.textContent = "";
+  }
+  
+  // Send line to device
+  async function sendLine(code, rx) {
+    const bytes = new TextEncoder().encode(code + "\n");
+    for (let i = 0; i < bytes.length; i += 20) {
+      await rx.writeValueWithoutResponse(bytes.slice(i, i + 20));
+      await new Promise(r => setTimeout(r, 25));
+    }
+  }
+  
+  // Run code on device and get response
+  async function run(code, rx, tx) {
+    await tx.startNotifications();
+    return new Promise((resolve, reject) => {
+      let buf = "";
+      const dec = new TextDecoder();
+      const h = e => {
+        const chunk = dec.decode(e.target.value);
+        const endIdx = chunk.indexOf("<<<END>>>");
+        if (endIdx !== -1) {
+          buf += chunk.slice(0, endIdx);
+          tx.removeEventListener("characteristicvaluechanged", h);
+          buf = buf.replace(/^>.*(?:\r?\n|$)/gm, "").trim();
+          resolve(buf);
+        } else {
+          buf += chunk;
+        }
+      };
+      tx.addEventListener("characteristicvaluechanged", h);
+      sendLine(code, rx).catch(err => {
+        tx.removeEventListener("characteristicvaluechanged", h);
+        reject(err);
+      });
+    });
+  }
+  
+  // Upload GPX file to server
+  async function uploadGPXFile(filename, content, notes) {
+    // Clean up content by removing any "=undefined" prefixes
+    content = content.replace(/^=undefined/m, "").trim();
+    
+    // If content is still empty after cleanup, don't upload
+    if (!content) {
+      log(`Warning: ${filename} appears to be empty after cleanup.`, "warning");
+      return false;
+    }
+    
+    // Create a FormData object
+    const formData = new FormData();
+    
+    // Create a file from the content
+    const blob = new Blob([content], { type: "application/gpx+xml" });
+    const file = new File([blob], filename, { type: "application/gpx+xml" });
+    
+    // Add file to form data
+    formData.append("gpx_files", file);
+    
+    // Add notes if provided
+    if (notes) {
+      formData.append("notes", notes);
+    }
+    
+    try {
+      // Send the file to the server
+      const response = await fetch("{{ url_for('handle_gpx_upload', username=username, source='TLL') }}", {
+        method: "POST",
+        body: formData
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Server responded with ${response.status}: ${errorText}`);
+      }
+      
+      const result = await response.json();
+      
+      // Check response for success/error status
+      const isSuccess = response.ok && (!result.error);
+      log(`Server response for ${filename}: ${isSuccess ? "Upload successful!" : JSON.stringify(result)}`, 
+          isSuccess ? "success" : "error");
+      
+      // Update file item with success indicator
+      const fileItem = document.querySelector(`[data-filename="${filename}"]`);
+      if (fileItem) {
+        const statusIcon = fileItem.querySelector(".status-icon");
+        if (statusIcon) {
+          statusIcon.className = isSuccess ? 
+            "status-icon bi bi-check-circle-fill text-success" : 
+            "status-icon bi bi-x-circle-fill text-danger";
+        }
+      }
+      
+      return isSuccess;
+    } catch (error) {
+      log(`Upload error for ${filename}: ${error.message}`, "error");
+      
+      // Update file item with error indicator
+      const fileItem = document.querySelector(`[data-filename="${filename}"]`);
+      if (fileItem) {
+        const statusIcon = fileItem.querySelector(".status-icon");
+        if (statusIcon) {
+          statusIcon.className = "status-icon bi bi-x-circle-fill text-danger";
+        }
+      }
+      
+      return false;
+    }
+  }
+  
+  // Delete GPX files from device
+  async function deleteGPXFiles(filenames) {
+    try {
+      // Check if we're already connected
+      if (!bluetoothServer || !bluetoothServer.connected) {
+        log("Reconnecting to device for deletion...");
+        // Reconnect to the device if not connected
+        if (!bluetoothDevice) {
+          throw new Error("No device previously connected");
+        }
+        
+        bluetoothServer = await bluetoothDevice.gatt.connect();
+        const service = await bluetoothServer.getPrimaryService(UART_SERVICE);
+        txCharacteristic = await service.getCharacteristic(TX_CHAR);
+        rxCharacteristic = await service.getCharacteristic(RX_CHAR);
+        
+        log("Reconnected successfully");
+      }
+      
+      log(`Attempting to delete ${filenames.length} file(s)...`);
+      
+      // Send a single command to delete all files at once
+      let deleteCommands = "";
+      filenames.forEach(filename => {
+        deleteCommands += `require("Storage").erase("${filename}");\n`;
+      });
+      
+      // Send the commands
+      const bytes = new TextEncoder().encode(deleteCommands);
+      for (let i = 0; i < bytes.length; i += 20) {
+        await rxCharacteristic.writeValueWithoutResponse(bytes.slice(i, i + 20));
+        await new Promise(r => setTimeout(r, 50));
+      }
+      
+      // Force a small delay to let operations complete
+      await new Promise(r => setTimeout(r, 500));
+      
+      // Assume success and update UI
+      filenames.forEach(filename => {
+        log(`Command sent to delete ${filename}`, "success");
+        const fileItem = document.querySelector(`[data-filename="${filename}"]`);
+        if (fileItem) {
+          fileItem.remove();
+        }
+      });
+      
+      // Update file list display
+      if (fileList.children.length === 0) {
+        noFilesMessage.style.display = "block";
+      }
+      
+      // Reset selection
+      selectedFiles.clear();
+      updateDeleteButton();
+      
+      // Reset delete button
+      deleteBtn.disabled = true;
+      deleteBtn.innerHTML = '<i class="bi bi-trash"></i> Delete Selected Files';
+      
+      // Add a refresh button to verify deletions
+      const refreshBtn = document.createElement('button');
+      refreshBtn.className = 'btn btn-outline-primary ms-2';
+      refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Refresh File List';
+      refreshBtn.onclick = connectAndProcess;
+      document.querySelector('.d-flex.gap-2.mb-4').appendChild(refreshBtn);
+      
+      return true;
+    } catch (error) {
+      log(`Error during deletion: ${error.message}`, "error");
+      
+      // Reset delete button on error
+      deleteBtn.disabled = false;
+      deleteBtn.innerHTML = '<i class="bi bi-trash"></i> Delete Selected Files';
+      
+      return false;
+    }
+  }
+  
+  // Helper function to convert JSON to GPX if needed
+  function convertToGPX(data, filename) {
+    try {
+      let gpx = '<?xml version="1.0" encoding="UTF-8"?>\n';
+      gpx += '<gpx version="1.1" creator="Bangle.js Trainlog" xmlns="http://www.topografix.com/GPX/1/1">\n';
+      gpx += '  <trk>\n';
+      gpx += `    <name>${filename.replace('.gpx', '')}</name>\n`;
+      gpx += '    <trkseg>\n';
+      
+      // Try to handle different possible JSON structures
+      if (data.points && Array.isArray(data.points)) {
+        data.points.forEach(pt => {
+          if (pt.lat && pt.lon) {
+            gpx += `      <trkpt lat="${pt.lat}" lon="${pt.lon}">\n`;
+            if (pt.ele !== undefined) gpx += `        <ele>${pt.ele}</ele>\n`;
+            if (pt.time) gpx += `        <time>${pt.time}</time>\n`;
+            gpx += '      </trkpt>\n';
+          }
+        });
+      } else if (Array.isArray(data)) {
+        // Maybe it's just an array of points
+        data.forEach(pt => {
+          if (pt.lat && pt.lon) {
+            gpx += `      <trkpt lat="${pt.lat}" lon="${pt.lon}">\n`;
+            if (pt.ele !== undefined) gpx += `        <ele>${pt.ele}</ele>\n`;
+            if (pt.time) gpx += `        <time>${pt.time}</time>\n`;
+            gpx += '      </trkpt>\n';
+          }
+        });
+      }
+      
+      gpx += '    </trkseg>\n';
+      gpx += '  </trk>\n';
+      gpx += '</gpx>';
+      
+      return gpx;
+    } catch (e) {
+      console.error("Error converting to GPX:", e);
+      return data; // Return original if conversion fails
+    }
+  }
+  
+  // Update delete button state
+  function updateDeleteButton() {
+    deleteBtn.disabled = selectedFiles.size === 0;
+    if (selectedFiles.size > 0) {
+      deleteBtn.textContent = `Delete Selected (${selectedFiles.size})`;
+    } else {
+      deleteBtn.innerHTML = '<i class="bi bi-trash"></i> Delete Selected Files';
+    }
+  }
+  
+  // Display file list
+  function displayFileList(files) {
+    fileList.innerHTML = '';
+    noFilesMessage.style.display = files.length === 0 ? "block" : "none";
+    filesContainer.classList.remove("d-none");
+    
+    files.forEach(filename => {
+      const item = document.createElement("div");
+      item.className = "list-group-item list-group-item-action d-flex justify-content-between align-items-center";
+      item.dataset.filename = filename;
+      
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.className = "form-check-input me-2";
+      checkbox.addEventListener("change", () => {
+        if (checkbox.checked) {
+          selectedFiles.add(filename);
+        } else {
+          selectedFiles.delete(filename);
+        }
+        updateDeleteButton();
+      });
+      
+      const nameSpan = document.createElement("span");
+      nameSpan.className = "flex-grow-1";
+      nameSpan.textContent = filename;
+      
+      const statusIcon = document.createElement("i");
+      statusIcon.className = "status-icon bi bi-circle me-2";
+      
+      item.appendChild(checkbox);
+      item.appendChild(nameSpan);
+      item.appendChild(statusIcon);
+      fileList.appendChild(item);
+    });
+  }
+  
+  // Connect to device and handle BLE operations
+  async function connectAndProcess() {
+    try {
+      log("Requesting Bluetooth device...");
+      bluetoothDevice = await navigator.bluetooth.requestDevice({
+        filters: [{ namePrefix: "Bangle.js" }],
+        optionalServices: [UART_SERVICE]
+      });
+      
+      log("Connecting to device...");
+      bluetoothServer = await bluetoothDevice.gatt.connect();
+      
+      log("Getting UART service...");
+      const service = await bluetoothServer.getPrimaryService(UART_SERVICE);
+      
+      log("Getting characteristics...");
+      txCharacteristic = await service.getCharacteristic(TX_CHAR);
+      rxCharacteristic = await service.getCharacteristic(RX_CHAR);
+      
+      // Update UI for connected state
+      connectBtn.textContent = "Connected";
+      connectBtn.classList.replace("btn-primary", "btn-success");
+      connectBtn.disabled = true;
+      
+      // Enable delete button
+      deleteBtn.disabled = true;
+      
+      // Fetch GPX file list
+      log("Fetching file list...");
+      const rawList = await run(
+        `echo(0);\nBluetooth.println(JSON.stringify(require('Storage').list(/\\.gpx$/)));\nBluetooth.println("<<<END>>>");\necho(1);`,
+        rxCharacteristic, txCharacteristic
+      );
+      
+      const files = (() => { 
+        try { 
+          return JSON.parse(rawList.match(/\[.*?\]/s)[0]); 
+        } catch(e) { 
+          console.error("Error parsing file list:", e, rawList);
+          log("Error parsing file list", "error");
+          return []; 
+        } 
+      })();
+      
+      // Display file list
+      displayFileList(files);
+      
+      if (files.length === 0) {
+        log("No GPX files found on device.", "warning");
+        return;
+      }
+      
+      log(`Found ${files.length} GPX file${files.length !== 1 ? "s" : ""}.`);
+      
+      // Get notes
+      const notes = document.getElementById("notes").value;
+      
+      // Process files with progress indication
+      let successCount = 0;
+      for (let i = 0; i < files.length; i++) {
+        const filename = files[i];
+        updateProgress(i, files.length);
+        
+        log(`Reading ${filename}...`);
+        
+        // Set status to processing
+        const fileItem = document.querySelector(`[data-filename="${filename}"]`);
+        if (fileItem) {
+          const statusIcon = fileItem.querySelector(".status-icon");
+          if (statusIcon) {
+            statusIcon.className = "status-icon bi bi-arrow-repeat text-primary spinner";
+          }
+        }
+        
+        // This is a more robust approach to read files from Bangle.js
+        const code = `
+          echo(0);
+          (function() {
+            var content = "";
+            try {
+              // First try direct read
+              content = require("Storage").read("${filename}");
+              if (!content || typeof content !== "string" || content === "undefined") {
+                // Try reading line by line
+                var f = require("Storage").open("${filename}", "r");
+                content = "";
+                var line;
+                while ((line = f.readLine()) !== undefined) {
+                  content += line + "\\n";
+                }
+              }
+            } catch (e) {
+              content = "Error reading file: " + e.toString();
+            }
+            Bluetooth.print(content);
+            Bluetooth.println("<<<END>>>");
+          })();
+          echo(1);
+        `;
+        
+        let gpxContent = await run(code, rxCharacteristic, txCharacteristic);
+        
+        // Clean up content - remove any "undefined" prefixes that might be causing issues
+        gpxContent = gpxContent.replace(/^=undefined/m, "").trim();
+        
+        if (!gpxContent || gpxContent === "undefined" || gpxContent.includes("Error reading file")) {
+          log(`Failed with standard method. Trying alternative approach for ${filename}...`, "warning");
+          
+          // Try a different approach - read in small chunks
+          const altCode = `
+            echo(0);
+            (function() {
+              try {
+                var f = require("Storage").open("${filename}", "r");
+                var chunk;
+                var chunkSize = 32; // Very small chunk size for problematic files
+                
+                // Reset file pointer to beginning
+                f.seek(0);
+                
+                while ((chunk = f.read(chunkSize)) !== undefined) {
+                  if (chunk) Bluetooth.print(chunk);
+                }
+              } catch (e) {
+                Bluetooth.print("Alt read error: " + e.toString());
+              }
+              Bluetooth.println("<<<END>>>");
+            })();
+            echo(1);
+          `;
+          
+          gpxContent = await run(altCode, rxCharacteristic, txCharacteristic);
+          // Clean up again
+          gpxContent = gpxContent.replace(/^=undefined/m, "").trim();
+        }
+        
+        // Check if what we got looks like GPX
+        if (gpxContent && !gpxContent.includes("<?xml")) {
+          log(`Content doesn't look like XML/GPX. Checking for JSON format...`, "warning");
+          try {
+            // Maybe it's JSON - try to parse and convert
+            const jsonData = JSON.parse(gpxContent);
+            gpxContent = convertToGPX(jsonData, filename);
+            log(`Successfully converted JSON to GPX format.`, "success");
+          } catch (e) {
+            log(`Not valid JSON either. Using raw content.`, "warning");
+          }
+        }
+        
+        if (gpxContent && gpxContent.trim()) {
+          log(`Uploading ${filename} to server...`);
+          const uploaded = await uploadGPXFile(filename, gpxContent, notes);
+          if (uploaded) {
+            successCount++;
+          }
+        } else {
+          log(`Unable to retrieve valid content for ${filename}.`, "error");
+          
+          // Last resort - try to directly get raw bytes
+          log(`Trying raw byte access for ${filename}...`, "warning");
+          const rawCode = `
+            echo(0);
+            (function() {
+              try {
+                var s = require("Storage");
+                var rawData = s.readArrayBuffer("${filename}");
+                if (rawData) {
+                  var result = "";
+                  for (var i=0; i<rawData.length; i++) {
+                    var byte = rawData[i];
+                    if (byte >= 32 && byte <= 126) // printable ASCII
+                      result += String.fromCharCode(byte);
+                  }
+                  Bluetooth.print(result);
+                } else {
+                  Bluetooth.print("No raw data available");
+                }
+              } catch (e) {
+                Bluetooth.print("Raw read error: " + e.toString());
+              }
+              Bluetooth.println("<<<END>>>");
+            })();
+            echo(1);
+          `;
+          
+          const rawContent = await run(rawCode, rxCharacteristic, txCharacteristic);
+          if (rawContent && rawContent.trim() && !rawContent.includes("error")) {
+            log(`Uploading ${filename} with raw content...`);
+            const uploaded = await uploadGPXFile(filename, rawContent, notes);
+            if (uploaded) {
+              successCount++;
+            }
+          } else {
+            // Update file item with failure indicator
+            const fileItem = document.querySelector(`[data-filename="${filename}"]`);
+            if (fileItem) {
+              const statusIcon = fileItem.querySelector(".status-icon");
+              if (statusIcon) {
+                statusIcon.className = "status-icon bi bi-x-circle-fill text-danger";
+              }
+            }
+            
+            log(`All attempts to retrieve ${filename} failed.`, "error");
+          }
+        }
+      }
+      
+      // Complete progress bar
+        updateProgress(files.length, files.length);
+        setTimeout(resetProgress, 2000);
+        
+        log(`Upload complete. Successfully uploaded ${successCount} of ${files.length} files.`, 
+          successCount === files.length ? "success" : "warning");
+      
+      // Reset UI
+      connectBtn.textContent = "Connect Device";
+      connectBtn.classList.replace("btn-success", "btn-primary");
+      connectBtn.disabled = false;
+      
+      // Don't disconnect automatically after uploads - let the connection stay alive
+      // for potential delete operations
+      if (selectedFiles.size === 0) {
+        if (bluetoothServer && bluetoothServer.connected) {
+          bluetoothServer.disconnect();
+          log("Device disconnected.");
+        }
+      } else {
+        log("Keeping connection alive for pending operations.");
+      }
+    } catch (e) {
+      log(`Error: ${e.message}`, "error");
+      console.error(e);
+      
+      // Reset UI
+      resetProgress();
+      connectBtn.textContent = "Connect Device";
+      connectBtn.classList.replace("btn-success", "btn-primary");
+      connectBtn.disabled = false;
+    }
+  }
+  
+  // Event listeners
+  connectBtn.addEventListener("click", connectAndProcess);
+  
+  deleteBtn.addEventListener("click", async () => {
+    if (selectedFiles.size === 0) return;
+    
+    if (confirm(`Are you sure you want to delete ${selectedFiles.size} file(s) from your device?`)) {
+      deleteBtn.disabled = true;
+      deleteBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Deleting...';
+      
+      await deleteGPXFiles([...selectedFiles]);
+      
+      // Note: We don't reset the button here as it's done in the deleteGPXFiles function
+    }
+  });
+  
+  // Add CSS for spinner animation
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .spinner {
+      animation: spin 1s linear infinite;
+    }
+    .card-header.bg-primary {
+      background-color: #3273dc !important;
+    }
+  `;
+  document.head.appendChild(style);
+  
+  // Add Bootstrap Icons
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css';
+  document.head.appendChild(link);
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,174 @@
+{% extends "bootstrap/layout.html" %}
+{% block content %}
+{% include nav%}
+
+<div id="leaderboard-container" class="container mt-3">
+    <h2>
+        {{ leaderboardCountries }}
+    </h2>
+    
+    <br>
+    {% include "leaderboardNav.html"%}
+
+    <br>
+
+    <table id="leaderboard" class="table table-bordered display nowrap">
+        <thead class="thead">
+            <tr>
+                <th></th>
+                <th class="all">{{ leaderboardCountry }}</th>
+                <th data-priority="3">{{ leaderboardLeaders }}</th>
+                <th data-priority="2">{{ leaderboardPercent }}</th>
+                <th class="none">{{ leaderboard }}</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+<script>
+
+var table = $('#leaderboard');
+
+const params = new URLSearchParams(window.location.search);
+const regionsParam = params.get('regions');
+const countryParam = params.get('country');
+const countriesWithRegions = new Set();
+
+$.get('{{url_for("getLeaderboardUsers", type=type)}}', function(countries, status){
+    countries.leaderboard_data.forEach(item => {
+        const cc = item.cc;
+        // Check if the 'cc' value is longer than 2, implying it's a subregion
+        if (cc.length > 2) {
+            // Extract the country code (first two characters)
+            countriesWithRegions.add(cc.substring(0, 2).toLowerCase());
+        }
+    });
+
+    countries.leaderboard_data.forEach(function(country) {
+        if (
+            (
+                (regionsParam == "true" && country.cc.includes("-") && countryParam == null) ||
+                (regionsParam == "true" && country.cc.includes("-") && countryParam != null && country.cc.split("-")[0].toUpperCase() == countryParam.toUpperCase())
+            ) ||
+            (regionsParam == null && !country.cc.includes("-"))
+        ) {
+
+            // Remove the first element from the array and store it
+            var firstData = country.data[0];
+
+            // Create a nested table for the users
+            var usersTable = $('<table>');
+            userHead = $('<tr>')
+                .append($('<th>').text("{{ leaderboardRank |safe}}"))
+                .append($('<th>').text("{{ leaderboardUsername|safe}}"))
+                .append($('<th>').text("{{ leaderboardPercent |safe}}"));
+            usersTable.append(userHead);
+
+            // Initialize a counter for the ID column, starting with 2
+            var idCounter = 1;
+
+            country.data.forEach(function(data) {
+                var medalIcon;
+                
+                switch(idCounter) {
+                    case 1:
+                        medalIcon = '<i class="fa fa-trophy" style="color: gold;"></i>'; // gold trophy for first place
+                        break;
+                    case 2:
+                        medalIcon = '<i class="fa fa-medal" style="color: silver;"></i>'; // silver medal for second place
+                        break;
+                    case 3:
+                        medalIcon = '<i class="fa fa-medal" style="color: #cd7f32;"></i>'; // bronze medal for third place
+                        break;
+                    default:
+                        medalIcon = idCounter; // use the number for other positions
+                        break;
+                }
+
+                userRow = $('<tr>')
+                    .append($('<td>').html(medalIcon))
+                    .append($('<td>').html(data.usernames.map(username => generateLink(username)).join(', ')))
+                    .append($('<td>').text(data.percent + "%"));
+                usersTable.append(userRow);
+
+                idCounter++; // Don't forget to increment the counter
+            });
+
+            var { flag, name } = processCountryCode(country.cc, flagPositions);
+
+            function generateLink(username) {         
+                if(countries.non_public_users.includes(username)){
+                    return `${username}`;
+                } else {
+                    return `<a class="leaderboardLink link-dark" href="{{url_for('public', username="")}}${username}">${username}</a>`;
+                }
+            }
+
+            if (countriesWithRegions.has(country.cc.substring(0, 2).toLowerCase()) && !regionsParam) {
+                var regionsLink = `<a class="leaderboardLink link-dark" href={{url_for('leaderboard', type="train_countries")}}?regions=true&country=${country.cc.substring(0, 2).toLowerCase()}>⁺</a>`;
+                var countryDisplay = `${flag} ${name} ${regionsLink}`;
+            } else {
+                var countryDisplay = `${flag} ${name}`;
+            }
+
+            var displayUsernames = firstData.usernames.length > 10 ? 'Over 10 people' : firstData.usernames.map(username => generateLink(username)).join(', ');
+
+            // Append to the main table
+            table.append($('<tr>').attr("data-subTable", country.data.length == 1 && displayUsernames != 'Over 10 people' ? false : true)
+                .append($('<td>'))
+                .append($('<td>').html(countryDisplay))
+                .append($('<td>').html(displayUsernames))
+                .append($('<td>').text(firstData.percent + "%"))
+                .append($('<td>').append(usersTable))
+            );
+        }
+    });
+
+    const dTable = $('#leaderboard').DataTable({
+        paging: false, // Don't want paging                
+        bPaginate: false, // Don't want paging   
+        columnDefs: [
+            {
+                className: 'dtr-control',
+                orderable: false,
+                target: 0
+            },
+            {
+                orderable: false,
+                target: 1
+            },
+            {
+                orderable: false,
+                target: 2
+            }
+        ],
+        responsive: {
+            details: {
+                type: 'column',
+                target: 0,
+                renderer: function (api, rowIdx, columns) {
+                    if ($(api.cell(rowIdx, 0).node()).hasClass('dtr-control')) {
+                        return columns[3].data;
+                    } else {
+                        return "";
+                    }
+                }
+            }
+        },
+        order: [[3, 'desc']]  // Order by percent in descending order
+    });
+
+    dTable.rows().every(function() {
+        var row = $(this.node());
+        if (
+            !row.data('subtable')  // row has a subtable with more than 1 user
+            && !row.find('td:eq(2)').hasClass('dtr-hidden') // row has all the leaders displayed
+        ) {
+            row.find('td:first').removeClass('dtr-control'); // Remove the class responsible for the "+"
+        }
+    });
+});
+</script>
+
+{% endblock %}

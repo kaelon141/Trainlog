@@ -1,0 +1,358 @@
+{% extends "bootstrap/layout.html" %}
+{% block content %}
+
+{% include "bootstrap/navigation.html"%}
+
+<script src="https://cdn.jsdelivr.net/npm/echarts@5"></script>
+
+<div class="container mt-4">
+    <h2>Monthly Trainlog's Finances</h2>
+    <div id="financeChart" style="width: 100%; height: 500px;"></div>
+</div>
+
+<!-- Displaying Totals Below the Chart using Bootstrap 5 cards -->
+<div class="container mt-4">
+    <div class="row text-center">
+        <div class="col-md-4 mb-3">
+            <div class="card shadow-sm border-primary">
+                <div class="card-body">
+                    <h5 class="card-title text-primary">Total Income</h5>
+                    <p class="card-text">{{ totals['revenue'] }} €</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card shadow-sm border-danger">
+                <div class="card-body">
+                    <h5 class="card-title text-danger">Total Hosting Spending</h5>
+                    <p class="card-text">{{ totals['hosting_spending'] }} €</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card shadow-sm border-danger">
+                <div class="card-body">
+                    <h5 class="card-title text-danger">Total Translation Spending</h5>
+                    <p class="card-text">{{ totals['translation_spending'] }} €</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row text-center">
+        <div class="col-md-4 mb-3">
+            <div class="card shadow-sm border-danger">
+                <div class="card-body">
+                    <h5 class="card-title text-danger">API Subscriptions</h5>
+                    <p class="card-text">{{ totals['api_subscription_spending'] }} €</p>
+                </div>
+            </div>
+        </div>
+        <!-- <div class="col-md-3 mb-3">
+            <div class="card shadow-sm border-danger">
+                <div class="card-body">
+                    <h5 class="card-title text-danger">API Topups</h5>
+                    <p class="card-text">{{ totals['api_topup_spending'] }} €</p>
+                </div>
+            </div>
+        </div> -->
+        <div class="col-md-4 mb-3">
+            <div class="card shadow-sm border-danger">
+                <div class="card-body">
+                    <h5 class="card-title text-danger">Total Spending</h5>
+                    <p class="card-text">{{ totals['total_spending'] }} €</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card shadow-sm 
+                {% if totals['profit'] >= 0 %}
+                    border-success
+                {% else %}
+                    border-danger
+                {% endif %}
+            ">
+                <div class="card-body">
+                    <h5 class="card-title 
+                        {% if totals['profit'] >= 0 %}
+                            text-success
+                        {% else %}
+                            text-danger
+                        {% endif %}
+                    ">
+                        Net Result
+                    </h5>
+                    <p class="card-text">{{ totals['profit'] }} €</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Export Data Button -->
+<div class="container mt-4 text-center">
+    <button class="btn btn-primary" onclick="exportData()">Export Data as CSV</button>
+</div>
+
+<script>
+    var chartDom = document.getElementById('financeChart');
+    var myChart = echarts.init(chartDom);
+    
+    var labels = {{ labels | tojson }};
+    var revenueDataPoints = {{ revenue_data_points | tojson }};
+    var hostingSpendingDataPoints = {{ hosting_spending_data_points | tojson }};
+    var translationSpendingDataPoints = {{ translation_spending_data_points | tojson }};
+    var apiSubscriptionSpendingDataPoints = {{ api_subscription_spending_data_points | tojson }};
+    var apiTopupSpendingDataPoints = {{ api_topup_spending_data_points | tojson }};
+    var totalSpendingDataPoints = {{ total_spending_data_points | tojson }};
+    var profitDataPoints = {{ profit_data_points | tojson }};
+    
+    // Calculate cumulative profit
+    var cumulativeProfitDataPoints = [];
+    profitDataPoints.reduce((acc, current, index) => {
+        acc += current;
+        cumulativeProfitDataPoints[index] = acc;
+        return acc;
+    }, 0);
+
+    // Find the indices for the default zoom range
+    var endIndex = labels.length - 1; // Set to the last index
+    var startIndex = endIndex - 11; // Set to the last index minus 11 for a 12-month view
+
+    var option = {
+        tooltip: {
+            trigger: 'axis',
+            backgroundColor: 'rgba(50, 50, 50, 0.7)',
+            borderColor: '#777',
+            borderWidth: 1,
+            textStyle: {
+                color: '#fff'
+            },
+            formatter: function (params) {
+                var tooltipText = `<strong>${params[0].axisValue}</strong><br>`;
+                params.forEach(function (param) {
+                    tooltipText += `${param.marker} ${param.seriesName}: ${param.value.toFixed(2)} €<br>`;
+                });
+                return tooltipText;
+            }
+        },
+        legend: {
+            data: ['Income', 'Hosting Spending', 'Translation Spending', 'API Subscriptions', 'API Topups', 'Net Result', 'Cumulative Profit'],
+            top: 10,
+            textStyle: {
+                color: '#333',
+                fontSize: 14
+            }
+        },
+        grid: {
+            left: '3%',
+            right: '4%',
+            bottom: '15%', // Increased bottom space for the slider
+            containLabel: true
+        },
+        xAxis: {
+            type: 'category',
+            data: labels,
+            axisLine: {
+                lineStyle: {
+                    color: '#777'
+                }
+            },
+            axisLabel: {
+                color: '#333',
+                fontSize: 12
+            }
+        },
+        yAxis: {
+            type: 'value',
+            axisLine: {
+                lineStyle: {
+                    color: '#777'
+                }
+            },
+            axisLabel: {
+                formatter: '{value} €',
+                color: '#333',
+                fontSize: 12
+            },
+            splitLine: {
+                lineStyle: {
+                    type: 'dashed'
+                }
+            }
+        },
+        dataZoom: [
+            {
+                type: 'slider',
+                startValue: startIndex, // Default zoom start
+                endValue: endIndex, // Default zoom end
+                bottom: '5%' // Positioning the slider a bit higher
+            },
+            {
+                type: 'inside',
+                startValue: startIndex, // Default zoom start
+                endValue: endIndex // Default zoom end
+            }
+        ],
+        series: [
+            {
+                name: 'Income',
+                type: 'bar',
+                data: revenueDataPoints,
+                itemStyle: {
+                    color: '#4CAF50', // Green shade
+                    shadowBlur: 1,
+                    shadowColor: 'rgba(0, 0, 0, 0.5)'
+                },
+                emphasis: {
+                    itemStyle: {
+                        color: '#388E3C'
+                    }
+                },
+                barCategoryGap: '30%'
+            },
+            {
+                name: 'Hosting Spending',
+                type: 'bar',
+                stack: 'Spending',
+                data: hostingSpendingDataPoints,
+                itemStyle: {
+                    color: '#F44336', // Red shade
+                    shadowBlur: 1,
+                    shadowColor: 'rgba(0, 0, 0, 0.5)'
+                },
+                emphasis: {
+                    itemStyle: {
+                        color: '#D32F2F'
+                    }
+                },
+                barCategoryGap: '30%'
+            },
+            {
+                name: 'Translation Spending',
+                type: 'bar',
+                stack: 'Spending',
+                data: translationSpendingDataPoints,
+                itemStyle: {
+                    color: '#FFCDD2', // Light red shade
+                    shadowBlur: 1,
+                    shadowColor: 'rgba(0, 0, 0, 0.5)'
+                },
+                emphasis: {
+                    itemStyle: {
+                        color: '#EF9A9A'
+                    }
+                },
+                barCategoryGap: '30%'
+            },
+            {
+                name: 'API Subscriptions',
+                type: 'bar',
+                stack: 'Spending',
+                data: apiSubscriptionSpendingDataPoints,
+                itemStyle: {
+                    color: '#FF5722', // Deep orange shade
+                    shadowBlur: 1,
+                    shadowColor: 'rgba(0, 0, 0, 0.5)'
+                },
+                emphasis: {
+                    itemStyle: {
+                        color: '#E64A19'
+                    }
+                },
+                barCategoryGap: '30%'
+            },
+            // {
+            //     name: 'API Topups',
+            //     type: 'bar',
+            //     stack: 'Spending',
+            //     data: apiTopupSpendingDataPoints,
+            //     itemStyle: {
+            //         color: '#FFAB91', // Light orange shade
+            //         shadowBlur: 1,
+            //         shadowColor: 'rgba(0, 0, 0, 0.5)'
+            //     },
+            //     emphasis: {
+            //         itemStyle: {
+            //             color: '#FF8A65'
+            //         }
+            //     },
+            //     barCategoryGap: '30%'
+            // },
+            {
+                name: 'Net Result',
+                type: 'line',
+                data: profitDataPoints,
+                itemStyle: {
+                    color: '#FF9800', // Orange shade
+                    shadowBlur: 1,
+                    shadowColor: 'rgba(0, 0, 0, 0.5)'
+                },
+                lineStyle: {
+                    width: 2
+                },
+                emphasis: {
+                    itemStyle: {
+                        color: '#F57C00'
+                    }
+                },
+                smooth: true
+            },
+            {
+                name: 'Cumulative Profit',
+                type: 'line',
+                data: cumulativeProfitDataPoints,
+                itemStyle: {
+                    color: '#2196F3', // Blue shade
+                    shadowBlur: 1,
+                    shadowColor: 'rgba(0, 0, 0, 0.5)'
+                },
+                lineStyle: {
+                    width: 2,
+                    type: 'dashed'
+                },
+                emphasis: {
+                    itemStyle: {
+                        color: '#1976D2'
+                    }
+                },
+                smooth: true
+            }
+        ]
+    };
+
+    myChart.setOption(option);
+
+    function exportData() {
+        // Prepare CSV data
+        let csvContent = "data:text/csv;charset=utf-8,";
+        csvContent += "Date,Income,Hosting Spending,Translation Spending,API Subscriptions,API Topups,Net Result,Cumulative Profit\n";
+        labels.forEach((label, index) => {
+            let row = [
+                label,
+                revenueDataPoints[index],
+                hostingSpendingDataPoints[index],
+                translationSpendingDataPoints[index],
+                apiSubscriptionSpendingDataPoints[index],
+                // apiTopupSpendingDataPoints[index],
+                profitDataPoints[index],
+                cumulativeProfitDataPoints[index]
+            ].join(",");
+            csvContent += row + "\n";
+        });
+
+        // Create a downloadable link
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "trainlog_finances.csv");
+        document.body.appendChild(link);
+
+        // Trigger the download
+        link.click();
+
+        // Remove the link after download
+        document.body.removeChild(link);
+    }
+</script>
+
+{% endblock %}

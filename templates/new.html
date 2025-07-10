@@ -1,0 +1,343 @@
+{% extends "bootstrap/layout.html" %}
+{% block content %}
+
+{% include "bootstrap/navigation.html"%}
+
+<div id="form" >
+  <h2 class="header">{{newTrip}}</h2>
+  <div>
+    <form id="newTripForm" autocomplete="off" action="javascript:void(0);" method="GET">
+      <label for="originManualToggle" class="checkboxLabel non_manual">{{manualOrigin}}</label>
+      <input type="checkbox" id="originManualToggle" name="originManualToggle" class="non_manual" />
+
+      <group id="originStationAuto">
+        <label for="originStation" class="sr-only">{{originTerminal}}</label>
+        <input type="text" class="stationSearch" id="originStation" name="originStation" placeholder="{{originTerminal}}" />
+      </group>
+
+      <group id="originStationManual" class="non_manual">
+        <label for="originManualName" class="sr-only">{{originTerminalName}}</label>
+        <input type="text" class="" name="originManualName" id="originManualName" placeholder="{{originTerminalName}}" /> 
+        <label for="originManualLat" class="sr-only">Lat</label>
+        <input type="float" class="" name="originManualLat" id="originManualLat" placeholder="Lat" /> 
+        <label for="originManualLng" class="sr-only">Lng</label>
+        <input type="float" class="" name="originManualLng" id="originManualLng" placeholder="Lng" />
+      </group>
+
+      <label id="destinationManualToggleLabel" for="destinationManualToggle" class="checkboxLabel non_poi non_manual">{{manDestination}}</label>
+      <input type="checkbox" id="destinationManualToggle" name="destinationManualToggle" class="non_poi non_manual"/>
+
+      <group id="destinationStationAuto" class="non_poi">
+        <label for="destinationStation" class="sr-only">{{destinationTerminal}}</label>
+        <input type="text" class="stationSearch" id="destinationStation" name="destinationStation" placeholder="{{destinationTerminal}}"/>
+      </group>
+      <group id="destinationStationManual" class="non_poi" class="non_manual">
+        <label for="destinationManualName" class="sr-only">{{destinationTerminalName}}</label>
+        <input type="text" class="" name="destinationManualName" id="destinationManualName" placeholder="{{destinationTerminalName}}"/> 
+        <label for="destinationManualLat" class="sr-only">Lat</label>
+        <input type="float" class="" name="destinationManualLat" id="destinationManualLat" placeholder="Lat"/> 
+        <label for="destinationManualLng" class="sr-only">Lng</label>
+        <input type="float" class="" name="destinationManualLng" id="destinationManualLng" placeholder="Lng"/>
+      </group>
+
+      <br class="non_poi">
+      <group id="operatorGroup" class="non_poi">
+        <div class="operatorLogoWrapper">
+          <img class="operatorLogo" src="{{ url_for('static',filename='images/icons/trip_logos/'+ vehicle_type +'.png')}}"/>
+        </div>
+        <label for="operator" class="sr-only">{{operator}}</label>
+        <input type="text" name="operator" id="operator" placeholder="{{operator}}"/>
+      </group>
+
+      <label for="lineName" class="sr-only">{{lineName}}</label>
+      <input type="text" name="lineName" id="lineName" class="non_poi" placeholder="{{lineName}}"/>
+      <br class="non_poi">
+
+      <label for="detailsToggle" class="checkboxLabel">{{details}}</label>
+      <input type="checkbox" id="detailsToggle" name="detailsToggle"/>
+
+      <div id="detailsGroup">
+        <label for="material_type" class="sr-only">{{material_type}}</label>
+        <input type="text" class="non_poi" name="material_type" id="material_type" placeholder="{{material_type}}">
+        <label for="reg" class="sr-only">{{reg}}</label>
+        <input type="text" class="non_poi" name="reg" id="reg" placeholder="{{reg}}">
+        <label for="seat" class="sr-only">{{seat}}</label>
+        <input type="text" class="non_poi" name="seat" id="seat" placeholder="{{seat}}">
+        <label for="notes" class="sr-only">{{notes}}</label>
+        <input type="text" name="notes" id="notes" placeholder="{{notes}}">
+
+        <!-- Price Details Subgroup -->
+        <fieldset class="fieldset-fixed fieldset-price">
+          <legend>
+            <span class="legend">{{priceLabel}}</span>
+          </legend>
+          
+          <label for="price" id="price_label" class="sr-only">{{price}}</label>
+          <input type="number" step="any" name="price" id="price" placeholder="{{price}}">
+          
+          <label for="currency" id="currency_label" class="sr-only">{{currency}}</label>  
+          <select name="currency" id="currency">
+              {% for currency in currencyOptions %}
+              <option value="{{ currency['currency'] }}" data-country="{{ currency['country'] }}"
+                  {% if currency['currency'] == user_currency %}selected{% endif %}>
+                  {{ currency['currency'] }}
+              </option>
+              {% endfor %}
+          </select>
+            
+          <!-- Purchasing Date Picker, limited to today's date or earlier -->
+          <label for="purchasing_date" id="purchasing_date_label" class="sr-only">{{purchasing_date}}</label>
+          <input type="date" name="purchasing_date" id="purchasing_date" />
+        </fieldset>
+
+        <label for="ticketSearchInput" id="ticketSearchInputLabel" class="form-label">{{select_ticket}}</label>
+        <select id="ticketSearchInput" name="ticket_id" class="form-select">
+        </select>
+       <!-- <br>
+        <input type="text" id="tagSearchInput" placeholder="{{select_tag}}" class="form-control" autocomplete="off">
+        <div id="tagList" class="d-flex flex-wrap"></div> -->
+      </div>
+
+      <br/>
+      <br class="non_poi"/>
+
+      <fieldset class="trip-time-inputs non_poi">
+        <legend class="non_poi">
+          <span class="legend">{{timings}}:</span>
+        </legend>
+        <div class="radio-group non_poi">
+          <input type="radio" id="radioPreciseDates" class="non_poi" value="preciseDates" name="precision" checked/>
+          <label for="radioPreciseDates" class="checkboxLabel non_poi" >{{preciseDates}}</label>
+        </div>
+        <div class="radio-group non_poi">
+          <input type="radio" id="radioUnknown" class="non_poi" value="unknown" name="precision"/>
+          <label for="radioUnknown" class="checkboxLabel non_poi">{{unknown}}</label>
+        </div>
+        <div class="radio-group non_poi">
+          <input type="radio" id="radioOnlyDate" class="non_poi" value="onlyDate" name="precision"/>
+          <label for="radioOnlyDate" class="checkboxLabel non_poi">{{onlyDate}}</label>
+        </div>
+      </fieldset>
+
+      <hr><br>
+
+      <group id="onlyDatePicker" class="non_poi">
+        <label for="newTripStartOnlyDate">{{newTripStart}}</label>
+        <input type="date" id="newTripStartOnlyDate" name="onlyDate" id="onlyDate"/>
+      </group>
+
+      <group id="unknownDates" class="inline-inputs non_poi">
+        <div class="radio-group non_poi">
+          <input type="radio" id="past" value="past" name="unknownType"/> 
+          <label for="past" class="checkboxLabel">{{past}}</label> 
+        </div>
+        <div class="radio-group non_poi">
+          <input type="radio" id="future" value="future" name="unknownType"/>  
+          <label for="future" class="checkboxLabel">{{future}}</label>
+        </div>
+      </group>
+      
+      <group id="manDuration" class="non_poi">
+        <fieldset class="fieldset-time">
+          <legend>
+            <span class="legend">{{tripDuration}}</span>
+          </legend>
+          <label class="sr-only" for="manDurationHours">{{hours}}</label>
+          <input type="number" min=0 max=200 step="1" id="manDurationHours" name="manDurationHours" placeholder="{{hours}}"/> 
+          <label class="sr-only" for="manDurationMinutes">{{minutes}}</label>
+          <input type="number" min=0 max=59 step="1" id="manDurationMinutes" name="manDurationMinutes" placeholder="{{minutes}}"/> 
+        </fieldset>
+      </group>
+      
+      <group id="dates">
+        <fieldset class="fieldset-datetime">
+          <legend>
+            <span class="legend">{{ newTripStart if vehicle_type not in  ('accommodation', 'poi', 'restaurant') else checkIn }}</span>
+          </legend>
+          <label class="sr-only" for="newTripStartDate">{{ date }}</label>
+          <input type="date" name="newTripStartDate" id="newTripStartDate" placeholder=" "/>
+          <label class="sr-only" for="newTripStartDate">{{ time }}</label>
+          <input type="time" name="newTripStartTime" id="newTripStartTime" placeholder=" "/>    
+        </fieldset>
+
+        <fieldset class="fieldset-datetime">
+          <legend>
+            <span class="legend">{{newTripEnd if vehicle_type not in  ('accommodation', 'poi', 'restaurant') else checkOut}}</span>
+          </legend>
+          <label class="sr-only" for="newTripEndDate">{{ date }}</label>
+          <input type="date" name="newTripEndDate" id="newTripEndDate" placeholder=" "/>
+          <label class="sr-only" for="newTripEndDate">{{ time }}</label>
+          <input type="time" name="newTripEndTime" id="newTripEndTime" placeholder=" " />
+        </fieldset>
+      </group>
+
+      <button id=submit type="submit" onclick="toRouting($('form').serializeArray(), '{{vehicle_type}}' == 'helicopter' ? airRoutingURL : routingURL, '{{vehicle_type}}');">{{submit}}</button>
+    </form>
+  </div>
+</div>
+
+<script>
+
+  {% if vehicle_type in ('accommodation', 'poi', 'restaurant') %}
+ 
+    $(".non_poi").hide();
+  
+  {% endif %}
+
+  manualCopyHandler();
+  var globalStationDict = {};
+  var manualStationsList = [];
+  var visitedStations = {};
+  var routingURL = "{{url_for('routing', username=username)}}";
+  var airRoutingURL = "{{url_for('air_routing', username=username, type='helicopter')}}";
+
+  $.get('{{url_for("getManAndOps", username=username, station_type=vehicle_type)}}', function(manAndOps, status){
+    Object.assign(globalStationDict, manAndOps.manualStations);
+    Object.assign(visitedStations, manAndOps.visitedStations);
+  
+    Object.keys(manAndOps.manualStations).forEach(function (station){
+      manualStationsList.push({"label":station, "value":station, "manual":true})
+    })
+
+
+    operatorAutocomplete( $("#operator"), manAndOps, "{{ url_for('static',filename='')}}",  "{{ url_for('static',filename='images/icons/trip_logos/' + vehicle_type + '.png')}}", "{{vehicle_type}}");
+  });
+
+
+  let searchParams = new URLSearchParams(window.location.search);
+  if (!searchParams.has('prevDest')){
+
+    $("#newTripStartDate").val(getCurrentDate());
+    $("#purchasing_date").val(getCurrentDate());
+    $("#purchasing_date").attr({"max":getCurrentDate()});
+    $("#onlyDate").val(getCurrentDate());
+    $("#newTripStartTime").val(getCurrentTime());
+
+  }
+  else{
+    $("#newTripStartDate").val(searchParams.get('prevEndDate'));    
+    $("#newTripEndDate").val(searchParams.get('prevEndDate'));    
+    $("#newTripStartTime").val(searchParams.get('prevEndTime'));
+    $("#onlyDate").val(searchParams.get('prevEndDate'));
+    coords = [searchParams.get('prevDest').split(',')[0],searchParams.get('prevDest').split(',')[1]];
+    $("#originStation").val(searchParams.get('prevDest').split(',')[2]);
+    globalStationDict[searchParams.get('prevDest').split(',')[2]] = [coords, searchParams.get('prevDest').split(',')[2]];
+    if ($("#newTripStartDate").val()>getCurrentDate() )
+    {
+      $("#purchasing_date").val(getCurrentDate());
+      $("#purchasing_date").attr({"max":getCurrentDate()});
+    }
+    else {
+      $("#purchasing_date").val($("#newTripStartDate").val());
+      $("#purchasing_date").attr({"max":$("#newTripStartDate").val()});
+    }
+  }
+  
+  $("#newTripStartDate").on("focusout", function() {
+    if($("#newTripEndDate").val() < $(this).val())
+    {
+      $("#newTripEndDate").val($(this).val());
+    }
+    $("#newTripEndDate").attr({"min":$(this).val()});
+    $("#purchasing_date").attr({"max":$(this).val()});
+    if($("#purchasing_date").val()>$(this).val()){
+      $("#purchasing_date").val($(this).val());
+    }
+  });
+
+  $("#newTripStartTime").on("focusout", function() {
+    if($("#newTripEndDate").val() == $("#newTripEndDate").val()){
+      $("#newTripEndTime").attr({"min":$(this).val()});
+      if ($("#newTripEndTime").val() < $(this).val()){
+        $("#newTripEndTime").val($(this).val());
+      }
+    }
+  });
+  var URLs = {
+    "bus": "/stationAutocomplete?osm_tag=amenity:bus_station&osm_tag=highway:bus_stop",
+    "train": "/stationAutocomplete?osm_tag=railway:halt&osm_tag=railway:station",
+    "tram": "/stationAutocomplete?osm_tag=railway:tram_stop&osm_tag=railway:station&osm_tag=railway:halt",
+    "metro": "/stationAutocomplete?osm_tag=railway:station&osm_tag=railway:subway_entrance",
+    "ferry": "/stationAutocomplete?osm_tag=amenity:ferry_terminal",
+    "helicopter": "/stationAutocomplete?osm_tag=aeroway:helipad&osm_tag=aeroway:heliport&osm_tag=aeroway:aerodrome",
+    "accommodation": "/stationAutocomplete?osm_tag=tourism:alpine_hut&osm_tag=tourism:apartment&osm_tag=tourism:chalet&osm_tag=tourism:guest_house&osm_tag=tourism:hostel&osm_tag=tourism:hotel&osm_tag=tourism:motel&osm_tag=tourism:wilderness_hut",
+    "poi": "/stationAutocomplete?osm_tag=tourism&osm_tag=!tourism:alpine_hut&osm_tag=!tourism:apartment&osm_tag=!tourism:chalet&osm_tag=!tourism:guest_house&osm_tag=!tourism:hostel&osm_tag=!tourism:hotel&osm_tag=!tourism:motel&osm_tag=!tourism:wilderness_hut",
+    "restaurant":  "/stationAutocomplete?osm_tag=amenity:restaurant",
+    "aerialway":  "/stationAutocomplete?osm_tag=aerialway:station",
+    "car":  "/stationAutocomplete",
+    "walk":  "/stationAutocomplete",
+    "cycle":  "/stationAutocomplete",
+  }
+  var specialURLs = {
+    "metro": "/stationAutocomplete?osm_tag=railway:station&osm_tag=!train",
+    "tram": "/stationAutocomplete?osm_tag=railway:tram_stop",
+    "no-filter": "/stationAutocomplete",
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const special = params.get('special');
+
+  console.log(special);
+  if("{{vehicle_type}}" == "train" && special){
+    stationSearchAutocomplete(".stationSearch", visitedStations, specialURLs[special], "{{manual}}");
+  }
+  else{
+    stationSearchAutocomplete(".stationSearch", visitedStations, URLs["{{vehicle_type}}"], "{{manual}}");
+  }
+
+  const currencySelect = document.getElementById('currency');
+  for (let option of currencySelect.options) {
+      const countryCode = option.dataset.country;
+      const emoji = getFlagEmoji(countryCode);
+      option.text = `${option.text} ${emoji}`; // Prepend the emoji to the option text
+  }
+
+  $('#price').on('input', function() {
+      var priceDefined = $(this).val() > 0;
+      
+      if(priceDefined) {
+          // Show currency and purchasing_date if price is defined
+          $('#currency').show();
+          $('#currency_label').show();
+          $('#purchasing_date').show();
+          $('#purchasing_date_label').show();
+          $("#price").show();
+          $("#price").css("width", "");
+          $("#price").css("grid-column-start", "");
+          $("#price").css("grid-column-end", "");
+      } else {
+          // Hide currency and purchasing_date if price is not defined
+          $('#currency').hide();
+          $('#currency_label').hide();
+          $('#purchasing_date').hide();
+          $('#purchasing_date_label').hide();
+          $("#price").show();
+          $("#price").css("width", "100%");
+          $("#price").css("grid-column-start", "1");
+          $("#price").css("grid-column-end", "-1");
+      }
+  }).trigger('input'); // Trigger on load to apply initial state
+  fetchTickets('{{ url_for("get_all_tickets", username=username) }}', "{{none_t}}");
+  //setupTagAutocomplete(`{{ url_for("get_all_tags", username=username) }}`);
+
+
+  if(!CSS.supports("contain:strict")) {
+    let fieldsets = document.querySelectorAll('fieldset:not(.fieldset-fixed)');
+    let legends = document.querySelectorAll('legend');
+    let radioGroups = document.querySelectorAll('.radio-group');
+
+    fieldsets.forEach(function(e,i) {
+      e.replaceWith(...e.childNodes);
+    });
+
+    legends.forEach(function(e,i) {
+      e.replaceWith(...e.childNodes);
+    });
+
+    radioGroups.forEach(function(e,i) {
+      e.replaceWith(...e.childNodes);
+    });
+  }
+</script>
+
+{% endblock %}

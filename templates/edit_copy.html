@@ -1,0 +1,1449 @@
+{% extends "bootstrap/layout.html" %}
+{% include "bootstrap/leafletLayout.html" %}
+{% block content %}
+<script src="{{ url_for('static',filename='js/map.js') }}"></script>
+
+{% include "bootstrap/navigation.html"%}
+
+<style>
+    .fullscreen-modal-dialog {
+        max-width: 100vw;
+        height: 100vh;
+        margin: 0;
+    }
+
+    .fullscreen-modal {
+        width: 100vw;
+        height: 100vh;
+        margin: 0;
+        top: 0;
+        left: 0;
+        border-radius: 0;
+        padding: 0;
+    }
+
+    .fullscreen-modal .modal-body {
+        height: calc(100vh - 56px);
+        /* Adjust for header height */
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: stretch;
+    }
+
+    .full-height {
+        flex-grow: 1;
+    }
+
+    .modal-header .btn-close {
+        margin-left: 0.25rem;
+        /* Small gap between buttons */
+    }
+
+    .btn-close.expand {
+        background: transparent !important;
+
+    }
+
+    .leaflet-marker-icon .numberDecor {
+        top: -37px;
+        left: 3.5px;
+    }
+
+    .leaflet-marker-icon .number {
+        left: -5px;
+    }
+
+    /* GPX Import Styles */
+    .gpx-drop-zone {
+        border: 2px dashed #dee2e6;
+        border-radius: 0.375rem;
+        padding: 2rem;
+        text-align: center;
+        background-color: #f8f9fa;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-bottom: 1rem;
+    }
+
+    .gpx-drop-zone:hover,
+    .gpx-drop-zone.dragover {
+        border-color: #0d6efd;
+        background-color: #e7f1ff;
+    }
+
+    .gpx-file-input {
+        display: none;
+    }
+
+    .path-import-buttons {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+        flex-wrap: wrap;
+    }
+
+    .progress-container {
+        margin-top: 15px;
+    }
+
+    .btn-label-label {
+        margin-left: -10px;
+        margin-right: -5px;
+    }
+
+    .btn-label {
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+</style>
+
+<!-- GPX Import Modal -->
+<div class="modal fade" id="gpxImportModal" tabindex="-1" aria-labelledby="gpxImportModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="gpxImportModalLabel">{{importPathFromGpx}}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{close}}"></button>
+            </div>
+            <div class="modal-body">
+                <div class="gpx-drop-zone" id="gpxDropZone">
+                    <i class="fa-solid fa-file-arrow-up fa-3x text-muted mb-3"></i>
+                    <h5>{{dropGpxFileHere}}</h5>
+                    <p class="text-muted">{{orClickToBrowse}}</p>
+                    <input type="file" id="gpxFileInput" class="gpx-file-input" accept=".gpx" />
+                </div>
+                <div id="gpxError" class="text-danger small d-none"></div>
+                <div id="gpxProgressContainer" class="progress mt-3 d-none">
+                    <div id="gpxProgressBar" class="progress-bar progress-bar-striped progress-bar-animated"
+                        role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                        0%
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{cancel}}</button>
+                <button type="button" class="btn btn-primary d-none" id="gpxImportBtn">{{importPath}}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- FR24 Path Import Modal (for air/helicopter) -->
+<div class="modal fade" id="fr24PathModal" tabindex="-1" aria-labelledby="fr24PathModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="fr24PathModalLabel">{{importPathFromFr24}}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{close}}"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted">{{importActualFlightPath}}</p>
+                <form id="fr24PathForm">
+                    <!-- Search Type Toggle -->
+                    <div class="mb-3">
+                        <label class="form-label d-block">{{searchBy}}</label>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="fr24SearchToggle">
+                            <label class="form-check-label" for="fr24SearchToggle" id="fr24SearchToggleLabel">{{reg}}</label>
+                        </div>
+                    </div>
+
+
+                    <!-- Input fields -->
+                    <div class="mb-3" id="flightNumberGroup">
+                        <label for="fr24PathFlightNumber" class="form-label">{{flightNumber}}</label>
+                        <input type="text" class="form-control" id="fr24PathFlightNumber"
+                            placeholder="{{flightNumberPlaceholder}}" value="{{tripLineName}}">
+                    </div>
+
+                    <div class="mb-3 d-none" id="regNumberGroup" >
+                        <label for="fr24PathRegNumber" class="form-label">{{reg}}</label>
+                        <input type="text" class="form-control" id="fr24PathRegNumber"
+                            placeholder="{{registrationPlaceholder}}" value="{{tripReg}}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="fr24PathDate" class="form-label">{{flightDate}}</label>
+                        <input type="date" class="form-control" id="fr24PathDate"
+                            value="{{ start_datetime[:10] if start_datetime not in [1, -1, None, ''] else current_date }}">
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="fr24OnlyPath">
+                            <label class="form-check-label" for="fr24OnlyPath">
+                                {{fr24OnlyPath}}
+                            </label>
+
+                        </div>
+                    </div>
+                    <div id="fr24PathProgressContainer" class="progress mt-3 d-none">
+                        <div id="fr24PathProgressBar" class="progress-bar progress-bar-striped progress-bar-animated"
+                            role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0"
+                            aria-valuemax="100">
+                            0%
+                        </div>
+                    </div>
+                </form>
+                <div id="fr24PathError" class="text-danger small d-none"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{cancel}}</button>
+                <button type="button" class="btn btn-primary" id="fr24PathSubmitBtn">{{importPath}}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Leg Selector Modal for FR24 -->
+<div class="modal fade" id="fr24LegSelectorModal" tabindex="-1" aria-labelledby="fr24LegSelectorModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="fr24LegSelectorModalLabel">{{selectFlightLeg}}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{close}}"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-3">{{flightHasMultipleLegs}}</p>
+                <div id="fr24PathLegsList" class="list-group">
+                    <!-- Legs will be dynamically inserted here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{cancel}}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="form">
+    <div>
+        <h2 class="header">
+            {% if edit_copy_type == "copy" %}
+            {{ copyTrip }}
+            {% elif edit_copy_type == "edit" %}
+            {{ editTrip }}
+            {% endif %}
+        </h2>
+    </div>
+    <form autocomplete="off" action="javascript:void(0);" method="GET">
+        <!-- TODO: accomodation, poi, restaurant: they have different fields -->
+        <!-- Origin -->
+        <div class="mb-3" id="originGroup">
+            <label for="originCountry" class="form-label">{{ originLabel }}</label>
+            <div class="d-flex align-items-center">
+                <div class="flagDropdownWrapper">
+                    <select id="originCountry" class="custom-select-flag" name="originCountry">
+                        {% for code, emoji in country_list.items() %}
+                        <option value="{{ emoji }}" data-code="{{ code }}" {% if origin.startswith(emoji) %}selected{%
+                            endif %}>
+                            {{ emoji }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <label for="originStation" class="sr-only">{{originTerminal}}</label>
+                <input type="text" id="originStation" name="originStation" placeholder="{{originTerminal}}"
+                    class="originInput" value="{{ origin.split(' ', 1)[1] }}" />
+            </div>
+        </div>
+
+        <!-- Destination -->
+        <div class="mb-3" id="destinationGroup">
+            <label for="destinationCountry" class="form-label">{{ destinationLabel }}</label>
+            <div class="d-flex align-items-center">
+                <div class="flagDropdownWrapper">
+                    <select id="destinationCountry" class="custom-select-flag" name="destinationCountry">
+                        {% for code, emoji in country_list.items() %}
+                        <option value="{{ emoji }}" data-code="{{ code }}" {% if destination.startswith(emoji)
+                            %}selected{% endif %}>
+                            {{ emoji }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <label for="destinationStation" class="sr-only">{{originTerminal}}</label>
+                <input type="text" id="destinationStation" name="destinationStation"
+                    placeholder="{{destinationTerminal}}" class="destinationInput"
+                    value="{{ destination.split(' ', 1)[1] }}" />
+            </div>
+        </div>
+
+        <group id="operatorGroup">
+            <div class="operatorLogoWrapper">
+                <img class="operatorLogo" />
+            </div>
+            <label for="operator" class="sr-only">{{operator}}</label>
+            <input type="text" name="operator" id="operator" placeholder="{{operator}}" value="{{tripOperator}}" />
+        </group>
+        <label for="lineName" class="sr-only">{{lineName}}</label>
+        <input type="text" name="lineName" id="lineName" placeholder="{{lineName}}" value="{{tripLineName}}" />
+
+        <fieldset>
+            <legend>
+                <span class="legend">{{details}}:</span>
+            </legend>
+
+            <label for="material_type">{{material_type}}</label>
+            <input type="text" name="material_type" id="material_type" placeholder="{{material_type}}"
+                value="{{tripMaterialType}}">
+            <label for="reg">{{reg}}</label>
+            <input type="text" name="reg" id="reg" placeholder="{{reg}}" value="{{tripReg}}">
+            <label for="seat">{{seat}}</label>
+            <input type="text" name="seat" id="seat" placeholder="{{seat}}" value="{{tripSeat}}">
+            <label for="notes">{{notes}}</label>
+            <input type="text" name="notes" id="notes" placeholder="{{notes}}" value="{{tripNotes}}">
+        </fieldset>
+
+        <!-- Price Details Subgroup -->
+        <fieldset class="fieldset-fixed fieldset-price">
+            <legend>
+                <span class="legend">{{priceLabel}}</span>
+            </legend>
+
+            <label for="price" id="price_label" class="sr-only">{{price}}</label>
+            <input type="number" step="any" name="price" id="price" min="0" placeholder="{{price}}"
+                value="{{tripPrice}}">
+
+            <label for="currency" id="currency_label" class="sr-only">{{currency}}</label>
+            <select name="currency" id="currency">
+                {% for currency in currencyOptions %}
+                <option value="{{ currency['currency'] }}" data-country="{{ currency['country'] }}" {% if
+                    currency['currency']==tripCurrency %}selected{% endif %}>
+                    {{ currency['currency'] }}
+                </option>
+                {% endfor %}
+            </select>
+
+            <!-- Purchasing Date Picker, limited to today's date or earlier -->
+            <label for="purchasing_date" id="purchasing_date_label" class="sr-only">{{purchasing_date}}</label>
+            <input type="date" name="purchasing_date" id="purchasing_date" value="{{tripPurchasingDate}}">
+        </fieldset>
+
+        <label for="ticketSearchInput" id="ticketSearchInputLabel" class="form-label">{{select_ticket}}</label>
+        <select id="ticketSearchInput" name="ticket_id" class="form-select">
+        </select>
+        <br>
+
+        <fieldset class="trip-time-inputs">
+            <legend>
+                <span class="legend">{{timings}}:</span>
+            </legend>
+
+            <div class="radio-group">
+                <input type="radio" id="radioPreciseDates" value="preciseDates" name="precision" checked />
+                <label for="radioPreciseDates" class="checkboxLabel">{{preciseDates}}</label>
+            </div>
+            <div class="radio-group">
+                <input type="radio" id="radioUnknown" value="unknown" name="precision" />
+                <label for="radioUnknown" class="checkboxLabel">{{unknown}}</label>
+            </div>
+            <div class="radio-group">
+                <input type="radio" id="radioOnlyDate" value="onlyDate" name="precision" />
+                <label for="radioOnlyDate" class="checkboxLabel">{{onlyDate}}</label>
+            </div>
+        </fieldset>
+
+        <hr><br>
+
+        <group id="onlyDatePicker">
+            <label for="newTripStart">{{newTripStart}}</label>
+            <input type="date" name="onlyDate" id="onlyDate" />
+        </group>
+
+        <group id="unknownDates" class="inline-inputs">
+            <div class="radio-group">
+                <input type="radio" id="radioPast" value="past" name="unknownType" />
+                <label for="radioPast" class="checkboxLabel">{{past}}</label>
+            </div>
+            <div class="radio-group">
+                <input type="radio" id="radioFuture" value="future" name="unknownType" />
+                <label for="radioFuture" class="checkboxLabel">{{future}}</label>
+            </div>
+        </group>
+
+        <group id="manDuration">
+            <fieldset class="fieldset-time">
+                <legend>
+                    <span class="legend">{{tripDuration}}</span>
+                </legend>
+                <label class="sr-only" for="manDurationHours">{{hours}}</label>
+                <input type="number" min=0 max=200 step="1" id="manDurationHours" value="{{tripHours}}"
+                    name="manDurationHours" placeholder="{{hours}}" />
+                <label class="sr-only" for="manDurationMinutes">{{minutes}}</label>
+                <input type="number" min=0 max=59 step="1" id="manDurationMinutes" value="{{tripMinutes}}"
+                    name="manDurationMinutes" placeholder="{{minutes}}" />
+            </fieldset>
+        </group>
+
+        <group id="dates">
+            <fieldset class="fieldset-datetime">
+                <legend>
+                    <span class="legend">{{ newTripStart }}</span>
+                </legend>
+                <label class="sr-only" for="newTripStartDate">{{ date }}</label>
+                <input type="date" name="newTripStartDate" id="newTripStartDate" placeholder=" " />
+                <label class="sr-only" for="newTripStartTime">{{ time }}</label>
+                <input type="time" name="newTripStartTime" id="newTripStartTime" placeholder=" " />
+            </fieldset>
+            <fieldset class="fieldset-datetime">
+                <legend>
+                    <span class="legend">{{newTripEnd }}</span>
+                </legend>
+                <label class="sr-only" for="newTripStartDate">{{ date }}</label>
+                <input type="date" name="newTripEndDate" id="newTripEndDate" placeholder=" " />
+                <label class="sr-only" for="newTripEndTime">{{ time }}</label>
+                <input type="time" name="newTripEndTime" id="newTripEndTime" placeholder=" " />
+            </fieldset>
+        </group>
+
+        <hr>
+
+        <!-- Path Import Section -->
+        <div class="path-import-buttons">
+            <span class="btn btn-labeled btn-primary" data-bs-toggle="modal" data-bs-target="#mapModal"
+                id="mapModalButton">
+                <span class="btn-label"><i class="fa-solid fa-route"></i></span>{{editPath}}
+            </span>
+            <span class="btn btn-labeled btn-secondary" data-bs-toggle="modal" data-bs-target="#gpxImportModal"
+                id="gpxImportButton">
+                <span class="btn-label"><i class="fa-solid fa-file-arrow-up"></i></span> <span
+                    class="btn-label-label">{{importGpx}}</span>
+            </span>
+            {% if tripType in ('air', 'helicopter') %}
+            <div class="d-inline-flex align-items-center">
+                <span
+                    class="btn btn-labeled {% if fr24_calls == 'premium' %}btn-primary{% elif fr24_calls is number and fr24_calls >= 5 %}btn-secondary disabled{% else %}btn-primary{% endif %}"
+                    id="fr24PathButton" {% if fr24_calls=='premium' or (fr24_calls is number and fr24_calls < 5) %}
+                    data-bs-toggle="modal" data-bs-target="#fr24PathModal" {% else %} aria-disabled="true" {% endif %}>
+                    <span class="btn-label">
+                        <img src="{{ url_for('static', filename='images/icons/fr24.png') }}" alt="FR24"
+                            style="height: 1em;">
+                    </span>
+                    <span class="btn-label-label">
+                        {{ importFr24Path }} {% if fr24_calls == 'premium' %}<small><i class="fa-solid fa-gem"
+                                style="color: #F39C12;"></i></small>{% else %}<small>({{ fr24_calls }}/5)</small>{%
+                        endif %}
+                    </span>
+                </span>
+                {% if fr24_calls is number and fr24_calls >= 5 %}
+                <span class="ms-2" data-bs-toggle="tooltip" data-bs-placement="top" title="{{fr24LimitInfo}}">
+                    <i class="bi bi-info-circle-fill text-muted" style="cursor: help;"></i>
+                </span>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+
+        <button id="submit" type="submit"
+            onclick="updateTrip(copy={{ 'false' if edit_copy_type == 'edit' else 'true' }});">
+            <div class="spinner-border" role="status" style="display:none;"></div>
+            <span id="submit_text">
+                {{ submit }}
+            </span>
+        </button>
+
+    </form>
+</div>
+
+<div class="modal fade" id="mapModal" tabindex="-1" role="dialog" aria-labelledby="mapModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="btn-close expand" id="fullscreenToggle" onclick="toggleFullscreen()"
+                    aria-label="{{toggleFullscreen}}">
+                    <i class="fa-solid fa-expand"></i>
+                </button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{close}}"></button>
+            </div>
+            <div class="modal-body">
+                <div id="map" class="mapRouting full-height" style="width: 100%; height: 400px;"></div>
+                <div id="sidebar">
+                    <div id="sidebar-content"></div>
+                </div>
+                <div class="mt-3 text-center">
+                    <span class="btn btn-labeled btn-success" id="editPathButton"><span class="btn-label"><i
+                                class="fa-solid fa-check"></i></span>{{submit}}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+
+    /*
+    TODO: load different fields for edit POI, of a different page
+    {% if vehicle_type in ('accommodation', 'poi', 'restaurant') %}
+      $(".non_poi").hide();
+    {% endif %}
+    */
+
+    function toggleFullscreen() {
+        var modalContent = document.querySelector('#mapModal .modal-content');
+        var modalDialog = document.querySelector('#mapModal .modal-dialog');
+        modalContent.classList.toggle('fullscreen-modal');
+        modalDialog.classList.toggle('fullscreen-modal-dialog');
+
+        // Ensure the map resizes correctly
+        setTimeout(function () {
+            if (typeof map !== 'undefined') {
+                map.invalidateSize();
+            }
+        }, 200);
+    }
+
+    var tripType = "{{tripType}}";
+    var updatedPath = null;
+
+    if (tripType == "air") {
+        $("#mapModalButton").hide();
+    }
+
+    var mapModal = new bootstrap.Modal(document.getElementById('mapModal'), {
+        keyboard: false
+    });
+
+    var routerurl = `${window.location.origin}/forwardRouting/${tripType}/route/v1`;
+
+
+    const texts = {
+        "routeTitle": "{{routeTitle}}",
+        "fineTuneNote": "{{fineTuneNote}}",
+        "distanceTime": "{{distanceTime}}",
+        "downloadGeoJSONButton": "{{downloadGeoJSONButton}}",
+        "saveTripButton": "{{submit}}",
+        "saveTripContinueButton": "{{saveTripContinueButton}}",
+    };
+
+
+    var wplist = JSON.parse("{{wplist}}");
+    var spinnerContent = '<div class="spinner-container"><div class="lds-spinner"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div></div>';
+    var errorContent = "<h4> {{routingError}} <h4>";
+    errorContent += "<p> {{routingErrorDetails}} </p>";
+    errorContent += `<p><button onclick="location.reload()"> {{retry}} </button></p>`;
+
+    var saveErrorContent = "<h4> {{saveError}} </h4>";
+    saveErrorContent += "<p> {{saveErrorDetails}} </p>";
+    saveErrorContent += `<p><button onclick="location.reload();"> {{retry}} </button></p>`;
+
+    var origLabel = "{{origin}}";
+    var destLabel = "{{destination}}";
+    var newTrip = {};
+
+    var map;
+    document.getElementById('mapModal').addEventListener('shown.bs.modal', function () {
+        if (typeof map === 'undefined') {
+            map = createMap(wplist[0]);
+            var sidebar;
+            routing(map, false, tripType);
+        }
+    });
+
+    $(document).ready(function () {
+        $('#editPathButton').on('click', function () {
+            updatedPath = currentRoute;
+            lastImportType = 'manual';
+            $('#mapModal').modal('hide');
+            updatePathButtonSuccess('{{editedPath}}');
+        });
+    });
+
+    // GPX Import functionality
+    let gpxPath = null;
+    let lastImportType = null;
+
+    // GPX Drop zone functionality
+    const gpxDropZone = document.getElementById('gpxDropZone');
+    const gpxFileInput = document.getElementById('gpxFileInput');
+
+    gpxDropZone.addEventListener('click', () => gpxFileInput.click());
+
+    gpxDropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        gpxDropZone.classList.add('dragover');
+    });
+
+    gpxDropZone.addEventListener('dragleave', () => {
+        gpxDropZone.classList.remove('dragover');
+    });
+
+    gpxDropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        gpxDropZone.classList.remove('dragover');
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleGpxFile(files[0]);
+        }
+    });
+
+    gpxFileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleGpxFile(e.target.files[0]);
+        }
+    });
+
+    function handleGpxFile(file) {
+        if (!file.name.toLowerCase().endsWith('.gpx')) {
+            showGpxError('{{pleaseSelectValidGpx}}');
+            return;
+        }
+
+        showGpxProgress(10);
+        hideGpxError();
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            try {
+                const gpxContent = e.target.result;
+                const parser = new DOMParser();
+                const gpxDoc = parser.parseFromString(gpxContent, 'text/xml');
+
+                showGpxProgress(50);
+
+                // Extract coordinates from GPX
+                const trackPoints = gpxDoc.querySelectorAll('trkpt');
+                const routePoints = gpxDoc.querySelectorAll('rtept');
+                const waypoints = gpxDoc.querySelectorAll('wpt');
+
+                let coordinates = [];
+
+                // Try track points first, then route points, then waypoints
+                if (trackPoints.length > 0) {
+                    trackPoints.forEach(point => {
+                        const lat = parseFloat(point.getAttribute('lat'));
+                        const lon = parseFloat(point.getAttribute('lon'));
+                        coordinates.push({ lat: lat, lng: lon });
+                    });
+                } else if (routePoints.length > 0) {
+                    routePoints.forEach(point => {
+                        const lat = parseFloat(point.getAttribute('lat'));
+                        const lon = parseFloat(point.getAttribute('lon'));
+                        coordinates.push({ lat: lat, lng: lon });
+                    });
+                } else if (waypoints.length > 0) {
+                    waypoints.forEach(point => {
+                        const lat = parseFloat(point.getAttribute('lat'));
+                        const lon = parseFloat(point.getAttribute('lon'));
+                        coordinates.push({ lat: lat, lng: lon });
+                    });
+                }
+
+                if (coordinates.length < 2) {
+                    showGpxError('{{gpxMustContainTwoPoints}}');
+                    showGpxProgress(0);
+                    return;
+                }
+
+                showGpxProgress(80);
+
+                // Store the path data in the expected format
+                gpxPath = coordinates;
+
+                showGpxProgress(100);
+
+                // Update UI
+                gpxDropZone.innerHTML = `
+                    <i class="fa-solid fa-check-circle fa-3x text-success mb-3"></i>
+                    <h5 class="text-success">{{gpxLoadedSuccessfully}}</h5>
+                    <p class="text-muted">${coordinates.length} {{pointsLoadedFrom}} ${file.name}</p>
+                `;
+
+                document.getElementById('gpxImportBtn').classList.remove('d-none');
+
+                setTimeout(() => showGpxProgress(0), 1000);
+
+            } catch (error) {
+                console.error('Error parsing GPX:', error);
+                showGpxError('{{errorParsingGpx}}');
+                showGpxProgress(0);
+            }
+        };
+
+        reader.onerror = function () {
+            showGpxError('{{errorReadingFile}}');
+            showGpxProgress(0);
+        };
+
+        reader.readAsText(file);
+    }
+
+    function showGpxError(message) {
+        const errorDiv = document.getElementById('gpxError');
+        errorDiv.textContent = message;
+        errorDiv.classList.remove('d-none');
+    }
+
+    function hideGpxError() {
+        document.getElementById('gpxError').classList.add('d-none');
+    }
+
+    function showGpxProgress(percent) {
+        const container = document.getElementById('gpxProgressContainer');
+        const bar = document.getElementById('gpxProgressBar');
+
+        if (percent > 0) {
+            container.classList.remove('d-none');
+            bar.style.width = `${percent}%`;
+            bar.setAttribute('aria-valuenow', percent);
+            bar.textContent = `${percent}%`;
+        } else {
+            container.classList.add('d-none');
+        }
+    }
+
+    // GPX Import button handler
+    // GPX Import button handler - UPDATED VERSION
+    document.getElementById('gpxImportBtn').addEventListener('click', function () {
+        if (gpxPath) {
+            updatedPath = gpxPath;
+            lastImportType = 'gpx';
+
+            // Calculate trip length and duration from GPX path
+            if (gpxPath.length >= 2) {
+                // Convert gpxPath format to pathArray format for distance calculation
+                const pathArray = gpxPath.map(point => [point.lat, point.lng]);
+                const tripLength = getTotalDistanceFromPath(pathArray);
+
+                // Calculate trip duration from GPX timestamps if available
+                let tripDuration = null;
+                if (gpxPath[0].time && gpxPath[gpxPath.length - 1].time) {
+                    const startTime = new Date(gpxPath[0].time);
+                    const endTime = new Date(gpxPath[gpxPath.length - 1].time);
+                    tripDuration = Math.floor((endTime - startTime) / 1000); // in seconds
+                } else {
+                    // Fallback estimation like FR24 import: based on trip type
+                    if (tripType === 'helicopter') {
+                        // Air travel: (distance / 235 km/h) + 30min buffer
+                        tripDuration = Math.round((tripLength / 235) * 3.6 + 1800);
+                    } else if (tripType === 'air') {
+                        tripDuration = Math.round((tripLength / 850) * 3.6 + 1800);
+                    }
+                    else {
+                        // Ground transport: estimate based on typical speeds
+                        let estimatedSpeed = 50; // default 50 km/h
+                        if (tripType === 'train') estimatedSpeed = 80;
+                        else if (tripType === 'bus') estimatedSpeed = 60;
+                        else if (tripType === 'car') estimatedSpeed = 70;
+                        else if (tripType === 'bike') estimatedSpeed = 20;
+                        else if (tripType === 'walk') estimatedSpeed = 5;
+
+                        tripDuration = Math.round((tripLength / estimatedSpeed) * 3.6);
+                    }
+                }
+
+                // Store in newTrip object like FR24 import does
+                newTrip.trip_length = tripLength;
+                newTrip.estimated_trip_duration = tripDuration;
+            }
+
+            // Close modal and update UI
+            const modal = bootstrap.Modal.getInstance(document.getElementById('gpxImportModal'));
+            modal.hide();
+
+            // Update the path button to show success
+            updatePathButtonSuccess('{{gpxPathImported}}');
+        }
+    });
+
+    {% if tripType in ('air', 'helicopter') %}
+    let allFlightLegsForPath = [];
+
+    // Helper function to calculate total distance from path using same logic as air routing
+    function getTotalDistanceFromPath(pathArray) {
+        if (!pathArray || pathArray.length < 2) return 0;
+
+        let totalDistance = 0;
+        for (let i = 1; i < pathArray.length; i++) {
+            const prev = pathArray[i - 1];
+            const curr = pathArray[i];
+            totalDistance += getDistanceFromLocations(
+                { lat: prev[0], lng: prev[1] },
+                { lat: curr[0], lng: curr[1] }
+            );
+        }
+        return totalDistance;
+    }
+
+    // Update progress bar function
+    function updateFr24PathProgressBar(percent) {
+        const container = document.getElementById('fr24PathProgressContainer');
+        const bar = document.getElementById('fr24PathProgressBar');
+
+        if (percent > 0) {
+            container.classList.remove('d-none');
+            bar.style.width = `${percent}%`;
+            bar.setAttribute('aria-valuenow', percent);
+            bar.textContent = `${percent}%`;
+        } else {
+            container.classList.add('d-none');
+        }
+    }
+
+    document.getElementById('fr24PathSubmitBtn').addEventListener('click', async function () {
+        const isReg = document.getElementById('fr24SearchToggle').checked;
+        const searchType = isReg ? 'reg' : 'flight';
+        const flightNumber = document.getElementById('fr24PathFlightNumber').value.trim();
+        const regNumber = document.getElementById('fr24PathRegNumber').value.trim();
+        const flightDate = document.getElementById('fr24PathDate').value;
+
+        if (searchType === 'flight' && (!flightNumber || !flightDate)) {
+            showFr24PathError('{{pleaseEnterFlightNumberAndDate}}');
+            return;
+        }
+        if (searchType === 'reg' && (!regNumber || !flightDate)) {
+            showFr24PathError('{{pleaseEnterRegNumberAndDate}}');
+            return;
+        }
+
+        hideFr24PathError();
+        updateFr24PathProgressBar(10);
+
+        try {
+            const url = searchType === 'flight'
+                ? '{{url_for("flight_summary", username=username)}}'
+                : '{{url_for("flight_summary_reg", username=username)}}';
+
+            const query = searchType === 'flight'
+                ? { flight_number: flightNumber, date: flightDate }
+                : { registration: regNumber, date: flightDate };
+
+            const res = await $.get(url, query);
+
+            if (!res.data || res.data.length === 0) {
+                showFr24PathError('{{noFlightDataFound}}');
+                updateFr24PathProgressBar(0);
+                return;
+            }
+
+            allFlightLegsForPath = res.data;
+
+            if (allFlightLegsForPath.length === 1) {
+                await processFlightLegForPath(allFlightLegsForPath[0]);
+            } else {
+                updateFr24PathProgressBar(0);
+                showFr24LegSelectorForPath(allFlightLegsForPath);
+            }
+
+        } catch (err) {
+            console.error(err);
+            showFr24PathError('{{errorFetchingFlightData}}');
+            updateFr24PathProgressBar(0);
+        }
+    });
+
+
+    async function showFr24LegSelectorForPath(legs) {
+        const legsList = document.getElementById('fr24PathLegsList');
+        legsList.innerHTML = ''; // Clear existing legs to prevent piling up
+
+        // Hide the FR24 path modal
+        const fr24PathModal = bootstrap.Modal.getInstance(document.getElementById('fr24PathModal'));
+        fr24PathModal.hide();
+
+        // Show the leg selector modal
+        const legSelectorModal = new bootstrap.Modal(document.getElementById('fr24LegSelectorModal'));
+        legSelectorModal.show();
+
+        for (let index = 0; index < legs.length; index++) {
+            const leg = legs[index];
+
+            try {
+                // Fetch airport data for display
+                const originData = await $.ajax({
+                    url: "/airportAutocomplete/" + leg.orig_icao,
+                    dataType: "json"
+                });
+                const destData = await $.ajax({
+                    url: "/airportAutocomplete/" + leg.dest_icao,
+                    dataType: "json"
+                });
+
+                const originAirport = originData[0];
+                const destAirport = destData[0];
+                const originFlag = getFlagEmoji(originAirport.iso_country);
+                const destFlag = getFlagEmoji(destAirport.iso_country);
+                const originLabel = `${originFlag} ${originAirport.name} (${originAirport.iata})`;
+                const destLabel = `${destFlag} ${destAirport.name} (${destAirport.iata})`;
+
+                let departureLocalString = '{{unknown}}';
+                let arrivalLocalString = '{{unknown}}';
+
+                if (leg.datetime_takeoff_local) {
+                    const departureLocal = new Date(leg.datetime_takeoff_local);
+                    departureLocalString = departureLocal.toLocaleString(undefined, {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                }
+
+                if (leg.datetime_landed_local) {
+                    const arrivalLocal = new Date(leg.datetime_landed_local);
+                    arrivalLocalString = arrivalLocal.toLocaleString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                }
+
+                const legItemHtml = `
+                    <a href="#" class="list-group-item list-group-item-action" data-leg-index="${index}">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{leg}} ${index + 1}: ${originLabel} → ${destLabel}</h6>
+                            <small class="text-muted">${leg.flight}</small>
+                        </div>
+                        <p class="mb-1">
+                            <strong>{{departure}}:</strong> ${departureLocalString}<br>
+                            <strong>{{arrival}}:</strong> ${arrivalLocalString}
+                        </p>
+                        <small class="text-muted">{{aircraft}}: ${leg.type} (${leg.reg})</small>
+                    </a>
+                `;
+
+                const legItem = $(legItemHtml);
+
+                legItem.on('click', async function (e) {
+                    e.preventDefault();
+                    const selectedIndex = $(this).data('leg-index');
+
+                    // Hide the leg selector modal
+                    const legModal = bootstrap.Modal.getInstance(document.getElementById('fr24LegSelectorModal'));
+                    legModal.hide();
+
+                    // Process the selected leg
+                    await processFlightLegForPath(allFlightLegsForPath[selectedIndex]);
+                });
+
+                legsList.appendChild(legItem[0]);
+
+            } catch (error) {
+                console.error('Error fetching airport data for leg', index, error);
+            }
+        }
+    }
+
+    async function processFlightLegForPath(flight) {
+        updateFr24PathProgressBar(20);
+
+        try {
+            // Fetch the detailed path data from FR24
+            const pathRes = await $.get(`{{url_for("flight_tracks", username=username, fr24_id='' )}}${flight.fr24_id}`);
+
+            updateFr24PathProgressBar(40);
+
+            if (!pathRes || pathRes.length === 0) {
+                showFr24PathError('{{noPathDataAvailable}}');
+                updateFr24PathProgressBar(0);
+                return;
+            }
+
+            // Convert FR24 path to the expected format (array of {lat, lng} objects)
+            updatedPath = pathRes.map(point => ({
+                lat: point[0],
+                lng: point[1]
+            }));
+
+            if (updatedPath.length < 2) {
+                showFr24PathError('{{insufficientPathData}}');
+                updateFr24PathProgressBar(0);
+                return;
+            }
+
+            updateFr24PathProgressBar(60);
+
+            // Calculate trip metrics using the same logic as air routing
+            const tripLength = getTotalDistanceFromPath(pathRes);
+            let tripDuration = null;
+
+            // Calculate duration from flight times (following air routing pattern)
+            if (flight.datetime_takeoff && flight.datetime_landed) {
+                const takeoff = new Date(flight.datetime_takeoff);
+                const landed = new Date(flight.datetime_landed);
+                tripDuration = Math.floor((landed - takeoff) / 1000); // in seconds
+            } else {
+                // Fallback estimation like air routing: (distance / 235 km/h) + 30min buffer
+                tripDuration = Math.round((tripLength / 235) + 1800);
+            }
+
+            // Store in newTrip object following air routing pattern
+            newTrip.trip_length = tripLength;
+            newTrip.estimated_trip_duration = tripDuration;
+            if (flight.fr24_id) {
+                newTrip.fr24_id = flight.fr24_id;
+                newTrip.fr24_duration = tripDuration;
+            }
+
+            // Auto-fill flight data if checkbox is checked
+            const autoFillChecked = !document.getElementById('fr24OnlyPath').checked;
+            if (autoFillChecked) {
+                await fillFlightDataForPath(flight);
+            }
+
+            updateFr24PathProgressBar(100);
+
+            // Close modal and update UI
+            const modal = bootstrap.Modal.getInstance(document.getElementById('fr24PathModal'));
+            if (modal) modal.hide();
+
+            lastImportType = 'fr24';
+            updatePathButtonSuccess('{{fr24PathImported}}');
+
+            setTimeout(() => updateFr24PathProgressBar(0), 1000);
+
+        } catch (error) {
+            console.error('Error importing FR24 path:', error);
+            showFr24PathError('{{errorImportingPath}}');
+            updateFr24PathProgressBar(0);
+        }
+    }
+
+    async function fillFlightDataForPath(flight) {
+        try {
+            // Fill in flight number/line name
+            if (flight.flight) {
+                document.getElementById('lineName').value = flight.flight;
+            }
+
+            // Fill in aircraft registration
+            if (flight.reg) {
+                document.getElementById('reg').value = flight.reg;
+            }
+
+            // Fill in aircraft type
+            if (flight.type) {
+                document.getElementById('material_type').value = flight.type;
+            }
+
+            // Fill in operator/airline following the new trip pattern
+            if (flight.operating_as) {
+                try {
+                    const airlineRes = await $.get("/api/airlines", { icao: flight.operating_as });
+                    console.log(airlineRes)
+                    if (airlineRes.length > 0) {
+                        const airline = airlineRes[0];
+                        document.getElementById('operator').value = airline.name;
+
+                        // Update operator logo
+                        if (airline.logo_url) {
+                            $(".operatorLogo").attr("src", airline.logo_url);
+                        } else {
+                            $(".operatorLogo").attr("src", "{{ url_for('static',filename='images/icons/trip_logos/{}.png'.format(tripType))}}");
+                        }
+                    } else {
+                        document.getElementById('operator').value = flight.operating_as;
+                    }
+                } catch (error) {
+                    console.error('Error fetching airline data:', error);
+                    document.getElementById('operator').value = flight.operating_as;
+                }
+            }
+
+            // Fill in origin and destination
+            if (flight.orig_icao) {
+                try {
+                    const originData = await $.ajax({
+                        url: "/airportAutocomplete/" + flight.orig_icao,
+                        dataType: "json"
+                    });
+                    if (originData && originData[0]) {
+                        const airport = originData[0];
+                        const flag = getFlagEmoji(airport.iso_country);
+
+                        // Set country flag
+                        const originCountrySelect = document.getElementById('originCountry');
+                        for (let option of originCountrySelect.options) {
+                            if (option.value === flag) {
+                                option.selected = true;
+                                break;
+                            }
+                        }
+
+                        // Set airport name
+                        document.getElementById('originStation').value = airport.name + " (" + airport.iata + ")";
+                    }
+                } catch (error) {
+                    console.error('Error fetching origin airport data:', error);
+                }
+            }
+
+            if (flight.dest_icao) {
+                try {
+                    const destData = await $.ajax({
+                        url: "/airportAutocomplete/" + flight.dest_icao,
+                        dataType: "json"
+                    });
+                    if (destData && destData[0]) {
+                        const airport = destData[0];
+                        const flag = getFlagEmoji(airport.iso_country);
+
+                        // Set country flag
+                        const destCountrySelect = document.getElementById('destinationCountry');
+                        for (let option of destCountrySelect.options) {
+                            if (option.value === flag) {
+                                option.selected = true;
+                                break;
+                            }
+                        }
+
+                        // Set airport name
+                        document.getElementById('destinationStation').value = airport.name + " (" + airport.iata + ")";
+                    }
+                } catch (error) {
+                    console.error('Error fetching destination airport data:', error);
+                }
+            }
+
+            // Fill in dates and times using local times from API
+            if (flight.datetime_takeoff_local && flight.datetime_landed_local) {
+                const takeoffDate = new Date(flight.datetime_takeoff_local);
+                const landedDate = new Date(flight.datetime_landed_local);
+
+                // Set precise dates radio button
+                document.getElementById('radioPreciseDates').checked = true;
+
+                // Fill start date and time
+                document.getElementById('newTripStartDate').value = takeoffDate.toISOString().slice(0, 10);
+                document.getElementById('newTripStartTime').value = takeoffDate.toTimeString().slice(0, 5);
+
+                // Fill end date and time
+                document.getElementById('newTripEndDate').value = landedDate.toISOString().slice(0, 10);
+                document.getElementById('newTripEndTime').value = landedDate.toTimeString().slice(0, 5);
+
+                // Calculate and fill trip duration (following air routing pattern)
+                const durationMs = landedDate.getTime() - takeoffDate.getTime();
+                const durationHours = Math.floor(durationMs / (1000 * 60 * 60));
+                const durationMinutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
+
+                document.getElementById('manDurationHours').value = durationHours;
+                document.getElementById('manDurationMinutes').value = durationMinutes;
+            }
+
+        } catch (error) {
+            console.error('Error filling flight data:', error);
+        }
+    }
+
+    function showFr24PathError(message) {
+        const errorDiv = document.getElementById('fr24PathError');
+        errorDiv.textContent = message;
+        errorDiv.classList.remove('d-none');
+    }
+
+    function hideFr24PathError() {
+        document.getElementById('fr24PathError').classList.add('d-none');
+    }
+
+    function showFr24PathProgress(percent) {
+        updateFr24PathProgressBar(percent);
+    }
+    {% endif %}
+
+    // Helper function to update path button appearance
+    function updatePathButtonSuccess(message) {
+        // Reset all path import buttons to their default states
+        const mapButton = document.getElementById('mapModalButton');
+        const gpxButton = document.getElementById('gpxImportButton');
+        {% if tripType in ('air', 'helicopter') %}
+        const fr24Button = document.getElementById('fr24PathButton');
+        {% endif %}
+
+        // Reset map/routing button
+        mapButton.classList.remove('btn-success');
+        mapButton.classList.add('btn-primary');
+        mapButton.innerHTML = `<span class="btn-label"><i class="fa-solid fa-route"></i></span>{{editPath}}`;
+
+        // Reset GPX button
+        gpxButton.classList.remove('btn-success');
+        gpxButton.classList.add('btn-secondary');
+        gpxButton.innerHTML = `<span class="btn-label"><i class="fa-solid fa-file-arrow-up"></i></span>{{importGpx}}`;
+
+        {% if tripType in ('air', 'helicopter') %}
+        // Reset FR24 button
+        fr24Button.classList.remove('btn-success');
+        fr24Button.classList.add('btn-primary');
+        fr24Button.innerHTML = `<span class="btn-label"><img src="{{ url_for('static', filename='images/icons/fr24.png') }}" alt="FR24" style="height: 1em;"></span>{{importFr24Path}}`;
+        {% endif %}
+
+        // Set the successful button to green with check icon based on import type
+        if (lastImportType === 'gpx') {
+            gpxButton.classList.remove('btn-secondary');
+            gpxButton.classList.add('btn-success');
+            gpxButton.innerHTML = `<span class="btn-label"><i class="fa-solid fa-check"></i></span>${message}`;
+        }
+        {% if tripType in ('air', 'helicopter') %}
+        else if (lastImportType === 'fr24') {
+            fr24Button.classList.remove('btn-primary');
+            fr24Button.classList.add('btn-success');
+            fr24Button.innerHTML = `<span class="btn-label"><i class="fa-solid fa-check"></i></span>${message}`;
+        }
+        {% endif %}
+        else {
+            // Manual routing edit was successful
+            mapButton.classList.remove('btn-primary');
+            mapButton.classList.add('btn-success');
+            mapButton.innerHTML = `<span class="btn-label"><i class="fa-solid fa-check"></i></span>${message}`;
+        }
+    }
+
+    // Reset GPX import modal when closed
+    document.getElementById('gpxImportModal').addEventListener('hidden.bs.modal', function () {
+        if (!gpxPath) {
+            // Reset the drop zone if no file was successfully imported
+            gpxDropZone.innerHTML = `
+                <i class="fa-solid fa-file-arrow-up fa-3x text-muted mb-3"></i>
+                <h5>{{dropGpxFileHere}}</h5>
+                <p class="text-muted">{{orClickToBrowse}}</p>
+            `;
+            document.getElementById('gpxImportBtn').classList.add('d-none');
+            hideGpxError();
+            showGpxProgress(0);
+        }
+    });
+
+    if ('{{precision}}' == "unknown") {
+        $("#radioUnknown").prop("checked", true);
+    }
+    else if ('{{precision}}' == "onlyDate") {
+        $("#radioOnlyDate").prop("checked", true);
+        $("#onlyDate").val('{{start_datetime}}'.slice(0, 10));
+    }
+    else {
+        $("#newTripStartDate").val('{{start_datetime}}'.slice(0, 10));
+        $("#newTripStartTime").val('{{start_datetime}}'.slice(11, 16));
+        $("#newTripEndDate").val('{{end_datetime}}'.slice(0, 10));
+        $("#newTripEndTime").val('{{end_datetime}}'.slice(11, 16));
+    }
+    if ("{{unknownType}}" == "past") {
+        $("#radioPast").prop("checked", true);
+    }
+    else if ("{{unknownType}}" == "future") {
+        $("#radioFuture").prop("checked", true);
+    }
+    function updateTrip(copy) {
+        $("#submit_text").hide();
+        $(".spinner-border").show();
+        var tripId = $(location).attr("href").split('/').pop();
+        var data = $('form').serializeArray();
+        var formData = Object.assign({}, ...data.map((x) => ({ [x.name]: x.value })));
+
+        formData['type'] = '{{tripType}}';
+        formData['origin_station'] = formData['originCountry'] + ' ' + formData['originStation'];
+        formData['destination_station'] = formData['destinationCountry'] + ' ' + formData['destinationStation'];
+
+        if (updatedPath != null) {
+            formData["path"] = JSON.stringify(updatedPath);
+            formData = {
+                ...formData,
+                ...newTrip
+            };
+        }
+
+        formData = processFormDates(formData);
+        formData["trip_id"] = tripId;
+        if ((
+            formData["precision"] == "unknown"
+            && formData["unknownType"]
+        )
+            || (
+                formData["precision"] == "onlyDate"
+                && formData["onlyDate"]
+            )
+            || (
+                formData["precision"] == "preciseDates"
+                && formData["newTripStart"].length == 16
+                && formData["newTripEnd"].length == 16
+            )) {
+
+            var redirectToProjects;
+            var now = new Date();
+
+            if (formData["precision"] == "preciseDates") {
+                var tripStart = new Date(formData["newTripStart"]);
+                redirectToProjects = now < tripStart;
+            }
+            else if (formData["precision"] == "onlyDate") {
+                var tripDate = new Date(formData["onlyDate"]);
+                redirectToProjects = now < tripDate;
+            }
+            else if (formData["precision"] == "unknown") {
+                redirectToProjects = (formData["unknownType"] == "past" ? false : true)
+            }
+            $.post({
+                url: copy ? "{{ url_for('copyTrip', username=username) }}" : "{{ url_for('updateTrip', username=username) }}",
+                data: formData,
+                success: function (res) {
+                    if (redirectToProjects) {
+                        location.href = "{{ url_for('dynamic_trips', time='projects', username=username) }}";
+                    }
+                    else {
+                        location.href = "{{ url_for('dynamic_trips', time='trips', username=username) }}";
+                    }
+                },
+                fail: function () {
+                    alert("error");
+                }
+            });
+        }
+
+    }
+
+
+    var origFilepath = "{{ url_for('static',filename='images/operator_logos/')}}" + "{{tripOperator}}" + ".png";
+    $.ajax(origFilepath)
+        .done(function () { $(".operatorLogo").attr("src", origFilepath); })
+        .fail(function () { $(".operatorLogo").attr("src", "{{ url_for('static',filename='images/icons/trip_logos/{}.png'.format(tripType))}}"); });
+
+    $.get('{{url_for("getManAndOps", username=username, station_type="*", tripType=tripType)}}', function (manAndOps, status) {
+        operatorAutocomplete($("#operator"), manAndOps, "{{ url_for('static',filename='')}}", "{{ url_for('static',filename='images/icons/trip_logos/' + tripType + '.png')}}", "{{tripType}}");
+    });
+
+
+    if (tripType == 'air') {
+        let airlinersData = [];
+
+        // Fetch data on page load
+        $.ajax({
+            url: "/getAirliners",
+            type: "GET",
+            dataType: "json",
+            success: function (data) {
+                airlinersData = data;
+            },
+            error: function (xhr, status, error) {
+                console.log("error: " + error);
+            }
+        });
+
+        // Initialize autocomplete
+        $("#material_type").autocomplete({
+            source: function (request, response) {
+                const term = request.term.toLowerCase();
+                const filteredData = airlinersData.filter(item => {
+                    const combinedString = `${item.iata} ${item.manufacturer} ${item.model}`.toLowerCase();
+                    return combinedString.includes(term);
+                });
+                response($.map(filteredData, function (item) {
+                    return {
+                        label: `${item.iata} - ${item.manufacturer} ${item.model}`,
+                        value: item.iata
+                    };
+                }));
+            }
+        });
+    }
+
+    const currencySelect = document.getElementById('currency');
+    for (let option of currencySelect.options) {
+        if (option.dataset.country) {
+
+            const countryCode = option.dataset.country; // using a data attribute for the country code
+            const emoji = getFlagEmoji(countryCode);
+            option.text = `${option.text} ${emoji}`; // Prepend the emoji to the option text
+
+        }
+    }
+
+    $('#price').on('input', function () {
+        var priceDefined = $(this).val() > 0;
+
+        if (priceDefined) {
+            // Show currency and purchasing_date if price is defined
+            $('#currency').show();
+            $('#currency_label').show();
+            $('#purchasing_date').show();
+            $('#purchasing_date_label').show();
+            $("#price").show();
+            $("#price").css("width", "");
+            $("#price").css("grid-column-start", "");
+            $("#price").css("grid-column-end", "");
+        } else {
+            // Hide currency and purchasing_date if price is not defined
+            $('#currency').hide();
+            $('#currency_label').hide();
+            $('#purchasing_date').hide();
+            $('#purchasing_date_label').hide();
+            $("#price").show();
+            $("#price").css("width", "100%");
+            $("#price").css("grid-column-start", "1");
+            $("#price").css("grid-column-end", "-1");
+        }
+    }).trigger('input'); // Trigger on load to apply initial state
+
+    fetchTickets('{{ url_for("get_all_tickets", username=username) }}', "{{none_t}}", {{ tripTicketId }});
+
+    var editCopyType = "{{ edit_copy_type }}";
+    var precision = "{{ precision }}";
+    var startDate = new Date("{{ start_datetime }}");
+    var endDate = new Date("{{ end_datetime }}");
+
+    // Assuming regionNames is already defined as an instance of Intl.DisplayNames
+    document.addEventListener('DOMContentLoaded', function () {
+        const originSelect = document.getElementById('originCountry');
+        const destinationSelect = document.getElementById('destinationCountry');
+
+        // Update both origin and destination country select options
+        updateCountryNames(originSelect);
+        updateCountryNames(destinationSelect);
+    });
+
+    console.log(editCopyType, precision)
+    if (editCopyType === "copy" && precision === "precise") {
+        var today = new Date();
+        var dayDifference = Math.round((endDate - startDate) / (1000 * 60 * 60 * 24));
+
+        var newStartDate = today;
+        var newEndDate = new Date(today);
+        newEndDate.setDate(today.getDate() + dayDifference);
+
+        var formattedNewStartDate = newStartDate.toISOString().slice(0, 10);
+        var formattedNewEndDate = newEndDate.toISOString().slice(0, 10);
+
+        $("#newTripStartDate").val(formattedNewStartDate);
+        $("#newTripEndDate").val(formattedNewEndDate);
+
+        var startTime = "{{ start_datetime }}".slice(11, 16);
+        var endTime = "{{ end_datetime }}".slice(11, 16);
+
+        $("#newTripStartTime").val(startTime);
+        $("#newTripEndTime").val(endTime);
+    }
+
+    if (!CSS.supports("contain:strict")) {
+        let fieldsets = document.querySelectorAll('fieldset:not(.fieldset-fixed)');
+        let legends = document.querySelectorAll('legend');
+        let radioGroups = document.querySelectorAll('.radio-group');
+
+        fieldsets.forEach(function (e, i) {
+            e.replaceWith(...e.childNodes);
+        });
+
+        legends.forEach(function (e, i) {
+            e.replaceWith(...e.childNodes);
+        });
+
+        radioGroups.forEach(function (e, i) {
+            e.replaceWith(...e.childNodes);
+        });
+    }
+
+    $('#fr24SearchToggle').on('change', function () {
+        const isReg = $(this).is(':checked');
+
+        if (isReg) {
+            $('#flightNumberGroup').addClass('d-none');
+            $('#regNumberGroup').removeClass('d-none');
+        } else {
+            $('#regNumberGroup').addClass('d-none');
+            $('#flightNumberGroup').removeClass('d-none');
+        }
+    });
+
+</script>
+
+{% endblock %}

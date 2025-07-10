@@ -1,0 +1,298 @@
+{% extends "bootstrap/layout.html" %}
+{% block content %}
+{% if username != "public" %}
+    {% include "bootstrap/navigation.html" %}
+{% else %}
+    {% include "bootstrap/no_user_nav.html" %}
+{% endif %}
+<div class="container mt-4">
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5><i class="fa-solid fa-location-dot"></i> Photon Geocoder Status</h5>
+        </div>
+        <div class="card-body">
+            <div id="photon-status-row" class="d-flex flex-wrap" style="gap: 2rem;">
+                <!-- Statuses injected here -->
+            </div>
+        </div>
+    </div>
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="header"><i class="fa-solid fa-route"></i> Router Status</h5>
+        </div>
+        <div class="card-body">
+            <table class="table table-bordered" style="color: #333;">
+                <thead class="thead-dark">
+                    <tr>
+                        <th>Transport Mode</th>
+                        <th>Region</th>
+                        <th>Provider</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="router-status-tbody">
+                    <!-- Rows injected by JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+const photonInstances = [
+  {
+    name: "Chiel",
+    url: "https://photon.chiel.uk/status"
+  },
+  {
+    name: "Komoot.io",
+    url: "https://photon.komoot.io/status"
+  }
+];
+
+function renderPhotonStatus() {
+  const row = document.getElementById("photon-status-row");
+  photonInstances.forEach(inst => {
+    const divId = "photon-" + inst.name.replace(/[^\w]/g, '-');
+    row.insertAdjacentHTML('beforeend', `
+      <div id="${divId}">
+        <strong>${escapeHTML(inst.name)}</strong> 
+        <span class="spinner-border spinner-border-sm"></span>
+      </div>
+    `);
+
+    fetch(`/photon_status?url=${encodeURIComponent(inst.url)}`)
+      .then(r => r.json())
+      .then(data => {
+        const badgeClass = data.status && data.status.toLowerCase() === "ok" ? "badge-success" : "badge-danger";
+        const status = data.status || "ERROR";
+        const updated = data.last_updated ? `Last updated: ${escapeHTML(data.last_updated)}` : "";
+        document.getElementById(divId).innerHTML = `
+          <strong>${escapeHTML(inst.name)}</strong>
+          <span class="badge ${badgeClass}" data-toggle="tooltip" title="${updated || escapeHTML(status)}">${escapeHTML(status.toUpperCase())}</span>
+          ${updated ? `<span class="text-muted small ml-2">${updated}</span>` : ""}
+        `;
+      })
+      .catch(e => {
+        document.getElementById(divId).innerHTML = `
+          <strong>${escapeHTML(inst.name)}</strong>
+          <span class="badge badge-warning" data-toggle="tooltip" title="Status check failed">ERROR</span>
+        `;
+      });
+  });
+}
+renderPhotonStatus();
+
+// Define routers with more detailed information about their purpose
+const routers = [
+    // Train routers
+    {
+        name: "Train", 
+        icon: "fa-solid fa-train",
+        region: "Global", 
+        provider: "Trainlog", 
+        url: "http://routing.trainlog.me:5000", 
+        profile: "train"
+    },
+    
+    // Tram (considered part of train for this example)
+    // Metro (considered part of train for this example)
+    
+    // Bus routers
+    {
+        name: "Bus", 
+        icon: "fa-solid fa-bus",
+        region: "Nordics, British Isles", 
+        provider: "Trainlog", 
+        url: "http://routing.trainlog.me:5002", 
+        profile: "bus"
+    },
+    {
+        name: "Bus", 
+        icon: "fa-solid fa-bus",
+        region: "Central Europe, Baltic, Western Europe", 
+        provider: "Chiel", 
+        url: "https://busrouter.chiel.uk", 
+        profile: "bus"
+    },
+    {
+        name: "Bus", 
+        icon: "fa-solid fa-bus",
+        region: "North America", 
+        provider: "SeriousProtection", 
+        url: "https://busrouter.jkimball.dev", 
+        profile: "bus"
+    },
+    {
+        name: "Bus", 
+        icon: "fa-solid fa-bus",
+        region: "Rest of World", 
+        provider: "OSM (Car Fallback)", 
+        url: "https://routing.openstreetmap.de/routed-car", 
+        profile: "driving"
+    },
+    
+    // Ferry routers
+    {
+        name: "Ferry", 
+        icon: "fa-solid fa-ship",
+        region: "Global", 
+        provider: "Trainlog", 
+        url: "http://routing.trainlog.me:5001", 
+        profile: "ferry"
+    },
+    
+    // Aerialway routers
+    {
+        name: "Aerialway", 
+        icon: "fa-solid fa-cable-car",
+        region: "Global", 
+        provider: "Trainlog", 
+        url: "http://routing.trainlog.me:5003", 
+        profile: "aerialway"
+    },
+    
+    // Walking
+    {
+        name: "Walking", 
+        icon: "fa-solid fa-person-hiking",
+        region: "Global", 
+        provider: "OSM", 
+        url: "https://routing.openstreetmap.de/routed-foot", 
+        profile: "foot"
+    },
+    
+    // Cycling
+    {
+        name: "Cycling", 
+        icon: "fa-solid fa-bicycle",
+        region: "Global", 
+        provider: "OSM", 
+        url: "https://routing.openstreetmap.de/routed-bike", 
+        profile: "bike"
+    },
+    
+    // Car
+    {
+        name: "Car", 
+        icon: "fa-solid fa-car-side",
+        region: "Global", 
+        provider: "OSM", 
+        url: "https://routing.openstreetmap.de/routed-car", 
+        profile: "driving"
+    }
+];
+
+function escapeHTML(s) {
+    return s.replace(/[&<>"']/g, function(c) {
+        return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c];
+    });
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    const tbody = document.getElementById("router-status-tbody");
+    
+    // Create a map to track transport mode groups for styling
+    let currentMode = null;
+    let rowClass = '';
+    
+    routers.forEach((router, idx) => {
+        // Add alternating background for different transport modes
+        if (currentMode !== router.name) {
+            currentMode = router.name;
+            rowClass = rowClass === 'mode-alt' ? '' : 'mode-alt';
+        }
+        
+        // Add row with spinner for now
+        const rowId = "router-row-" + idx;
+        tbody.insertAdjacentHTML('beforeend', `
+          <tr id="${rowId}" class="${rowClass}">
+            <td><i class="${router.icon}"></i> ${escapeHTML(router.name)}</td>
+            <td>${escapeHTML(router.region)}</td>
+            <td>${escapeHTML(router.provider)}</td>
+            <td><span class="spinner-border spinner-border-sm"></span></td>
+          </tr>
+        `);
+        
+        // Make request for each router
+        fetch(`/router_status/single?url=${encodeURIComponent(router.url)}&profile=${encodeURIComponent(router.profile)}`)
+          .then(r => r.json())
+          .then(data => {
+              const statusCell = document.querySelector(`#${rowId} td:nth-child(4)`);
+              const statusText = data.status === "OK" ? "OK" : data.status;
+              const tooltipText = data.message || (data.status === "OK" ? "Service operational" : "Service issue");
+              statusCell.innerHTML = `<span class="badge ${data.status === "OK" ? "badge-success" : "badge-danger"}" 
+                                       data-toggle="tooltip" title="${escapeHTML(tooltipText)}">${statusText}</span>`;
+          })
+          .catch(e => {
+              const statusCell = document.querySelector(`#${rowId} td:nth-child(4)`);
+              statusCell.innerHTML = `<span class="badge badge-warning" 
+                                      data-toggle="tooltip" title="Status check failed">ERROR</span>`;
+          });
+    });
+});
+</script>
+
+<style>
+/* Custom styles for the router status table */
+.table {
+    background-color: #fff;
+    margin-bottom: 0;
+}
+
+.table td, .table th {
+    vertical-align: middle;
+}
+
+.thead-dark th {
+    background-color: #343a40;
+    color: white;
+    border-color: #454d55;
+}
+
+.badge-success {
+    background-color: #28a745;
+}
+
+.badge-danger {
+    background-color: #dc3545;
+}
+
+.badge-warning {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.mode-alt {
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
+.badge {
+    cursor: help;
+    padding: 0.5em 0.75em;
+}
+
+.tooltip-inner {
+    max-width: 300px;
+    text-align: left;
+}
+
+.table td i {
+    margin-right: 8px;
+    width: 16px;
+    text-align: center;
+}
+
+.card {
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+#photon-status-row > div {
+  min-width: 180px;
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+}
+</style>
+{% endblock %}

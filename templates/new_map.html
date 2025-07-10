@@ -1,0 +1,588 @@
+{% extends "bootstrap/layout.html" %}
+{% set leaflet = True %}
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static',filename='styles/new_map.css') }}">
+<link href="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.css" rel="stylesheet">
+
+{% include nav%}
+
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+</div>
+
+<div id="map" class="mapUser"></div>
+
+<div class="control-panel" id="controlPanel">
+    <button class="control-toggle" onclick="toggleControlPanel()">
+        <i id="controlToggleIcon" class="fas fa-chevron-left"></i>
+    </button>
+    
+    <div class="control-header">
+        <h3 class="control-title">{{ filterTitle }}</h3>
+    </div>
+
+    <div class="control-group">
+        <label class="control-label">{{ viewMode }}</label>
+        <div class="select-wrapper">
+            <select id="viewMode" onchange="updateViewMode()">
+                <option value="year">{{ year }}</option>
+                <option value="past">{{ showPast }}</option>
+                <option value="planned">{{ showPlanned }}</option>
+                <option value="projects">{{ showProjects }}</option>
+                <option value="all">{{ all }}</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="control-group" id="yearSelector" style="display: none;">
+        <label class="control-label">{{ selectYears }}</label>
+        <div class="select-wrapper">
+            <select id="yearSelect" onchange="addYear()">
+                <option value="">{{ addYear }}...</option>
+            </select>
+        </div>
+        <div class="year-tags" id="selectedYears"></div>
+    </div>
+
+    <div class="filter-section">
+        <div class="filter-title">{{ transportTypes }}</div>
+        <div class="filter-grid" id="transportFilters">
+            <!-- Filters will be populated dynamically -->
+        </div>
+    </div>
+</div>
+
+<div class="legend-control">
+    <button class="legend-toggle" onclick="toggleLegend()">
+        <i class="fas fa-info-circle"></i>
+    </button>
+    <div class="legend-content" id="legendContent">
+        <div class="legend-items">
+            <div class="legend-item">
+                <div class="legend-line" style="background-color: #52b0fe;"></div>
+                <span><i class="fa-solid fa-train"></i> {{ train }}</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-line" style="background-color: #a2d7ff;"></div>
+                <span><i class="fa-solid fa-train-tram"></i> {{ tram }}</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-line" style="background-color: #004595;"></div>
+                <span><i class="fa-solid fa-train-subway"></i> {{ metro }}</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-line" style="background-color: #a68fcd;"></div>
+                <span><i class="fa-solid fa-car-side"></i> {{ car }}</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-line" style="background-color: #e88c00;"></div>
+                <span><i class="fa-solid fa-person-hiking"></i> {{ walk }}</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-line" style="background-color: #6e211a;"></div>
+                <span><i class="fa-solid fa-bicycle"></i> {{ cycle }}</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-line" style="background-color: #40b91f;"></div>
+                <span><i class="fa-solid fa-plane"></i> {{ air }}</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-line" style="background-color: #9f4bbb;"></div>
+                <span><i class="fa-solid fa-bus"></i> {{ bus }}</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-line" style="background-color: #1e1e7c;"></div>
+                <span><i class="fa-solid fa-ship"></i> {{ ferry }}</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-line" style="background-color: #afcf3b;"></div>
+                <span><i class="fa-solid fa-cable-car"></i> {{ aerialway }}</span>
+            </div>
+            <div class="legend-separator"></div>
+            <div class="legend-item">
+                <div class="legend-line future" style="background-color: rgba(255, 255, 255, 0.5);"></div>
+                <span>{{ future }}</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-line planned-future"></div>
+                <span>{{ project }}</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-line current"></div>
+                <span>{{ current }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-cookie/3.0.5/js.cookie.min.js"></script>
+<script src="{{ url_for('static', filename='js/maplibre-utils.js') }}"></script>
+
+<script>
+// Global variables
+let map;
+let trips = [];
+let selectedYears = new Set();
+let activeFilters = {
+    viewMode: 'year',
+    years: [],
+    transportTypes: new Set(['train', 'tram', 'metro', 'car', 'walk', 'cycle', 'air', 'bus', 'ferry', 'aerialway'])
+};
+
+const transportTypeLabels = {
+    train: '{{ train }}',
+    tram: '{{ tram }}',
+    metro: '{{ metro }}',
+    bus: '{{ bus }}',
+    car: '{{ car }}',
+    cycle: '{{ cycle }}',
+    walk: '{{ walk }}',
+    air: '{{ air }}',
+    ferry: '{{ ferry }}',
+    aerialway: '{{ aerialway }}'
+};
+
+// Initialize map
+async function initMap() {
+    // Get tile server from URL params
+    const params = new URLSearchParams(window.location.search);
+    const serverType = params.get('tileserver') || "{{ tileserver }}";
+    const useGlobe = params.has('globe') ? params.get('globe') === 'true' : {{ 'true' if globe else 'false' }};
+
+    // Initialize map using utilities
+   map = await MapLibreUtils.initializeMapLibre({
+        container: 'map',
+        tileserver: serverType,
+        useGlobe: useGlobe,
+        userLanguage: "{{langId}}",
+        center: [10, 50],
+        zoom: 5
+    });
+
+    // Initialize transport filters
+    initializeTransportFilters();
+    
+    // Load trips data
+    loadTripsData();
+}
+
+// Initialize transport type filters
+function initializeTransportFilters() {
+    const container = document.getElementById('transportFilters');
+    
+    MapLibreUtils.MapConfig.transportTypes.forEach(type => {
+        const filterItem = document.createElement('label');
+        filterItem.className = 'filter-item';
+        filterItem.style.display = 'none'; // Initially hidden
+        filterItem.innerHTML = `
+            <input type="checkbox" id="${type.id}Filter" checked onchange="toggleTransportType('${type.id}')">
+            <span class="filter-icon" style="color: ${type.color};">
+                <i class="fa-solid ${type.icon}"></i>
+            </span>
+            <span class="filter-label">${transportTypeLabels[type.id]}</span>
+        `;
+        container.appendChild(filterItem);
+    });
+}
+
+// Load trips using localforage and API
+function loadTripsData() {
+    const username = "{{ username }}";
+    
+    // Clear cache if needed
+    if (!Cookies.get('cacheCleared')) {
+        localforage.clear().then(function() {
+            Cookies.set('cacheCleared', 'true', { expires: 30 });
+        }).catch(function(err) {
+            console.error('Failed to clear localforage cache:', err);
+        });
+    }
+    
+    // Check for cached data
+    localforage.getItem("lastLocal_" + username, function(error, lastLocal){
+        if (lastLocal === null) {
+            // No cache, fetch all
+            $.get('{{ url_for("public_getTripsPaths", username=username, lastLocal="all") if public else url_for("getTripsPaths", username=username, lastLocal="all") }}', function(data, status){
+                trips = data.trips;
+                processTrips();
+                localforage.setItem("trips_" + username, trips);
+                localforage.setItem("lastLocal_" + username, data.lastLocal);
+            });
+        } else {
+            // Cache exists, fetch updates
+            $.get('{{ url_for("public_getTripsPaths", username=username, lastLocal="") if public else url_for("getTripsPaths", username=username, lastLocal="") }}' + lastLocal, function(data, status){
+                localforage.getItem("trips_" + username, function(error, storedTrips){
+                    let currentTripIds = data.idList;
+                    trips = integrateChanges(storedTrips, data.trips, currentTripIds);
+                    processTrips();
+                    if (JSON.stringify(storedTrips) != JSON.stringify(trips)) {
+                        localforage.setItem("trips_" + username, trips);
+                        localforage.setItem("lastLocal_" + username, data.lastLocal);
+                    }
+                });
+            });
+        }
+    });
+}
+
+// Integrate changes into existing data
+function integrateChanges(existingData, changes, currentTripIds) {
+    let dataMap = new Map();
+    for (let item of existingData) {
+        dataMap.set(item.trip.uid, item);
+    }
+
+    for (let item of changes) {
+        if (item.trip === null) {
+            dataMap.delete(item.trip.uid);
+        } else {
+            dataMap.set(item.trip.uid, item);
+        }
+    }
+
+    for (let [uid, item] of dataMap) {
+        if (!currentTripIds.includes(uid)) {
+            dataMap.delete(uid);
+        }
+    }
+
+    return Array.from(dataMap.values());
+}
+
+// Process trips and add to map
+function processTrips() {
+    const order = { past: 1, plannedFuture: 2, future: 3 };
+
+    trips.sort((a, b) => {
+        const timeOrder = order[a.time] - order[b.time];
+        if (timeOrder !== 0) return timeOrder;
+
+        const dateA = a.utc_filtered_start_datetime;
+        const dateB = b.utc_filtered_start_datetime;
+
+        if (dateA === -1) return 1;
+        if (dateB === -1) return -1;
+        if (dateA === 1) return -1;
+        if (dateB === 1) return 1;
+
+        return new Date(dateB) - new Date(dateA);
+    });
+
+    if (trips.length === 0) {
+        hideLoading();
+        return;
+    }
+
+    const years = new Set();
+    const visibleTypes = new Set();
+
+    // Process trips to extract years and visible types
+    trips.forEach(trip => {
+        trip = MapLibreUtils.computeTimeStatus(trip);
+
+        const checkbox = document.getElementById(`${trip.trip.type}Filter`);
+        if (checkbox && checkbox.parentElement) {
+            checkbox.parentElement.style.display = 'flex';
+            visibleTypes.add(trip.trip.type);
+        }
+        if (trip.trip.start_datetime !== 1 && trip.trip.start_datetime !== -1)
+            years.add(trip.trip.start_datetime.substring(0, 4));
+    });
+    
+    // Populate year selector
+    const yearSelect = document.getElementById('yearSelect');
+    yearSelect.innerHTML = `<option value="">{{ addYear }}...</option>`;
+    [...years].sort().reverse().forEach(year => {
+        const option = document.createElement('option');
+        option.value = year;
+        option.textContent = year;
+        yearSelect.appendChild(option);
+    });
+
+    // Load preferences BEFORE building layers
+    loadPreferences();
+
+    const buildLayers = () => {
+        // Build trip layers using utilities
+        const features = MapLibreUtils.buildTripLayers(map, trips, MapLibreUtils.MapConfig.transportTypes, {
+            onLayerClick: (e) => {
+                e.originalEvent.stopPropagation();
+                showPopup(e);
+            },
+            visibleTypes: visibleTypes
+        });
+
+        // Handle year selection defaults ONLY if no preferences were loaded
+        if (selectedYears.size === 0 && activeFilters.viewMode === 'year') {
+            if (years.size) {
+                const mostRecent = [...years].sort().reverse()[0];
+                selectedYears.add(mostRecent);
+                activeFilters.years = Array.from(selectedYears);
+            } else {
+                // If no years available, switch to 'all' mode
+                document.getElementById('viewMode').value = 'all';
+                activeFilters.viewMode = 'all';
+            }
+        }
+
+        // Update UI to match loaded preferences
+        updateSelectedYears();
+        updateViewMode();
+
+        // Apply filters BEFORE fitting bounds
+        updateFilters();
+
+        // Fit bounds only to VISIBLE features after filters are applied
+        MapLibreUtils.fitBoundsToVisibleFeatures(map, features, activeFilters);
+
+        hideLoading();
+    };
+
+    if (map.isStyleLoaded()) {
+        buildLayers();
+    } else {
+        map.once('load', buildLayers);
+    }
+}
+
+// Show popup for trip
+function showPopup(e) {
+    const properties = e.features[0].properties;
+    const coordinates = e.lngLat;
+
+    const isOwner = location.href === "{{ url_for('user_home', username=username, _external=True) }}";
+    const tripUrl = "{{ url_for('public_trip_new', tripIds='TRIP_ID') }}".replace('TRIP_ID', properties.id);
+    const editUrl = "{{ url_for('edit_copy_trip', username=username, edit_copy_type='edit', tripId='TRIP_ID') }}".replace('TRIP_ID', properties.id);
+
+    const popupContent = `
+        <div class="popup-route">
+            <div class="route-text">
+                <span class="origin">${properties.origin}</span>
+                <span class="separator">→</span>
+                <span class="destination">${properties.destination}</span>
+            </div>
+            <div class="popup-actions-icons">
+                <a href="${tripUrl}" class="popup-icon blue">
+                    <i class="fas fa-link"></i>
+                </a>
+                {% if not public %}
+                    <a href="${editUrl}" class="popup-icon yellow">
+                        <i class="fas fa-pen-to-square"></i>
+                    </a>
+                    <button class="popup-icon red" onclick="if(confirm('{{confirmDelete}}')) deleteTrip('${properties.id}')">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                {% endif %}
+            </div>
+        </div>
+    `;
+
+    new maplibregl.Popup()
+        .setLngLat(coordinates)
+        .setHTML(popupContent)
+        .addTo(map);
+}
+
+
+// Delete trip
+function deleteTrip(tripId) {
+    $.post({
+        url: '{{ url_for("deleteTrip", username=username) }}',
+        data: {
+            tripId: tripId
+        },
+        success: function(res) {
+            location.href = "{{ url_for('user_home', username=username) }}";
+        },
+        fail: function() {
+            alert("error");
+        }
+    });
+}
+
+// Update view mode
+function updateViewMode() {
+    const viewMode = document.getElementById('viewMode').value;
+    const yearSelector = document.getElementById('yearSelector');
+    
+    activeFilters.viewMode = viewMode;
+    
+    if (viewMode === 'year') {
+        yearSelector.style.display = 'block';
+        // Only set default year if no years are selected AND no preferences were loaded
+        if (selectedYears.size === 0 && document.getElementById('yearSelect').options.length > 1) {
+            const mostRecentYear = document.getElementById('yearSelect').options[1].value;
+            selectedYears.add(mostRecentYear);
+            activeFilters.years = Array.from(selectedYears);
+            updateSelectedYears();
+        }
+    } else {
+        yearSelector.style.display = 'none';
+    }
+    
+    updateFilters();
+}
+
+// Add year to selection
+function addYear() {
+    const select = document.getElementById('yearSelect');
+    const year = select.value;
+    
+    if (year && !selectedYears.has(year)) {
+        selectedYears.add(year);
+        updateSelectedYears();
+        updateFilters();
+    }
+    
+    select.value = '';
+}
+
+// Update selected years display
+function updateSelectedYears() {
+    const container = document.getElementById('selectedYears');
+    container.innerHTML = '';
+    
+    Array.from(selectedYears).sort().reverse().forEach(year => {
+        const tag = document.createElement('div');
+        tag.className = 'year-tag';
+        tag.innerHTML = `
+            ${year}
+            <button onclick="removeYear('${year}')">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        container.appendChild(tag);
+    });
+    
+    activeFilters.years = Array.from(selectedYears);
+}
+
+// Remove year from selection
+function removeYear(year) {
+    selectedYears.delete(year);
+    updateSelectedYears();
+    updateFilters();
+}
+
+// Toggle transport type
+function toggleTransportType(type) {
+    const checkbox = document.getElementById(`${type}Filter`);
+    
+    if (checkbox.checked) {
+        activeFilters.transportTypes.add(type);
+    } else {
+        activeFilters.transportTypes.delete(type);
+    }
+    
+    updateFilters();
+}
+
+// Update map filters
+function updateFilters() {
+    if (!map.isStyleLoaded()) {
+        map.once('idle', updateFilters);
+        return;
+    }
+    
+    // Use utility function to update layer visibility
+    MapLibreUtils.updateLayerVisibility(map, MapLibreUtils.MapConfig.transportTypes, activeFilters);
+    
+    savePreferences();
+}
+
+// Toggle control panel
+function toggleControlPanel() {
+    const panel = document.getElementById('controlPanel');
+    const icon = document.getElementById('controlToggleIcon');
+    
+    panel.classList.toggle('collapsed');
+
+    const isCollapsed = panel.classList.contains('collapsed');
+    icon.classList.remove('fa-chevron-left', 'fa-chevron-right');
+    icon.classList.add(isCollapsed ? 'fa-chevron-right' : 'fa-chevron-left');
+}
+
+// Toggle legend
+function toggleLegend() {
+    const content = document.getElementById('legendContent');
+    content.classList.toggle('show');
+}
+
+// Hide loading overlay
+function hideLoading() {
+    const overlay = document.getElementById('loadingOverlay');
+    overlay.classList.add('hidden');
+}
+
+// Save preferences to cookies
+function savePreferences() {
+    Cookies.set('viewMode', activeFilters.viewMode, { expires: 30 });
+    Cookies.set('yearSelect', Array.from(selectedYears).join(','), { expires: 30 });
+    
+    MapLibreUtils.MapConfig.transportTypes.forEach(type => {
+        const checkbox = document.getElementById(`${type.id}Filter`);
+        if (checkbox) {
+            Cookies.set(type.id, checkbox.checked, { expires: 30 });
+        }
+    });
+}
+
+function loadPreferences() {
+    // Load view mode
+    const savedViewMode = Cookies.get('viewMode');
+    if (savedViewMode) {
+        document.getElementById('viewMode').value = savedViewMode;
+        activeFilters.viewMode = savedViewMode;
+    }
+    
+    // Load selected years
+    const savedYears = Cookies.get('yearSelect');
+    if (savedYears && savedYears !== '') {
+        selectedYears.clear(); // Clear default selections
+        savedYears.split(',').forEach(year => {
+            if (year) selectedYears.add(year);
+        });
+        activeFilters.years = Array.from(selectedYears);
+    }
+    
+    // Load transport type preferences
+    MapLibreUtils.MapConfig.transportTypes.forEach(type => {
+        const savedState = Cookies.get(type.id);
+        if (savedState !== undefined) {
+            const checkbox = document.getElementById(`${type.id}Filter`);
+            if (checkbox) {
+                checkbox.checked = savedState === 'true';
+                if (checkbox.checked) {
+                    activeFilters.transportTypes.add(type.id);
+                } else {
+                    activeFilters.transportTypes.delete(type.id);
+                }
+            }
+        }
+    });
+}
+
+// Initialize everything when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    initMap();
+    if (window.innerWidth <= 640) {
+        document.getElementById('controlPanel').classList.add('collapsed');
+        const icon = document.getElementById('controlToggleIcon');
+        icon.classList.remove('fa-chevron-left');
+        icon.classList.add('fa-chevron-right');
+    }
+});
+
+// Handle keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        const legendContent = document.getElementById('legendContent');
+        if (legendContent.classList.contains('show')) {
+            toggleLegend();
+        }
+    }
+});
+</script>
+
+{% endblock %}

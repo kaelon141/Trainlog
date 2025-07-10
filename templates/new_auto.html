@@ -1,0 +1,146 @@
+{% extends "bootstrap/layout.html" %}
+{% block content %}
+
+{% include "bootstrap/navigation.html"%}
+
+<div id="form">
+  <h2 class="header">{{ newTrip }}</h2>
+  <div>
+    <form id="newTripForm" autocomplete="off" action="javascript:void(0);" method="GET">
+      
+      <!-- Origin Station -->
+      <label for="originStation" class="sr-only">{{ tOrigin }}</label>
+      <input type="text" class="stationSearch" id="originStation" name="originStation" placeholder="{{ tOrigin }}" />
+
+      <!-- Destination Station -->
+      <label for="destinationStation" class="sr-only">{{ tDestination }}</label>
+      <input type="text" class="stationSearch" id="destinationStation" name="destinationStation" placeholder="{{ tDestination }}" />
+
+      <!-- Start Date + Time Selection -->
+      <fieldset class="fieldset-datetime">
+        <legend>
+          <span class="legend">{{ newTripStart }}</span>
+        </legend>
+        
+        <!-- Date Input -->
+        <label class="sr-only" for="newTripStartDate">{{ date }}</label>
+        <input type="date" name="newTripStartDate" id="newTripStartDate" placeholder=" " />
+
+        <!-- Time Input -->
+        <label class="sr-only" for="newTripStartTime">{{ time }}</label>
+        <input type="time" name="newTripStartTime" id="newTripStartTime" placeholder=" " />
+      </fieldset>
+
+      <!-- Modes Selection -->
+      <fieldset>
+        <legend>
+          <span class="legend">Modes (optional)</span>
+        </legend>
+        <div style="display: flex; gap: 15px; align-items: center;">
+          <label>
+            <input type="checkbox" class="includeMode" value="highSpeedTrain,intercityTrain,interRegionalTrain,regionalTrain,cityTrain,lightRail,inclined,monorail" />
+            Train
+          </label>
+          <label>
+            <input type="checkbox" class="includeMode" value="bus,busRapid,privateBus" />
+            Bus
+          </label>
+        </div>
+      </fieldset>
+
+      <button id="submit" type="submit">{{ submit }}</button>
+    </form>
+  </div>
+</div>
+
+<script>
+  var globalStationDict = {};
+  var manualStationsList = [];
+  var visitedStations = {};
+
+  $(document).ready(function() {
+    // Default start date to current date
+    const currentDate = new Date().toISOString().split("T")[0];
+    $("#newTripStartDate").val(currentDate);
+
+    // Default start time to local current time
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, "0");
+    const mins = String(now.getMinutes()).padStart(2, "0");
+    $("#newTripStartTime").val(hours + ":" + mins);
+
+    // Initialize autocomplete if needed
+    stationSearchAutocomplete(".stationSearch", {}, "/placeAutocomplete", "{{ manual }}");
+
+    // Intercept form submission
+    $("#newTripForm").on("submit", function(e) {
+      e.preventDefault(); // Stop normal form submission
+
+      // 1) Gather user inputs: origin & destination from station dictionary
+      const originInput = globalStationDict[$("#originStation").val()]?.[0];
+      const destinationInput = globalStationDict[$("#destinationStation").val()]?.[0];
+      const originName = globalStationDict[$("#originStation").val()]?.[1]?.slice(4);
+      const destinationName = globalStationDict[$("#destinationStation").val()]?.[1]?.slice(4);
+
+      //   - date/time from the form
+      const departureDate = $("#newTripStartDate").val();    // e.g. "2025-05-07"
+      let departureTime = $("#newTripStartTime").val();      // e.g. "14:30"
+      if (!departureTime) departureTime = "00:00";           
+
+      // 2) Basic validation
+      if (!originInput || !destinationInput || !departureDate) {
+        alert("Please fill all fields (origin, destination, date).");
+        return;
+      }
+
+      // 3) Combine date + time into "YYYY-MM-DDTHH:MM"
+      const departureDateTime = departureDate + "T" + departureTime;
+      // e.g. "2025-05-07T14:30"
+
+      // 4) Collect transit modes (either all positive or all negative, but not both)
+      const includeModes = [];
+      $(".includeMode:checked").each(function() {
+        includeModes.push($(this).val());
+      });
+
+      const excludeModes = [];
+      $(".excludeMode:checked").each(function() {
+        excludeModes.push($(this).val());
+      });
+
+      let modesParam = "";
+      if (includeModes.length > 0 && excludeModes.length > 0) {
+        // If user checks both, you could show an alert or choose one over the other
+        alert("Cannot mix included and excluded modes at the same time.");
+        return;
+      } else if (includeModes.length > 0) {
+        // e.g. "bus,subway,ferry"
+        modesParam = includeModes.join(",");
+      } else if (excludeModes.length > 0) {
+        // e.g. "-bus,-subway,-ferry"
+        modesParam = excludeModes.join(",");
+      }
+
+
+      const router = new URLSearchParams(window.location.search).get('type') === 'google' ? 'googleRouteDisplay' : 'hereRouteDisplay';
+
+      // 5) Build the route with optional '?modes=...' query parameter
+      let route = "/{{username}}/" 
+        + encodeURIComponent(router) + "/" 
+        + encodeURIComponent(originName) + "/" 
+        + encodeURIComponent(destinationName) + "/" 
+        + encodeURIComponent(originInput) + "/" 
+        + encodeURIComponent(destinationInput) + "/" 
+        + encodeURIComponent(departureDateTime);
+
+      if (modesParam) {
+        route += "?modes=" + encodeURIComponent(modesParam);
+      }
+
+      // 6) Redirect to route
+      window.location.href = route;
+    });
+  });
+</script>
+
+{% endblock %}

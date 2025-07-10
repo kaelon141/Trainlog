@@ -1,0 +1,15 @@
+.vscode/*
+**/__pycache__/*
+*.db
+!databases/data.db
+.flask_secret
+config.yaml
+.python-version
+.env
+.venv
+logs/
+static/images/operator_logos/
+node_modules/
+package.json
+package-lock.json
+server.js

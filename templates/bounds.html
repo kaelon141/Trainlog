@@ -1,0 +1,89 @@
+{% extends "bootstrap/layout.html" %}
+{% block content %}
+
+{% if username != "public" %}
+    {% include "bootstrap/navigation.html" %}
+{% else %}
+    {% include "bootstrap/no_user_nav.html" %}
+{% endif %}
+
+<div id="form" class="aboutForm">
+    <h2 class="header">{{ translations['travel_bounds_header'] or 'Travel Boundaries' }}</h2>
+    <div>
+        <p>{{ translations['travel_bounds_text'] or 'Here are the northernmost, southernmost, westernmost, and easternmost points from your trips.' }}</p>
+        <div id="bounds-loading" class="loading my-3 text-center">
+            <span class="spinner-border spinner-border-sm"></span>
+            {{ translations['loading'] or "Loading..." }}
+        </div>
+        <div id="bounds-error" class="error my-3 text-center" style="display:none;"></div>
+        <div id="bounds-table-container" style="display:none;">
+            <table class="table table-bordered bounds-table">
+                <thead>
+                    <tr>
+                        <th style="color:unset;">{{ translations['direction'] or "Direction" }}</th>
+                        <th style="color:unset;">{{ translations['coordinates'] or "Coordinates" }}</th>
+                        <th style="color:unset;">{{ translations['location'] or "Place" }}</th>
+                        <th style="color:unset;">{{ translations['map'] or "Map" }}</th>
+                    </tr>
+                </thead>
+                <tbody id="bounds-table-body">
+                    <!-- JS will fill rows here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const username = "{{ username }}";
+    fetch(`/getBounds/${username}`)
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById("bounds-loading").style.display = "none";
+            if (data.error) {
+                document.getElementById("bounds-error").innerText = data.error;
+                document.getElementById("bounds-error").style.display = "block";
+                return;
+            }
+            const tableContainer = document.getElementById("bounds-table-container");
+            tableContainer.style.display = "block";
+            const tableBody = document.getElementById("bounds-table-body");
+
+            // Map directions to human-readable, you can add translations here
+            const directionNames = {
+                north: "{{ translations['north'] or 'North' }}",
+                south: "{{ translations['south'] or 'South' }}",
+                east:  "{{ translations['east'] or 'East' }}",
+                west:  "{{ translations['west'] or 'West' }}"
+            };
+
+            for (const dir of ['north', 'south', 'west', 'east']) {
+                const bound = data[dir];
+                let coord = bound.coordinates
+                    ? `${bound.coordinates[0].toFixed(5)}, ${bound.coordinates[1].toFixed(5)}`
+                    : "{{ translations['unknown'] or 'Unknown' }}";
+                let location = bound.place && bound.place.location
+                    ? bound.place.location
+                    : "{{ translations['unknown'] or 'Unknown' }}";
+                let osmLink = bound.place && bound.place.osm_link
+                    ? `<a href="${bound.place.osm_link}" target="_blank" class="btn btn-sm btn-outline-primary">OSM</a>`
+                    : '';
+                let row = `<tr>
+                    <td><b>${directionNames[dir]}</b></td>
+                    <td><code>${coord}</code></td>
+                    <td>${location}</td>
+                    <td>${osmLink}</td>
+                </tr>`;
+                tableBody.insertAdjacentHTML('beforeend', row);
+            }
+        })
+        .catch(err => {
+            document.getElementById("bounds-loading").style.display = "none";
+            document.getElementById("bounds-error").innerText = "Could not fetch travel boundaries.";
+            document.getElementById("bounds-error").style.display = "block";
+        });
+});
+</script>
+
+{% endblock %}

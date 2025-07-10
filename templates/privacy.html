@@ -1,0 +1,101 @@
+{% extends "bootstrap/layout.html" %}
+{% block content %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ privacy_title }}</title>
+    <style>
+        .section-title {
+            margin-top: 2rem;
+            border-bottom: 2px solid #dee2e6;
+            padding-bottom: 0.5rem;
+        }
+        .updated-date {
+            color: #6c757d;
+            font-style: italic;
+        }
+        .content-wrapper {
+            max-width: 800px;
+            margin: auto;
+            padding: 2rem 1rem;
+        }
+        .tldr {
+            background-color: #f8f9fa;
+            border-left: 5px solid #0d6efd;
+            padding: 1rem 1.5rem;
+            margin-bottom: 2rem;
+            border-radius: 0.25rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="content-wrapper">
+    <h1 class="mb-4">{{ privacy_title }}</h1>
+
+    <p class="updated-date">{{ privacy_last_updated }}</p>
+
+    <div class="tldr">
+        <h5><strong>TL;DR:</strong></h5>
+        <p>{{ privacy_tldr|safe }}</p>
+    </div>
+
+    <p>{{ privacy_intro }}</p>
+
+    <h2 class="section-title">{{ privacy_section_info_title }}</h2>
+    <p>{{ privacy_section_info_intro }}</p>
+    <ul>
+        <li><strong>{{ privacy_section_info_username }}</strong></li>
+        <li><strong>{{ privacy_section_info_email }}</strong></li>
+        <li><strong>{{ privacy_section_info_password }}</strong></li>
+    </ul>
+    <p>{{ privacy_section_info_trip_data }}</p>
+
+    <h2 class="section-title">{{ privacy_section_use_title }}</h2>
+    <p>{{ privacy_section_use_intro }}</p>
+    <ul>
+        <li>{{ privacy_section_use_manage }}</li>
+        <li>{{ privacy_section_use_store }}</li>
+        <li>{{ privacy_section_use_improve }}</li>
+    </ul>
+
+    <h2 class="section-title">{{ privacy_section_logs_title }}</h2>
+    <p>{{ privacy_section_logs_content }}</p>
+
+    <h2 class="section-title">{{ privacy_section_cookies_title }}</h2>
+    <p>{{ privacy_section_cookies_intro }}</p>
+    <ul>
+        <li><strong>{{ privacy_section_cookies_session }}</strong></li>
+        <li><strong>{{ privacy_section_cookies_cache }}</strong></li>
+    </ul>
+    <p>{{ privacy_section_cookies_refuse }}</p>
+
+    <h2 class="section-title">{{ privacy_section_security_title }}</h2>
+    <p>{{ privacy_section_security_content }}</p>
+
+    <h2 class="section-title">{{ privacy_section_thirdparty_title }}</h2>
+    <p>{{ privacy_section_thirdparty_content }}</p>
+
+    <h2 class="section-title">{{ privacy_section_rights_title }}</h2>
+    <p>{{ privacy_section_rights_intro }}</p>
+    <ul>
+        <li>{{ privacy_section_rights_export }}</li>
+        <li>{{ privacy_section_rights_delete }}</li>
+    </ul>
+
+    <h2 class="section-title">{{ privacy_section_age_title }}</h2>
+    <p>{{ privacy_section_age_content }}</p>
+
+    <h2 class="section-title">{{ privacy_section_changes_title }}</h2>
+    <p>{{ privacy_section_changes_content }}</p>
+
+    <h2 class="section-title">{{ privacy_section_contact_title }}</h2>
+    <p>{{ privacy_section_contact_content|safe }}</p>
+</div>
+
+</body>
+</html>
+
+{% endblock %}

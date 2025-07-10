@@ -1,0 +1,25 @@
+-- silence psql's welcome messages
+\set QUIET on
+
+-- display username, hostname, port and db in prompt
+\set PROMPT1 '%[%033[36m%]%[%033[90m%]%n%[%033[97m%] :: %[%033[34m%]%M%[%033[97m%]:%[%033[34m%]%>%[%033[33m%] ‹%/%[%033[31m%]%x%[%033[33m%]› %[%033[90m%]pid:%p %[%033[K%]%[%033[0m%]\n%[%033[90m%]›%[%033[0m%] '
+
+\set PROMPT2 '%[%033[90m%]›%[%033[0m%] '
+
+-- do not automatically commit at every statement
+--\set AUTOCOMMIT off
+
+-- get verbose feedback
+\set VERBOSITY verbose
+
+-- ignore entries starting with a space and duplicates
+\set HISTCONTROL ignoreboth
+
+-- autocomplete keywords in uppercase
+\set COMP_KEYWORD_CASE upper
+
+-- display nulls
+\pset null null
+
+-- turn psql's output back on
+\set QUIET off

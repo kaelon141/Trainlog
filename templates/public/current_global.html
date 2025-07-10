@@ -1,0 +1,241 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<style>
+  .leaflet-popup-content {
+    max-width: 600px;
+  }
+</style>
+
+<div class="spinner-container">
+  <div class="lds-spinner">
+    <div></div><div></div><div></div><div></div><div></div><div></div>
+    <div></div><div></div><div></div><div></div><div></div><div></div>
+  </div>
+</div>
+
+<div id="map" class="mapIndiv"></div>
+
+<script src="{{ url_for('static', filename='js/util.js') }}"></script>
+<script>
+var logosList = {{logosList | safe}};
+/* ───────────────────────────── helper utilities ───────────────────────── */
+function formatDT(iso) {
+  if (!iso) return {date:"-", time:"-"};
+  const d = new Date(iso);
+  return {
+    date: d.toLocaleDateString(),
+    time: d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"})
+  };
+}
+
+function getPopupContent(tripObj) {
+  const trip        = tripObj.trip || {};
+  const username    = tripObj.username || "-";
+  const origin      = trip.origin_station || "-";
+  const destination = trip.destination_station || "-";
+  const { date: startDate, time: startTime } = formatDT(trip.start_datetime);
+  const { time: endTime } = formatDT(trip.end_datetime);
+  const profile_url = `/public/${username}`;
+  const lineName    = trip.line_name;
+
+  const lineNameHTML = lineName
+    ? `<div><strong>Line:</strong>${lineName}</div>`
+    : '';
+
+  // Operator content (logos or plain text)
+  let operatorContents = [];
+  if (trip.operator) {
+    let operators = String(trip.operator).split(",").map(op => op.trim());
+
+    operators.forEach(operator => {
+      if (operator in logosList) {
+        let imgElement = `<img src="/static/${logosList[operator]}" title="${operator}" class="itineraryOperatorLogo" style="max-height: 240px; max-width: 100%; object-fit: contain; margin: 0 4px;" />`;
+        operatorContents.push(imgElement);
+      } else {
+        operatorContents.push(`<span>${operator}</span>`);
+      }
+    });
+  }
+
+let logoHTML = operatorContents.length
+  ? `<div class="logo-column" style="
+        margin-right: 10px;
+        display: flex;
+        align-items: flex-start;
+      ">
+        <img src="/static/${logosList[trip.operator]}" 
+            title="${trip.operator}" 
+            class="itineraryOperatorLogo"
+            style="
+              max-height: 85px;
+              height: auto;
+              width: auto;
+              object-fit: contain;
+              display: block;
+            " />
+    </div>`
+  : '';
+
+  let infoHTML = `
+    <div class="info-column" style="
+        flex: initial;
+        max-width: 100%;
+      ">
+      <div class="operator-name" style="
+          font-weight: bold;
+          font-size: 1.1em;
+          margin-bottom: 6px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        ">
+        <a href="${profile_url}" target="_blank" style="text-decoration: none;">${username}</a>
+      </div>
+      <div class="trip-info" style="font-size: 0.9em; color: #333;">
+        <div><strong>From:</strong> ${origin}</div>
+        <div><strong>To:</strong> ${destination}</div>
+        <div><strong>Date:</strong> ${startDate}</div>
+        <div><strong>Time:</strong> ${startTime} – ${endTime}</div>
+        ${trip.line_name ? `<div><strong>Line:</strong> ${trip.line_name}</div>` : ''}
+      </div>
+    </div>
+  `;
+
+  return `
+    <style>
+      .leaflet-popup-content {
+        width: auto !important;
+        max-width: 600px;
+        display: inline-block;
+        white-space: nowrap; 
+        overflow: hidden;
+      }
+    </style>
+    <div class="popup-content" style="
+        font-family: Century Gothic, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      ">
+      ${infoHTML}
+      ${logoHTML}
+    </div>
+  `;
+}
+
+function calculateProgress(tripObj) {
+  const now     = Date.now();
+  const startMs = new Date(tripObj.trip.utc_start_datetime + 'Z').getTime();
+  const endMs   = new Date(tripObj.trip.utc_end_datetime + 'Z').getTime();
+  return Math.min(Math.max((now - startMs) / (endMs - startMs), 0), 1);
+}
+
+/* ───────────────────────────── path utilities ─────────────────────────── */
+function densifyPath(path, type){
+  if (path.length === 2 && ["air","helicopter","airCurrent"].includes(type)){
+    const g = new L.Geodesic([path], {steps:8});
+    return g.getLatLngs()[0].map(ll => [ll.lat, ll.lng]);
+  }
+  return path;
+}
+
+function splitFuture(path, progress){
+  const idx = Math.floor(progress * path.length);
+  return path.slice(idx);        // from ‘idx’ to end  (can be [P] length 1)
+}
+
+/* ────────────────────────── marker / AntPath helpers ──────────────────── */
+function makeAntPath(latlngs, className){
+  return L.polyline.antPath(
+    latlngs.map(([lat,lng]) => L.latLng(lat,lng)),
+   {
+    antpath:true,
+    opacity: 0.9,
+    delay: 600,
+    dashArray: [32, 80],
+    weight: 3,
+    color: "rgb(0,0,0,0)",
+    pulseColor: "#FFFFFF",
+    paused: false,
+    reverse: false,
+    hardwareAccelerated: true
+    }
+  );
+}
+
+function placePeg(position, tripObj){
+  return L.marker(position)
+      .bindPopup(getPopupContent(tripObj), {
+      maxWidth: 600,
+      autoPanPaddingTopLeft:[15,100]});
+}
+
+/* ───────────────────────────── main renderer ──────────────────────────── */
+let tripsLayerGroup = null;   // global reference so we can replace it
+
+function renderTrips(trips){
+  if (tripsLayerGroup){
+    map.removeLayer(tripsLayerGroup);   // 🔄 wipe previous layer set
+  }
+  tripsLayerGroup = new L.featureGroup();
+
+  trips.forEach(trip => {
+    const type      = trip.trip.type;
+    const fullPath  = densifyPath(trip.path, type);
+    const progress  = calculateProgress(trip);
+    const futureSeg = splitFuture(fullPath, progress);
+
+    /*  Static polyline: goes over the ENTIRE trip  */
+    tripsLayerGroup.addLayer(
+      L.polyline(fullPath, {
+        className: `polyline fullPath ${type}Polyline`
+      }).bindPopup(getPopupContent(trip),
+                   {autoPanPaddingTopLeft:[15,100]})
+    );
+
+    /*  Ant-Path: overlay ONLY the future segment for direction animation */
+    if (futureSeg.length > 1 && progress < 1){
+      tripsLayerGroup.addLayer(
+        makeAntPath(futureSeg,
+                    `polyline animatedFuture ${type}Polyline`)
+          .bindPopup(getPopupContent(trip),
+                     {autoPanPaddingTopLeft:[15,100]})
+      );
+    }
+
+    /*  Live-position marker (will “move” because we rebuild, not duplicate) */
+    const pegPos = fullPath[Math.floor(progress * (fullPath.length - 1))];
+    tripsLayerGroup.addLayer(placePeg(pegPos, trip));
+  });
+
+  if (trips.length) {
+        tripsLayerGroup.addTo(map);
+        map.fitBounds(tripsLayerGroup.getBounds());
+    } else {
+        // Default bounds: [[southWestLat, southWestLng], [northEastLat, northEastLng]]
+        const defaultBounds = [[20, -130], [60, 30]]; // adjust these values as needed
+        map.fitBounds(defaultBounds);
+    }
+  $('.spinner-container').hide();
+}
+
+/* ─────────────────────────────── map setup ────────────────────────────── */
+var map = createMap({
+  map_legend:  '{{legendTitle}}',
+  train:       '{{train}}',   tram:    '{{tram}}',   metro:   '{{metro}}',
+  car:         '{{car}}',     walk:    '{{walk}}',   cycle:   '{{cycle}}',
+  air:         '{{air}}',     bus:     '{{bus}}',    ferry:   '{{ferry}}',
+  aerialway:   '{{aerialway}}',
+  future:      '{{future}}',  current: '{{current}}', project:'{{project}}'
+}, null);
+
+function loadTrips(){
+  $.get("/public/current_trips", renderTrips);
+}
+
+loadTrips();                    // first draw
+setInterval(loadTrips, 60000);  // refresh every minute
+</script>
+{% endblock %}
