@@ -615,81 +615,139 @@ function placePolylines(trips) {
         showShadows: true
     });
 
-    // Handle collection/voyage specific features
-    {% if collection_voyage != 'collection' %}
-    // Add station change lines
-    trips.forEach((trip, index) => {
-        if (index < trips.length - 1 && trip.trip.destination_station !== trips[index + 1].trip.origin_station) {
-            const stationChangePath = [
-                [trip.path[trip.path.length - 1][1], trip.path[trip.path.length - 1][0]],
-                [trips[index + 1].path[0][1], trips[index + 1].path[0][0]]
-            ];
-            
-            // Add station change line
-            map.addLayer({
-                id: `station-change-${index}`,
-                type: 'line',
-                source: {
-                    type: 'geojson',
-                    data: {
-                        type: 'Feature',
-                        geometry: {
-                            type: 'LineString',
-                            coordinates: stationChangePath
-                        }
-                    }
-                },
-                layout: {
-                    'line-join': 'round',
-                    'line-cap': 'round'
-                },
-                paint: {
-                    'line-color': '#888888',
-                    'line-width': 2,
-                    'line-dasharray': [2, 2],
-                    'line-opacity': 0.6
-                }
-            });
-        }
-    });
+// Function to create numbered circle icon on canvas
+function createNumberedIcon(number) {
+    const size = 100; // Double size for retina displays
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    
+    // Draw outer white circle (border)
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(size / 2, size / 2, size / 2 - 2, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Draw inner blue circle
+    ctx.fillStyle = '#3887be';
+    ctx.beginPath();
+    ctx.arc(size / 2, size / 2, size / 2 - 6, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Draw number
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 50px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(number.toString(), size / 2, size / 2);
+    
+    return canvas;
+}
 
-    // Add numbered markers
-    let markerIndex = 1;
-    trips.forEach((trip, index) => {
-        if (index !== 0) {
-            addNumberedMarker([trip.path[0][1], trip.path[0][0]], markerIndex, trip.trip.origin_station);
+// Update the placePolylines function numbered marker section:
+
+{% if collection_voyage != 'collection' %}
+// Collect all numbered markers data
+const numberedMarkers = [];
+let markerIndex = 1;
+
+trips.forEach((trip, index) => {
+    if (index !== 0) {
+        numberedMarkers.push({
+            coordinates: [trip.path[0][1], trip.path[0][0]],
+            number: markerIndex,
+            popupText: trip.trip.origin_station
+        });
+        markerIndex++;
+    }
+    
+    if (index !== 0 && index < trips.length - 1) {
+        if (trips[index + 1].trip.origin_station !== trips[index].trip.destination_station) {
+            numberedMarkers.push({
+                coordinates: [trip.path[trip.path.length - 1][1], trip.path[trip.path.length - 1][0]],
+                number: markerIndex,
+                popupText: trip.trip.destination_station
+            });
             markerIndex++;
         }
+    }
+});
+
+// Create unique icons for each number and add them to the map
+if (numberedMarkers.length > 0) {
+    // First, create and add all unique numbered icons
+    const uniqueNumbers = [...new Set(numberedMarkers.map(m => m.number))];
+    
+    uniqueNumbers.forEach(num => {
+        const iconCanvas = createNumberedIcon(num);
+        const ctx = iconCanvas.getContext('2d');
+        const imageData = ctx.getImageData(0, 0, iconCanvas.width, iconCanvas.height);
         
-        if (index !== 0 && index < trips.length - 1) {
-            if (trips[index + 1].trip.origin_station !== trips[index].trip.destination_station) {
-                addNumberedMarker(
-                    [trip.path[trip.path.length - 1][1], trip.path[trip.path.length - 1][0]], 
-                    markerIndex, 
-                    trip.trip.destination_station
-                );
-                markerIndex++;
-            }
+        map.addImage(`numbered-marker-${num}`, {
+            width: iconCanvas.width,
+            height: iconCanvas.height,
+            data: imageData.data
+        }, { pixelRatio: 2 });
+    });
+    
+    // Create features with icon references
+    const features = numberedMarkers.map(marker => ({
+        type: 'Feature',
+        geometry: {
+            type: 'Point',
+            coordinates: marker.coordinates
+        },
+        properties: {
+            number: marker.number,
+            popupText: marker.popupText,
+            icon: `numbered-marker-${marker.number}`
+        }
+    }));
+    
+    // Add source
+    map.addSource('numbered-markers', {
+        type: 'geojson',
+        data: {
+            type: 'FeatureCollection',
+            features: features
         }
     });
-
-    // Add start/end markers
-    const firstTrip = trips[0];
-    const lastTrip = trips[trips.length - 1];
     
-    if (firstTrip.trip.origin_station !== lastTrip.trip.destination_station) {
-        // Different start and end
-        createCustomMarker([firstTrip.path[0][1], firstTrip.path[0][0]], 'green', firstTrip.trip.origin_station);
-        createCustomMarker(
-            [lastTrip.path[lastTrip.path.length - 1][1], lastTrip.path[lastTrip.path.length - 1][0]], 
-            'red', 
-            lastTrip.trip.destination_station
-        );
-    } else {
-        // Same start and end (round trip)
-        createCustomMarker([firstTrip.path[0][1], firstTrip.path[0][0]], 'red-green', firstTrip.trip.origin_station);
-    }
-    {% endif %}
+    // Add symbol layer with the custom icons
+    map.addLayer({
+        id: 'numbered-markers',
+        type: 'symbol',
+        source: 'numbered-markers',
+        layout: {
+            'icon-image': ['get', 'icon'],
+            'icon-size': 0.5, // Scale down since we created at 2x
+            'icon-allow-overlap': true,
+            'icon-ignore-placement': true
+        }
+    });
+    
+    // Add click handler for popups
+    map.on('click', 'numbered-markers', (e) => {
+        e.originalEvent.stopPropagation();
+        const properties = e.features[0].properties;
+        if (properties.popupText) {
+            new maplibregl.Popup({ offset: 25 })
+                .setLngLat(e.lngLat)
+                .setText(properties.popupText)
+                .addTo(map);
+        }
+    });
+    
+    // Change cursor on hover
+    map.on('mouseenter', 'numbered-markers', () => {
+        map.getCanvas().style.cursor = 'pointer';
+    });
+    map.on('mouseleave', 'numbered-markers', () => {
+        map.getCanvas().style.cursor = '';
+    });
+}
+{% endif %}
 
     // Handle current trips with position markers
     trips.forEach(trip => {
