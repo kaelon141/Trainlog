@@ -722,7 +722,8 @@ function getRegionFromCode(region_code){
     "SE-K": "Blekinge", "SE-W": "Dalarna", "SE-I": "Gotland", "SE-X": "Gävleborg", "SE-N": "Halland", "SE-Z": "Jämtland", "SE-F": "Jönköping", "SE-H": "Kalmar", "SE-G": "Kronoberg", "SE-BD": "Norrbotten", "SE-M": "Skåne", "SE-AB": "Stockholm", "SE-D": "Södermanland", "SE-C": "Uppsala", "SE-S": "Värmland", "SE-AC": "Västerbotten", "SE-Y": "Västernorrland", "SE-U": "Västmanland", "SE-O": "Västra Götaland", "SE-T": "Örebro", "SE-E": "Östergötland",
     "FI-02": "Etelä-Karjala", "FI-03": "Etelä-Pohjanmaa", "FI-04": "Etelä-Savo", "FI-05": "Kainuu", "FI-06": "Kanta-Häme", "FI-07": "Keski-Pohjanmaa", "FI-08": "Keski-Suomi", "FI-09": "Kymenlaakso", "FI-10": "Lappi", "FI-11": "Pirkanmaa", "FI-12": "Österbotten", "FI-13": "Pohjois-Karjala", "FI-14": "Pohjois-Pohjanmaa", "FI-15": "Pohjois-Savo", "FI-16": "Päijät-Häme", "FI-17": "Satakunta", "FI-18": "Uusimaa", "FI-19": "Varsinais-Suomi",
     "BE-BRU" : "Bruxelles-Capitale", "BE-VLG" : "Vlaanderen", "BE-WAL": "Wallonie",
-    "NL-DR": "Drenthe", "NL-FL": "Flevoland", "NL-FR": "Friesland", "NL-GE": "Gelderland", "NL-GR": "Groningen", "NL-LI": "Limburg", "NL-NB": "Noord-Brabant", "NL-NH": "Noord-Holland", "NL-OV": "Overijssel", "NL-UT": "Utrecht", "NL-ZE": "Zeeland", "NL-ZH": "Zuid-Holland"
+    "NL-DR": "Drenthe", "NL-FL": "Flevoland", "NL-FR": "Friesland", "NL-GE": "Gelderland", "NL-GR": "Groningen", "NL-LI": "Limburg", "NL-NB": "Noord-Brabant", "NL-NH": "Noord-Holland", "NL-OV": "Overijssel", "NL-UT": "Utrecht", "NL-ZE": "Zeeland", "NL-ZH": "Zuid-Holland",
+    "NO-03": "Oslo", "NO-11": "Rogaland", "NO-15": "Møre og Romsdal", "NO-18": "Nordland", "NO-30": "Viken", "NO-34": "Innlandet", "NO-38": "Vestfold og Telemark", "NO-42": "Agder", "NO-46": "Vestland", "NO-50": "Trøndelag"
   };
   return regions[region_code]
 }
