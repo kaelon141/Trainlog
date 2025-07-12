@@ -1,0 +1,231 @@
+{% extends "bootstrap/layout.html" %}
+{% block content %}
+
+{% include nav %}
+
+<div class="container">
+    <h1 class="mt-3">{{ feature_requests_title }}</h1>
+    <p class="text-muted">{{ feature_requests_subtitle }}</p>
+    
+    {% if logged_in_user and username and username != "public" %}
+        <button type="button" class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#requestModal">
+            <i class="fa-solid fa-plus"></i> {{ feature_requests_submit_button }}
+        </button>
+    {% elif not logged_in_user %}
+        <div class="alert alert-info mb-3">
+            <i class="fa-solid fa-info-circle"></i> {{ feature_requests_login_prompt }}
+        </div>
+    {% endif %}
+    
+    <div class="row">
+        {% for request in requests %}
+        <div class="col-12 mb-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Voting Section -->
+                        <div class="col-md-1 col-2 text-center">
+                            {% if logged_in_user and not is_owner and username %}
+                                <form method="POST" action="{{ url_for('feature_requests.vote_feature_request', username=username) }}" class="d-inline">
+                                    <input type="hidden" name="request_id" value="{{ request.id }}">
+                                    <input type="hidden" name="vote_type" value="upvote">
+                                    <button type="submit" class="btn btn-sm {{ 'btn-success' if request.user_vote == 1 else 'btn-outline-success' }} mb-1">
+                                        <i class="fa-solid fa-chevron-up"></i>
+                                    </button>
+                                </form>
+                            {% else %}
+                                <div class="btn btn-sm btn-outline-success mb-1 disabled">
+                                    <i class="fa-solid fa-chevron-up"></i>
+                                </div>
+                            {% endif %}
+                            
+                            <div class="fw-bold text-{{ 'success' if request.score > 0 else 'danger' if request.score < 0 else 'muted' }}">
+                                {{ request.score }}
+                            </div>
+                            
+                            {% if logged_in_user and not is_owner and username %}
+                                <form method="POST" action="{{ url_for('feature_requests.vote_feature_request', username=username) }}" class="d-inline">
+                                    <input type="hidden" name="request_id" value="{{ request.id }}">
+                                    <input type="hidden" name="vote_type" value="downvote">
+                                    <button type="submit" class="btn btn-sm {{ 'btn-danger' if request.user_vote == -1 else 'btn-outline-danger' }} mt-1">
+                                        <i class="fa-solid fa-chevron-down"></i>
+                                    </button>
+                                </form>
+                            {% else %}
+                                <div class="btn btn-sm btn-outline-danger mt-1 disabled">
+                                    <i class="fa-solid fa-chevron-down"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Content Section -->
+                        <div class="col-md-11 col-10">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h5 class="card-title mb-1">{{ request.title }}</h5>
+                                    <p class="card-text">{{ request.description }}</p>
+                                    <small class="text-muted">
+                                        {{ feature_requests_by }} {{ request.author }} • 
+                                        {% if request.created %}
+                                            {{ request.created.strftime('%Y-%m-%d %H:%M') }}
+                                        {% else %}
+                                            {{ feature_requests_unknown }}
+                                        {% endif %}
+                                    </small>
+                                </div>
+                                
+                                <!-- Status Badge -->
+                                <div class="ms-3">
+                                    {% if request.status == 'open' %}
+                                        <span class="badge bg-primary">{{ feature_requests_status_open }}</span>
+                                    {% elif request.status == 'working_on_it' %}
+                                        <span class="badge bg-warning">{{ feature_requests_status_working }}</span>
+                                    {% elif request.status == 'completed' %}
+                                        <span class="badge bg-success">{{ feature_requests_status_completed }}</span>
+                                    {% elif request.status == 'not_doing' %}
+                                        <span class="badge bg-secondary">{{ feature_requests_status_not_doing }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <!-- Vote Details -->
+                            <div class="mt-2">
+                                <small class="text-muted">
+                                    <a href="#" class="text-decoration-none" onclick="showVoters({{ request.id }})">
+                                        <i class="fa-solid fa-chevron-up text-success"></i> {{ request.upvotes }} 
+                                        <i class="fa-solid fa-chevron-down text-danger ms-2"></i> {{ request.downvotes }}
+                                    </a>
+                                </small>
+                                
+                                {% if is_owner %}
+                                <div class="mt-2">
+                                    <form method="POST" action="{{ url_for('feature_requests.update_feature_request_status', username=username) }}" class="d-inline">
+                                        <input type="hidden" name="request_id" value="{{ request.id }}">
+                                        <select name="status" class="form-select form-select-sm d-inline-block" style="width: auto;" onchange="this.form.submit()">
+                                            <option value="open" {{ 'selected' if request.status == 'open' else '' }}>{{ feature_requests_status_open }}</option>
+                                            <option value="working_on_it" {{ 'selected' if request.status == 'working_on_it' else '' }}>{{ feature_requests_status_working }}</option>
+                                            <option value="completed" {{ 'selected' if request.status == 'completed' else '' }}>{{ feature_requests_status_completed }}</option>
+                                            <option value="not_doing" {{ 'selected' if request.status == 'not_doing' else '' }}>{{ feature_requests_status_not_doing }}</option>
+                                        </select>
+                                    </form>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        
+        {% if not requests %}
+        <div class="col-12">
+            <div class="alert alert-info text-center">
+                <i class="fa-solid fa-lightbulb"></i> {{ feature_requests_empty }}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if logged_in_user and username and username != "public" %}
+<div class="modal fade" id="requestModal" tabindex="-1" aria-labelledby="requestModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="requestModalLabel">{{ feature_requests_modal_title }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ feature_requests_close }}"></button>
+            </div>
+            <div class="modal-body">
+                <form id="requestForm" method="POST" action="{{ url_for('feature_requests.submit_feature_request', username=username) }}">
+                    <div class="form-group mb-3">
+                        <label for="title" class="form-label">{{ feature_requests_form_title_label }}</label>
+                        <input type="text" class="form-control" id="title" name="title" required maxlength="200">
+                        <div class="form-text">{{ feature_requests_form_title_hint }}</div>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="description" class="form-label">{{ feature_requests_form_description_label }}</label>
+                        <textarea class="form-control" id="description" name="description" rows="4" required maxlength="2000"></textarea>
+                        <div class="form-text">{{ feature_requests_form_description_hint }}</div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ cancel }}</button>
+                        <button type="submit" class="btn btn-primary">{{ submit }}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="modal fade" id="votersModal" tabindex="-1" aria-labelledby="votersModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="votersModalLabel">{{ feature_requests_voters }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ feature_requests_close }}"></button>
+            </div>
+            <div class="modal-body">
+                <div id="votersContent">
+                    <div class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">{{ feature_requests_loading }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showVoters(requestId) {
+    const modal = new bootstrap.Modal(document.getElementById('votersModal'));
+    modal.show();
+
+    {% if username %}
+        fetch(`{{ url_for('feature_requests.feature_request_voters', request_id=0) }}`.replace('0', requestId))
+    {% else %}
+        fetch(`/feature_requests/${requestId}/voters`)
+    {% endif %}
+        .then(response => response.json())
+        .then(data => {
+            let content = '';
+            
+            if (data.upvoters.length > 0) {
+                content += '<h6 class="text-success"><i class="fa-solid fa-chevron-up"></i> {{ feature_requests_upvoters }} (' + data.upvoters.length + ')</h6>';
+                content += '<ul class="list-unstyled mb-3">';
+                data.upvoters.forEach(voter => {
+                    content += `<li><small>${voter.username} <span class="text-muted">• ${new Date(voter.created).toLocaleDateString()}</span></small></li>`;
+                });
+                content += '</ul>';
+            }
+
+            if (data.downvoters.length > 0) {
+                content += '<h6 class="text-danger"><i class="fa-solid fa-chevron-down"></i> {{ feature_requests_downvoters }} (' + data.downvoters.length + ')</h6>';
+                content += '<ul class="list-unstyled">';
+                data.downvoters.forEach(voter => {
+                    content += `<li><small>${voter.username} <span class="text-muted">• ${new Date(voter.created).toLocaleDateString()}</span></small></li>`;
+                });
+                content += '</ul>';
+            }
+
+            if (data.upvoters.length === 0 && data.downvoters.length === 0) {
+                content = '<p class="text-muted text-center">{{ feature_requests_no_votes }}</p>';
+            }
+
+            document.getElementById('votersContent').innerHTML = content;
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('votersContent').innerHTML = '<p class="text-danger">{{ feature_requests_error_loading }}</p>';
+        });
+}
+
+document.getElementById('requestModal').addEventListener('hidden.bs.modal', function () {
+    document.getElementById('requestForm').reset();
+});
+</script>
+
+{% endblock %}

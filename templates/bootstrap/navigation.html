@@ -60,6 +60,11 @@
               <a class="dropdown-item" href="{{ url_for('user_home', username=username) }}">
                 <i class="bi bi-map"></i> {{map}}
               </a>
+            </li>            
+            <li>
+              <a class="dropdown-item" href="{{ url_for('user_dashboard', username=username) }}">
+               <i class="bi bi-speedometer2"></i> {{user_dashboard}}
+              </a>
             </li>
             <li>
               <a class="dropdown-item" href="{{ url_for('new_map', username=username) }}">
@@ -214,9 +219,28 @@
             <i class="bi bi-info-circle"></i> {{ about }}
           </a>
           <ul class="dropdown-menu" aria-labelledby="infoDropdown">
-            <li><a class="dropdown-item" href="{{ url_for('about') }}">{{ about }}</a></li>
-            <li><a class="dropdown-item" href="{{ url_for('privacy') }}">{{ privacy_title }}</a></li>
-            <li><a class="dropdown-item" href="{{ url_for('router_status')}}">{{router_status}}</a></li>
+            <li>
+              <a class="dropdown-item" href="{{ url_for('about') }}">
+                <i class="fa fa-info-circle"></i> {{ about }}
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item" href="{{ url_for('privacy') }}">
+                <i class="fa fa-user-secret"></i> {{ privacy_title }}
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item" href="{{ url_for('router_status') }}">
+                <i class="fa-solid fa-route"></i> {{ router_status }}
+              </a>
+            </li>
+            {%if is_alpha%}
+            <li>
+              <a class="dropdown-item" href="{{ url_for('feature_requests.feature_requests') }}">
+                <i class="fa fa-lightbulb"></i> {{ feature_requests_title }}
+              </a>
+            </li>
+            {%endif%}
           </ul>
         </li>
         <li class="nav-item">
