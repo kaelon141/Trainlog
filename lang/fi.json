@@ -270,7 +270,7 @@
     "CA": "Keski-Amerikka",
     "SA": "Etelä-Amerikka",
     "OC": "Oseania",
-    "countriesLoadingMessage": "<h3>Odota hetki, kun kokoamme sinun tilastojasi.</h3><br> Suuremmille mailla tämä kestää melko kauan (Nyt on erinomainen aika juoda kuppi jotakin kuumaa ☕)",
+    "countriesLoadingMessage": "<h3>Odota hetki, kun kokoamme tilastojasi.</h3><br> Suuremmilla mailla tämä saattaa kestää pidempään (Nyt on erinomainen aika juoda kuppi kuumaa ☕)",
     "notes": "Muistiinpanot",
     "subdivisions": "Maakunnat",
     "invalidEmail": "Ole hyvä ja anna voimassa oleva sähköpostiosoite.",
