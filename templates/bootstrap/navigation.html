@@ -234,13 +234,11 @@
                 <i class="fa-solid fa-route"></i> {{ router_status }}
               </a>
             </li>
-            {%if is_alpha%}
             <li>
               <a class="dropdown-item" href="{{ url_for('feature_requests.feature_requests') }}">
                 <i class="fa fa-lightbulb"></i> {{ feature_requests_title }}
               </a>
             </li>
-            {%endif%}
           </ul>
         </li>
         <li class="nav-item">
