@@ -1,20 +1,78 @@
+# ================================
+# REQUIRED CONFIGURATION
+# ================================
+
+# Database configuration for PostgreSQL connection (used throughout the backend)
+pg:
+  user: db_user
+  dbname: your_database
+  hostname: localhost
+  password: db_password
+  port: 5432
+
+# Default admin account (used for setting up the first login)
+owner:
+  username: your_username
+  email: your_email
+  password: your_password
+
+
+# ================================
+# OPTIONAL CONFIGURATION
+# Only include these if you use the related features
+# ================================
+
+# Email sending via SMTP (used for error notifications to owner and password reset)
 smtp:
   server: smtp.example.com
   port: 587
   user: your_email@example.com
   password: YOUR_PASSWORD_HERE
 
-owner:
-  username: your_username
-  email: your_email
-  password: your_password
-
+# OpenAI API (used for auto translation of language files)
 openai:
   openai_key: OPENAI_API_KEY
 
+# Google APIs (used for Vessel picture search and autorouting)
 google:
   key: GOOGLE_API_KEY
+  transitKey: GOOGLE_TRANSIT_KEY
   cx: GOOGLE_CX
 
+# FlightAware API (used for ticket autocomplete)
+flightaware:
+  fa_key: FLIGHTAWARE_API_KEY
+
+# Buy Me a Coffee integration (used to show supporter info or accept donations)
 bmc:
   key: BMC_API_KEY
+
+# FriendlyCaptcha (used for form bot protection, registration)
+friendlyCaptcha:
+  APIKey: FRIENDLYCAPTCHA_API_KEY
+
+# HERE Maps API (used for autorouting)
+here:
+  APIKey: HERE_API_KEY
+
+# Matomo Analytics (used for visitor tracking, analytics dashboard)
+matomo:
+  url: https://analytics.example.com
+  id_site: 1
+  token_auth: MATOMO_TOKEN
+
+# API Ninjas (used for airlines data)
+api_ninjas:
+  api_key: NINJAS_API_KEY
+
+# Jawg Maps (specific map tilesets)
+jawg:
+  api_key: JAWG_API_KEY
+
+# Thunderforest Maps (specific map tilesets)
+thunderforest:
+  api_key: THUNDER_API_KEY
+
+# FlightRadar24 (used for importing flight paths and data)
+FR24:
+  token_auth: FR24_AUTH_TOKEN
