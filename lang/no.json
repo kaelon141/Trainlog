@@ -563,5 +563,10 @@
     "feature_requests_downvoters": "De som har stemt ned",
     "feature_requests_no_votes": "Ingen stemmer ennå",
     "feature_requests_error_loading": "Feil ved lasting av velgere",
-    "user_dashboard": "Brukerdashboard"
+    "user_dashboard": "Brukerdashboard",
+    "feature_requests_edit_title": "Rediger funksjonsforespørsel",
+    "update": "Oppdater",
+    "feature_requests_delete_title": "Slett funksjonsforespørsel",
+    "feature_requests_delete_confirm": "Er du sikker på at du vil slette?",
+    "feature_requests_delete_warning": "Denne handlingen kan ikke angres. Alle stemmer vil også bli slettet."
 }

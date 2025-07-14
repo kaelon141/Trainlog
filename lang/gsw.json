@@ -563,5 +563,10 @@
     "feature_requests_downvoters": "Persone, wu dogäge gstummt hend",
     "feature_requests_no_votes": "No kei Stimmene",
     "feature_requests_error_loading": "Fähler bim Lade vo de Stimmgebende",
-    "user_dashboard": "Benutzer-Dashboard"
+    "user_dashboard": "Benutzer-Dashboard",
+    "feature_requests_edit_title": "Funktion Aafroge bearbeite",
+    "update": "Aktualisiere",
+    "feature_requests_delete_title": "Funktion Aafroge lösche",
+    "feature_requests_delete_confirm": "Bisch sicher, dass du wotsch lösche?",
+    "feature_requests_delete_warning": "Die Aktion cha nüm rückgängig gmacht werde. Alli Stimm werde au glöscht."
 }

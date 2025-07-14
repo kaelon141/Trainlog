@@ -563,5 +563,10 @@
     "feature_requests_downvoters": "Chi ha votato negativamente",
     "feature_requests_no_votes": "Ancora nessun voto",
     "feature_requests_error_loading": "Errore nel caricamento dei votanti",
-    "user_dashboard": "Dashboard utente"
+    "user_dashboard": "Dashboard utente",
+    "feature_requests_edit_title": "Modifica richiesta di funzionalità",
+    "update": "Aggiorna",
+    "feature_requests_delete_title": "Elimina richiesta di funzionalità",
+    "feature_requests_delete_confirm": "Sei sicuro di voler eliminare?",
+    "feature_requests_delete_warning": "Questa azione non può essere annullata. Tutti i voti saranno inoltre eliminati."
 }

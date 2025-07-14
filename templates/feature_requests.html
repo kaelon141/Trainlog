@@ -17,8 +17,26 @@
         </div>
     {% endif %}
     
+    <!-- Active Feature Requests -->
     <div class="row">
+        {% set active_requests = [] %}
+        {% set completed_requests = [] %}
+        {% set not_doing_requests = [] %}
+        {% set negative_requests = [] %}
+        
         {% for request in requests %}
+            {% if request.status == 'completed' %}
+                {% set _ = completed_requests.append(request) %}
+            {% elif request.status == 'not_doing' %}
+                {% set _ = not_doing_requests.append(request) %}
+            {% elif request.score < 0 %}
+                {% set _ = negative_requests.append(request) %}
+            {% else %}
+                {% set _ = active_requests.append(request) %}
+            {% endif %}
+        {% endfor %}
+        
+        {% for request in active_requests %}
         <div class="col-12 mb-3">
             <div class="card">
                 <div class="card-body">
@@ -65,7 +83,17 @@
                                     <h5 class="card-title mb-1">{{ request.title }}</h5>
                                     <p class="card-text">{{ request.description }}</p>
                                     <small class="text-muted">
-                                        {{ feature_requests_by }} {{ request.author }} • 
+                                        {{ feature_requests_by }} 
+                                        {% if request.author_display == "admin" %}
+                                            <span class="badge bg-warning text-dark">
+                                                <i class="fa-solid fa-crown"></i> admin
+                                            </span>
+                                        {% else %}
+                                        <span class="badge bg-primary text-white">
+                                            {{ request.author_display }}
+                                        </span>
+                                        {% endif %}
+                                         • 
                                         {% if request.created %}
                                             {{ request.created.strftime('%Y-%m-%d %H:%M') }}
                                         {% else %}
@@ -74,16 +102,31 @@
                                     </small>
                                 </div>
                                 
-                                <!-- Status Badge -->
-                                <div class="ms-3">
+                                <!-- Action Buttons -->
+                                <div class="ms-3 d-flex flex-column align-items-end">
+                                    <!-- Status Badge -->
                                     {% if request.status == 'open' %}
-                                        <span class="badge bg-primary">{{ feature_requests_status_open }}</span>
+                                        <span class="badge bg-primary mb-2">{{ feature_requests_status_open }}</span>
                                     {% elif request.status == 'working_on_it' %}
-                                        <span class="badge bg-warning">{{ feature_requests_status_working }}</span>
+                                        <span class="badge bg-warning mb-2">{{ feature_requests_status_working }}</span>
                                     {% elif request.status == 'completed' %}
-                                        <span class="badge bg-success">{{ feature_requests_status_completed }}</span>
+                                        <span class="badge bg-success mb-2">{{ feature_requests_status_completed }}</span>
                                     {% elif request.status == 'not_doing' %}
-                                        <span class="badge bg-secondary">{{ feature_requests_status_not_doing }}</span>
+                                        <span class="badge bg-secondary mb-2">{{ feature_requests_status_not_doing }}</span>
+                                    {% endif %}
+                                    
+                                    <!-- Edit/Delete Buttons -->
+                                    {% if logged_in_user and username and (is_owner or request.author == logged_in_user) %}
+                                        <div class="btn-group btn-group-sm">
+                                            <button type="button" class="btn btn-outline-secondary" 
+                                                    onclick="editRequest({{ request.id }}, '{{ request.title|e }}', '{{ request.description|e }}')">
+                                                <i class="fa-solid fa-edit"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-danger" 
+                                                    onclick="deleteRequest({{ request.id }}, '{{ request.title|e }}')">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </div>
                                     {% endif %}
                                 </div>
                             </div>
@@ -118,7 +161,7 @@
         </div>
         {% endfor %}
         
-        {% if not requests %}
+        {% if not active_requests and not completed_requests and not not_doing_requests and not negative_requests %}
         <div class="col-12">
             <div class="alert alert-info text-center">
                 <i class="fa-solid fa-lightbulb"></i> {{ feature_requests_empty }}
@@ -126,8 +169,355 @@
         </div>
         {% endif %}
     </div>
+    
+    <!-- Collapsible Sections for Hidden Requests -->
+    <div class="mt-4">
+        {% if completed_requests %}
+        <div class="accordion mb-3" id="completedAccordion">
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="completedHeading">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#completedCollapse" aria-expanded="false" aria-controls="completedCollapse">
+                        <i class="fa-solid fa-check-circle text-success me-2"></i>
+                        {{feature_requests_status_completed}} ({{ completed_requests|length }})
+                    </button>
+                </h2>
+                <div id="completedCollapse" class="accordion-collapse collapse" aria-labelledby="completedHeading" data-bs-parent="#completedAccordion">
+                    <div class="accordion-body">
+                        {% for request in completed_requests %}
+                        <div class="card mb-2">
+                            <div class="card-body">
+                                <div class="row">
+                                    <!-- Voting Section -->
+                                    <div class="col-md-1 col-2 text-center">
+                                        <div class="btn btn-sm btn-outline-success mb-1 disabled">
+                                            <i class="fa-solid fa-chevron-up"></i>
+                                        </div>
+                                        <div class="fw-bold text-{{ 'success' if request.score > 0 else 'danger' if request.score < 0 else 'muted' }}">
+                                            {{ request.score }}
+                                        </div>
+                                        <div class="btn btn-sm btn-outline-danger mt-1 disabled">
+                                            <i class="fa-solid fa-chevron-down"></i>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Content Section -->
+                                    <div class="col-md-11 col-10">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div class="flex-grow-1">
+                                                <h6 class="card-title mb-1">{{ request.title }}</h6>
+                                                <p class="card-text small">{{ request.description }}</p>
+                                                <small class="text-muted">
+                                                    {{ feature_requests_by }} 
+                                                    {% if request.author_display == "admin" %}
+                                                        <span class="badge bg-warning text-dark">
+                                                            <i class="fa-solid fa-crown"></i> admin
+                                                        </span>
+                                                    {% else %}
+                                                    <span class="badge bg-primary text-white">
+                                                        {{ request.author_display }}
+                                                    </span>
+                                                    {% endif %}
+                                                     • 
+                                                    {% if request.created %}
+                                                        {{ request.created.strftime('%Y-%m-%d %H:%M') }}
+                                                    {% else %}
+                                                        {{ feature_requests_unknown }}
+                                                    {% endif %}
+                                                </small>
+                                            </div>
+                                            
+                                            <div class="ms-3 d-flex flex-column align-items-end">
+                                                <span class="badge bg-success mb-2">{{ feature_requests_status_completed }}</span>
+                                                {% if logged_in_user and username and (is_owner or request.author == logged_in_user) %}
+                                                    <div class="btn-group btn-group-sm">
+                                                        <button type="button" class="btn btn-outline-secondary" 
+                                                                onclick="editRequest({{ request.id }}, '{{ request.title|e }}', '{{ request.description|e }}')">
+                                                            <i class="fa-solid fa-edit"></i>
+                                                        </button>
+                                                        <button type="button" class="btn btn-outline-danger" 
+                                                                onclick="deleteRequest({{ request.id }}, '{{ request.title|e }}')">
+                                                            <i class="fa-solid fa-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="mt-2">
+                                            <small class="text-muted">
+                                                <a href="#" class="text-decoration-none" onclick="showVoters({{ request.id }})">
+                                                    <i class="fa-solid fa-chevron-up text-success"></i> {{ request.upvotes }} 
+                                                    <i class="fa-solid fa-chevron-down text-danger ms-2"></i> {{ request.downvotes }}
+                                                </a>
+                                            </small>
+                                            
+                                            {% if is_owner %}
+                                            <div class="mt-2">
+                                                <form method="POST" action="{{ url_for('feature_requests.update_feature_request_status', username=username) }}" class="d-inline">
+                                                    <input type="hidden" name="request_id" value="{{ request.id }}">
+                                                    <select name="status" class="form-select form-select-sm d-inline-block" style="width: auto;" onchange="this.form.submit()">
+                                                        <option value="open" {{ 'selected' if request.status == 'open' else '' }}>{{ feature_requests_status_open }}</option>
+                                                        <option value="working_on_it" {{ 'selected' if request.status == 'working_on_it' else '' }}>{{ feature_requests_status_working }}</option>
+                                                        <option value="completed" {{ 'selected' if request.status == 'completed' else '' }}>{{ feature_requests_status_completed }}</option>
+                                                        <option value="not_doing" {{ 'selected' if request.status == 'not_doing' else '' }}>{{ feature_requests_status_not_doing }}</option>
+                                                    </select>
+                                                </form>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if not_doing_requests %}
+        <div class="accordion mb-3" id="notDoingAccordion">
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="notDoingHeading">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#notDoingCollapse" aria-expanded="false" aria-controls="notDoingCollapse">
+                        <i class="fa-solid fa-times-circle text-secondary me-2"></i>
+                        {{feature_requests_status_not_doing}} ({{ not_doing_requests|length }})
+                    </button>
+                </h2>
+                <div id="notDoingCollapse" class="accordion-collapse collapse" aria-labelledby="notDoingHeading" data-bs-parent="#notDoingAccordion">
+                    <div class="accordion-body">
+                        {% for request in not_doing_requests %}
+                        <div class="card mb-2">
+                            <div class="card-body">
+                                <div class="row">
+                                    <!-- Voting Section -->
+                                    <div class="col-md-1 col-2 text-center">
+                                        <div class="btn btn-sm btn-outline-success mb-1 disabled">
+                                            <i class="fa-solid fa-chevron-up"></i>
+                                        </div>
+                                        <div class="fw-bold text-{{ 'success' if request.score > 0 else 'danger' if request.score < 0 else 'muted' }}">
+                                            {{ request.score }}
+                                        </div>
+                                        <div class="btn btn-sm btn-outline-danger mt-1 disabled">
+                                            <i class="fa-solid fa-chevron-down"></i>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Content Section -->
+                                    <div class="col-md-11 col-10">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div class="flex-grow-1">
+                                                <h6 class="card-title mb-1">{{ request.title }}</h6>
+                                                <p class="card-text small">{{ request.description }}</p>
+                                                <small class="text-muted">
+                                                    {{ feature_requests_by }} 
+                                                    {% if request.author_display == "admin" %}
+                                                        <span class="badge bg-warning text-dark">
+                                                            <i class="fa-solid fa-crown"></i> admin
+                                                        </span>
+                                                    {% else %}
+                                                    <span class="badge bg-primary text-white">
+                                                        {{ request.author_display }}
+                                                    </span>
+                                                    {% endif %}
+                                                     • 
+                                                    {% if request.created %}
+                                                        {{ request.created.strftime('%Y-%m-%d %H:%M') }}
+                                                    {% else %}
+                                                        {{ feature_requests_unknown }}
+                                                    {% endif %}
+                                                </small>
+                                            </div>
+                                            
+                                            <div class="ms-3 d-flex flex-column align-items-end">
+                                                <span class="badge bg-secondary mb-2">{{ feature_requests_status_not_doing }}</span>
+                                                {% if logged_in_user and username and (is_owner or request.author == logged_in_user) %}
+                                                    <div class="btn-group btn-group-sm">
+                                                        <button type="button" class="btn btn-outline-secondary" 
+                                                                onclick="editRequest({{ request.id }}, '{{ request.title|e }}', '{{ request.description|e }}')">
+                                                            <i class="fa-solid fa-edit"></i>
+                                                        </button>
+                                                        <button type="button" class="btn btn-outline-danger" 
+                                                                onclick="deleteRequest({{ request.id }}, '{{ request.title|e }}')">
+                                                            <i class="fa-solid fa-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="mt-2">
+                                            <small class="text-muted">
+                                                <a href="#" class="text-decoration-none" onclick="showVoters({{ request.id }})">
+                                                    <i class="fa-solid fa-chevron-up text-success"></i> {{ request.upvotes }} 
+                                                    <i class="fa-solid fa-chevron-down text-danger ms-2"></i> {{ request.downvotes }}
+                                                </a>
+                                            </small>
+                                            
+                                            {% if is_owner %}
+                                            <div class="mt-2">
+                                                <form method="POST" action="{{ url_for('feature_requests.update_feature_request_status', username=username) }}" class="d-inline">
+                                                    <input type="hidden" name="request_id" value="{{ request.id }}">
+                                                    <select name="status" class="form-select form-select-sm d-inline-block" style="width: auto;" onchange="this.form.submit()">
+                                                        <option value="open" {{ 'selected' if request.status == 'open' else '' }}>{{ feature_requests_status_open }}</option>
+                                                        <option value="working_on_it" {{ 'selected' if request.status == 'working_on_it' else '' }}>{{ feature_requests_status_working }}</option>
+                                                        <option value="completed" {{ 'selected' if request.status == 'completed' else '' }}>{{ feature_requests_status_completed }}</option>
+                                                        <option value="not_doing" {{ 'selected' if request.status == 'not_doing' else '' }}>{{ feature_requests_status_not_doing }}</option>
+                                                    </select>
+                                                </form>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if negative_requests %}
+        <div class="accordion mb-3" id="negativeAccordion">
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="negativeHeading">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#negativeCollapse" aria-expanded="false" aria-controls="negativeCollapse">
+                        <i class="fa-solid fa-thumbs-down text-danger me-2"></i>
+                        {{feature_requests_downvoters}} ({{ negative_requests|length }})
+                    </button>
+                </h2>
+                <div id="negativeCollapse" class="accordion-collapse collapse" aria-labelledby="negativeHeading" data-bs-parent="#negativeAccordion">
+                    <div class="accordion-body">
+                        {% for request in negative_requests %}
+                        <div class="card mb-2">
+                            <div class="card-body">
+                                <div class="row">
+                                    <!-- Voting Section -->
+                                    <div class="col-md-1 col-2 text-center">
+                                        {% if logged_in_user and not is_owner and username %}
+                                            <form method="POST" action="{{ url_for('feature_requests.vote_feature_request', username=username) }}" class="d-inline">
+                                                <input type="hidden" name="request_id" value="{{ request.id }}">
+                                                <input type="hidden" name="vote_type" value="upvote">
+                                                <button type="submit" class="btn btn-sm {{ 'btn-success' if request.user_vote == 1 else 'btn-outline-success' }} mb-1">
+                                                    <i class="fa-solid fa-chevron-up"></i>
+                                                </button>
+                                            </form>
+                                        {% else %}
+                                            <div class="btn btn-sm btn-outline-success mb-1 disabled">
+                                                <i class="fa-solid fa-chevron-up"></i>
+                                            </div>
+                                        {% endif %}
+                                        
+                                        <div class="fw-bold text-{{ 'success' if request.score > 0 else 'danger' if request.score < 0 else 'muted' }}">
+                                            {{ request.score }}
+                                        </div>
+                                        
+                                        {% if logged_in_user and not is_owner and username %}
+                                            <form method="POST" action="{{ url_for('feature_requests.vote_feature_request', username=username) }}" class="d-inline">
+                                                <input type="hidden" name="request_id" value="{{ request.id }}">
+                                                <input type="hidden" name="vote_type" value="downvote">
+                                                <button type="submit" class="btn btn-sm {{ 'btn-danger' if request.user_vote == -1 else 'btn-outline-danger' }} mt-1">
+                                                    <i class="fa-solid fa-chevron-down"></i>
+                                                </button>
+                                            </form>
+                                        {% else %}
+                                            <div class="btn btn-sm btn-outline-danger mt-1 disabled">
+                                                <i class="fa-solid fa-chevron-down"></i>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <!-- Content Section -->
+                                    <div class="col-md-11 col-10">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div class="flex-grow-1">
+                                                <h6 class="card-title mb-1">{{ request.title }}</h6>
+                                                <p class="card-text small">{{ request.description }}</p>
+                                                <small class="text-muted">
+                                                    {{ feature_requests_by }} 
+                                                    {% if request.author_display == "admin" %}
+                                                        <span class="badge bg-warning text-dark">
+                                                            <i class="fa-solid fa-crown"></i> admin
+                                                        </span>
+                                                    {% else %}
+                                                    <span class="badge bg-primary text-white">
+                                                        {{ request.author_display }}
+                                                    </span>
+                                                    {% endif %}
+                                                     • 
+                                                    {% if request.created %}
+                                                        {{ request.created.strftime('%Y-%m-%d %H:%M') }}
+                                                    {% else %}
+                                                        {{ feature_requests_unknown }}
+                                                    {% endif %}
+                                                </small>
+                                            </div>
+                                            
+                                            <div class="ms-3 d-flex flex-column align-items-end">
+                                                {% if request.status == 'open' %}
+                                                    <span class="badge bg-primary mb-2">{{ feature_requests_status_open }}</span>
+                                                {% elif request.status == 'working_on_it' %}
+                                                    <span class="badge bg-warning mb-2">{{ feature_requests_status_working }}</span>
+                                                {% elif request.status == 'completed' %}
+                                                    <span class="badge bg-success mb-2">{{ feature_requests_status_completed }}</span>
+                                                {% elif request.status == 'not_doing' %}
+                                                    <span class="badge bg-secondary mb-2">{{ feature_requests_status_not_doing }}</span>
+                                                {% endif %}
+                                                
+                                                {% if logged_in_user and username and (is_owner or request.author == logged_in_user) %}
+                                                    <div class="btn-group btn-group-sm">
+                                                        <button type="button" class="btn btn-outline-secondary" 
+                                                                onclick="editRequest({{ request.id }}, '{{ request.title|e }}', '{{ request.description|e }}')">
+                                                            <i class="fa-solid fa-edit"></i>
+                                                        </button>
+                                                        <button type="button" class="btn btn-outline-danger" 
+                                                                onclick="deleteRequest({{ request.id }}, '{{ request.title|e }}')">
+                                                            <i class="fa-solid fa-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="mt-2">
+                                            <small class="text-muted">
+                                                <a href="#" class="text-decoration-none" onclick="showVoters({{ request.id }})">
+                                                    <i class="fa-solid fa-chevron-up text-success"></i> {{ request.upvotes }} 
+                                                    <i class="fa-solid fa-chevron-down text-danger ms-2"></i> {{ request.downvotes }}
+                                                </a>
+                                            </small>
+                                            
+                                            {% if is_owner %}
+                                            <div class="mt-2">
+                                                <form method="POST" action="{{ url_for('feature_requests.update_feature_request_status', username=username) }}" class="d-inline">
+                                                    <input type="hidden" name="request_id" value="{{ request.id }}">
+                                                    <select name="status" class="form-select form-select-sm d-inline-block" style="width: auto;" onchange="this.form.submit()">
+                                                        <option value="open" {{ 'selected' if request.status == 'open' else '' }}>{{ feature_requests_status_open }}</option>
+                                                        <option value="working_on_it" {{ 'selected' if request.status == 'working_on_it' else '' }}>{{ feature_requests_status_working }}</option>
+                                                        <option value="completed" {{ 'selected' if request.status == 'completed' else '' }}>{{ feature_requests_status_completed }}</option>
+                                                        <option value="not_doing" {{ 'selected' if request.status == 'not_doing' else '' }}>{{ feature_requests_status_not_doing }}</option>
+                                                    </select>
+                                                </form>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
 </div>
 
+<!-- Submit Feature Request Modal -->
 {% if logged_in_user and username and username != "public" %}
 <div class="modal fade" id="requestModal" tabindex="-1" aria-labelledby="requestModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -159,6 +549,63 @@
 </div>
 {% endif %}
 
+<!-- Edit Feature Request Modal -->
+<div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editModalLabel">{{ feature_requests_edit_title }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ feature_requests_close }}"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editForm" method="POST" action="{{ url_for('feature_requests.edit_feature_request', username=username) }}">
+                    <input type="hidden" id="editRequestId" name="request_id">
+                    <div class="form-group mb-3">
+                        <label for="editTitle" class="form-label">{{ feature_requests_form_title_label }}</label>
+                        <input type="text" class="form-control" id="editTitle" name="title" required maxlength="200">
+                        <div class="form-text">{{ feature_requests_form_title_hint }}</div>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="editDescription" class="form-label">{{ feature_requests_form_description_label }}</label>
+                        <textarea class="form-control" id="editDescription" name="description" rows="4" required maxlength="2000"></textarea>
+                        <div class="form-text">{{ feature_requests_form_description_hint }}</div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ cancel }}</button>
+                        <button type="submit" class="btn btn-primary">{{ update }}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">{{ feature_requests_delete_title }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ feature_requests_close }}"></button>
+            </div>
+            <div class="modal-body">
+                <p>{{ feature_requests_delete_confirm }} "<span id="deleteRequestTitle"></span>"?</p>
+                <div class="alert alert-warning">
+                    <i class="fa-solid fa-triangle-exclamation"></i> {{ feature_requests_delete_warning }}
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ cancel }}</button>
+                <form id="deleteForm" method="POST" action="{{ url_for('feature_requests.delete_feature_request', username=username) }}" class="d-inline">
+                    <input type="hidden" id="deleteRequestId" name="request_id">
+                    <button type="submit" class="btn btn-danger">{{ delete }}</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Voters Modal -->
 <div class="modal fade" id="votersModal" tabindex="-1" aria-labelledby="votersModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -180,6 +627,23 @@
 </div>
 
 <script>
+function editRequest(id, title, description) {
+    document.getElementById('editRequestId').value = id;
+    document.getElementById('editTitle').value = title;
+    document.getElementById('editDescription').value = description;
+    
+    const modal = new bootstrap.Modal(document.getElementById('editModal'));
+    modal.show();
+}
+
+function deleteRequest(id, title) {
+    document.getElementById('deleteRequestId').value = id;
+    document.getElementById('deleteRequestTitle').textContent = title;
+    
+    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    modal.show();
+}
+
 function showVoters(requestId) {
     const modal = new bootstrap.Modal(document.getElementById('votersModal'));
     modal.show();
@@ -223,8 +687,13 @@ function showVoters(requestId) {
         });
 }
 
+// Reset forms when modals are hidden
 document.getElementById('requestModal').addEventListener('hidden.bs.modal', function () {
     document.getElementById('requestForm').reset();
+});
+
+document.getElementById('editModal').addEventListener('hidden.bs.modal', function () {
+    document.getElementById('editForm').reset();
 });
 </script>
 

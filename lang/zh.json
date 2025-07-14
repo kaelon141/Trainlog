@@ -563,5 +563,10 @@
     "feature_requests_downvoters": "点踩者",
     "feature_requests_no_votes": "还没有投票",
     "feature_requests_error_loading": "加载投票者时出错",
-    "user_dashboard": "用户仪表板"
+    "user_dashboard": "用户仪表板",
+    "feature_requests_edit_title": "编辑功能请求",
+    "update": "更新",
+    "feature_requests_delete_title": "删除功能请求",
+    "feature_requests_delete_confirm": "您确定要删除吗？",
+    "feature_requests_delete_warning": "此操作无法撤销。所有投票也将被删除。"
 }

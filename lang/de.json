@@ -563,5 +563,10 @@
     "feature_requests_downvoters": "Ablehner",
     "feature_requests_no_votes": "Noch keine Stimmen",
     "feature_requests_error_loading": "Fehler beim Laden der Wähler",
-    "user_dashboard": "Benutzer-Dashboard"
+    "user_dashboard": "Benutzer-Dashboard",
+    "feature_requests_edit_title": "Funktionsanfrage bearbeiten",
+    "update": "Aktualisieren",
+    "feature_requests_delete_title": "Funktionsanfrage löschen",
+    "feature_requests_delete_confirm": "Sind Sie sicher, dass Sie löschen möchten?",
+    "feature_requests_delete_warning": "Diese Aktion kann nicht rückgängig gemacht werden. Alle Stimmen werden ebenfalls gelöscht."
 }

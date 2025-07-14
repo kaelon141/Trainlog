@@ -563,5 +563,10 @@
     "feature_requests_downvoters": "Votantes negativos",
     "feature_requests_no_votes": "Sin votos aún",
     "feature_requests_error_loading": "Error al cargar votantes",
-    "user_dashboard": "Panel de usuario"
+    "user_dashboard": "Panel de usuario",
+    "feature_requests_edit_title": "Editar Solicitud de Función",
+    "update": "Actualizar",
+    "feature_requests_delete_title": "Eliminar Solicitud de Función",
+    "feature_requests_delete_confirm": "¿Estás seguro de que deseas eliminar?",
+    "feature_requests_delete_warning": "Esta acción no se puede deshacer. Todos los votos también serán eliminados."
 }

@@ -563,5 +563,10 @@
     "feature_requests_downvoters": "Vastu hääletajad",
     "feature_requests_no_votes": "Veel pole hääli",
     "feature_requests_error_loading": "Tõrge hääletajate laadimisel",
-    "user_dashboard": "Kasutajapaneel"
+    "user_dashboard": "Kasutajapaneel",
+    "feature_requests_edit_title": "Funktsioonisoovi muutmine",
+    "update": "Uuenda",
+    "feature_requests_delete_title": "Funktsioonisoovi kustutamine",
+    "feature_requests_delete_confirm": "Kas olete kindel, et soovite kustutada?",
+    "feature_requests_delete_warning": "Seda toimingut ei saa tagasi võtta. Kõik hääled kustutatakse ka."
 }

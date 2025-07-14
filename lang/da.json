@@ -563,5 +563,10 @@
     "feature_requests_downvoters": "Modstemmer",
     "feature_requests_no_votes": "Ingen stemmer endnu",
     "feature_requests_error_loading": "Fejl ved indlæsning af vælgere",
-    "user_dashboard": "Brugerdashboard"
+    "user_dashboard": "Brugerdashboard",
+    "feature_requests_edit_title": "Rediger funktionsanmodning",
+    "update": "Opdater",
+    "feature_requests_delete_title": "Slet funktionsanmodning",
+    "feature_requests_delete_confirm": "Er du sikker på, at du vil slette?",
+    "feature_requests_delete_warning": "Denne handling kan ikke fortrydes. Alle stemmer vil også blive slettet."
 }

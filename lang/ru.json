@@ -563,5 +563,10 @@
     "feature_requests_downvoters": "Проголосовавшие против",
     "feature_requests_no_votes": "Пока нет голосов",
     "feature_requests_error_loading": "Ошибка загрузки списка голосующих",
-    "user_dashboard": "Панель пользователя"
+    "user_dashboard": "Панель пользователя",
+    "feature_requests_edit_title": "Редактировать запрос функции",
+    "update": "Обновить",
+    "feature_requests_delete_title": "Удалить запрос функции",
+    "feature_requests_delete_confirm": "Вы уверены, что хотите удалить?",
+    "feature_requests_delete_warning": "Это действие нельзя отменить. Все голоса также будут удалены."
 }

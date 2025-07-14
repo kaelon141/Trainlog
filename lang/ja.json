@@ -563,5 +563,10 @@
     "feature_requests_downvoters": "反対者",
     "feature_requests_no_votes": "まだ投票がありません",
     "feature_requests_error_loading": "投票者の読み込みエラー",
-    "user_dashboard": "ユーザーダッシュボード"
+    "user_dashboard": "ユーザーダッシュボード",
+    "feature_requests_edit_title": "機能リクエストを編集する",
+    "update": "更新",
+    "feature_requests_delete_title": "機能リクエストを削除する",
+    "feature_requests_delete_confirm": "本当に削除しますか？",
+    "feature_requests_delete_warning": "この操作は元に戻せません。すべての投票も削除されます。"
 }

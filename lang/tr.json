@@ -563,5 +563,10 @@
     "feature_requests_downvoters": "Olumsuz oy verenler",
     "feature_requests_no_votes": "Henüz oy yok",
     "feature_requests_error_loading": "Oy verenleri yükleme hatası",
-    "user_dashboard": "Kullanıcı Paneli"
+    "user_dashboard": "Kullanıcı Paneli",
+    "feature_requests_edit_title": "Özellik Talebini Düzenle",
+    "update": "Güncelle",
+    "feature_requests_delete_title": "Özellik Talebini Sil",
+    "feature_requests_delete_confirm": "Silmek istediğinizden emin misiniz?",
+    "feature_requests_delete_warning": "Bu işlem geri alınamaz. Tüm oylar da silinecektir."
 }

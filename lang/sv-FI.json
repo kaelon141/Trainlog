@@ -563,5 +563,10 @@
     "feature_requests_downvoters": "Ogillare",
     "feature_requests_no_votes": "Inga röster än",
     "feature_requests_error_loading": "Fel vid inläsning av väljare",
-    "user_dashboard": "Användarpanel"
+    "user_dashboard": "Användarpanel",
+    "feature_requests_edit_title": "Redigera funktionsbegäran",
+    "update": "Uppdatera",
+    "feature_requests_delete_title": "Ta bort funktionsbegäran",
+    "feature_requests_delete_confirm": "Är du säker på att du vill ta bort?",
+    "feature_requests_delete_warning": "Denna åtgärd kan inte ångras. Alla röster kommer också att tas bort."
 }

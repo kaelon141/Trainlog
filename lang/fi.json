@@ -563,5 +563,10 @@
     "feature_requests_downvoters": "Vastaan äänestäjät",
     "feature_requests_no_votes": "Ei ääniä vielä",
     "feature_requests_error_loading": "Virhe äänestäjien lataamisessa",
-    "user_dashboard": "Käyttäjän hallintapaneeli"
+    "user_dashboard": "Käyttäjän hallintapaneeli",
+    "feature_requests_edit_title": "Muokkaa ominaisuuspyyntöä",
+    "update": "Päivitä",
+    "feature_requests_delete_title": "Poista ominaisuuspyyntö",
+    "feature_requests_delete_confirm": "Oletko varma, että haluat poistaa?",
+    "feature_requests_delete_warning": "Tätä toimintoa ei voi peruuttaa. Kaikki äänet poistetaan myös."
 }

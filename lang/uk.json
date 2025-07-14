@@ -563,5 +563,10 @@
     "feature_requests_downvoters": "Ті, хто проголосував проти",
     "feature_requests_no_votes": "Поки що немає голосів",
     "feature_requests_error_loading": "Помилка завантаження списку голосуючих",
-    "user_dashboard": "Панель користувача"
+    "user_dashboard": "Панель користувача",
+    "feature_requests_edit_title": "Редагувати запит на функцію",
+    "update": "Оновити",
+    "feature_requests_delete_title": "Видалити запит на функцію",
+    "feature_requests_delete_confirm": "Ви впевнені, що хочете видалити?",
+    "feature_requests_delete_warning": "Цю дію не можна скасувати. Усі голоси також будуть видалені."
 }

@@ -563,5 +563,10 @@
     "feature_requests_downvoters": "Stemgerechtigden die tegen hebben gestemd",
     "feature_requests_no_votes": "Nog geen stemmen",
     "feature_requests_error_loading": "Fout bij laden van stemgerechtigden",
-    "user_dashboard": "Gebruikersdashboard"
+    "user_dashboard": "Gebruikersdashboard",
+    "feature_requests_edit_title": "Functieverzoek bewerken",
+    "update": "Bijwerken",
+    "feature_requests_delete_title": "Functieverzoek verwijderen",
+    "feature_requests_delete_confirm": "Weet je zeker dat je wilt verwijderen?",
+    "feature_requests_delete_warning": "Deze actie kan niet ongedaan gemaakt worden. Alle stemmen zullen ook worden verwijderd."
 }

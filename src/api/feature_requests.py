@@ -5,7 +5,7 @@ from flask import Blueprint, render_template, request, session, redirect, url_fo
 
 from src.pg import pg_session
 from src.sql import feature_requests as fr_sql
-from src.utils import getUser, isCurrentTrip, lang, owner_required
+from src.utils import getUser, isCurrentTrip, lang, owner_required, owner
 
 logger = logging.getLogger(__name__)
 
@@ -32,11 +32,15 @@ def feature_requests(username=None):
         # Convert to list of dictionaries
         request_list = []
         for req in result:
+            if req[3] == owner:
+                author_display='admin'
+            else: 
+                author_display = req[3]
             request_dict = {
                 'id': req[0],
                 'title': req[1],
                 'description': req[2],
-                'author': req[3],
+                'author_display': author_display,
                 'status': req[4],
                 'created': req[5],
                 'upvotes': req[6],
@@ -85,6 +89,78 @@ def submit_feature_request(username):
                 "description": description,
                 "username": current_user
             }
+        )
+    
+    return redirect(url_for("feature_requests.feature_requests"))
+
+
+@feature_requests_blueprint.route("/<username>/feature_requests/edit", methods=["POST"])
+@login_required
+def edit_feature_request(username):
+    """Edit a feature request (owner can edit any, users can edit their own)"""
+    request_id = request.form["request_id"]
+    title = request.form["title"]
+    description = request.form["description"]
+    current_user = session["userinfo"]["logged_in_user"]
+    is_owner = session["userinfo"].get("is_owner", False)
+    
+    with pg_session() as pg:
+        # Check if user can edit this request
+        if not is_owner:
+            # Regular user can only edit their own requests
+            result = pg.execute(
+                fr_sql.get_feature_request_author(),
+                {"request_id": request_id}
+            ).fetchone()
+            
+            if not result or result[0] != current_user:
+                logger.warning(f"User {current_user} attempted to edit request {request_id} they don't own")
+                return redirect(url_for("feature_requests.feature_requests"))
+        
+        # Update the request
+        pg.execute(
+            fr_sql.update_feature_request(),
+            {
+                "request_id": request_id,
+                "title": title,
+                "description": description
+            }
+        )
+    
+    return redirect(url_for("feature_requests.feature_requests"))
+
+
+@feature_requests_blueprint.route("/<username>/feature_requests/delete", methods=["POST"])
+@login_required
+def delete_feature_request(username):
+    """Delete a feature request (owner can delete any, users can delete their own)"""
+    request_id = request.form["request_id"]
+    current_user = session["userinfo"]["logged_in_user"]
+    is_owner = session["userinfo"].get("is_owner", False)
+    
+    with pg_session() as pg:
+        # Check if user can delete this request
+        if not is_owner:
+            # Regular user can only delete their own requests
+            result = pg.execute(
+                fr_sql.get_feature_request_author(),
+                {"request_id": request_id}
+            ).fetchone()
+            
+            if not result or result[0] != current_user:
+                logger.warning(f"User {current_user} attempted to delete request {request_id} they don't own")
+                return redirect(url_for("feature_requests.feature_requests"))
+        
+        # Delete associated votes first
+        pg.execute(
+            fr_sql.delete_all_votes_for_request(),
+            {"request_id": request_id}
+        )
+        
+        # Delete the request
+        pg.execute(
+            fr_sql.delete_feature_request(),
+            {"request_id": request_id}
         )
     
     return redirect(url_for("feature_requests.feature_requests"))
@@ -233,3 +309,23 @@ def public_feature_request_voters(request_id):
                 voters['downvoters'].append(vote_data)
     
     return jsonify(voters)
+
+
+@feature_requests_blueprint.route("/feature_requests/<int:request_id>/details")
+def get_feature_request_details(request_id):
+    """Get feature request details for editing"""
+    with pg_session() as pg:
+        result = pg.execute(
+            fr_sql.get_feature_request_details(),
+            {"request_id": request_id}
+        ).fetchone()
+        
+        if result:
+            return jsonify({
+                'id': result[0],
+                'title': result[1],
+                'description': result[2],
+                'author': result[3]
+            })
+        else:
+            return jsonify({'error': 'Feature request not found'}), 404

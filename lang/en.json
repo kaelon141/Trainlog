@@ -563,5 +563,10 @@
     "feature_requests_downvoters": "Downvoters",
     "feature_requests_no_votes": "No votes yet",
     "feature_requests_error_loading": "Error loading voters",
-    "user_dashboard": "User Dashboard"
+    "user_dashboard": "User Dashboard",
+    "feature_requests_edit_title": "Edit Feature Request",
+    "update": "Update",
+    "feature_requests_delete_title": "Delete Feature Request",
+    "feature_requests_delete_confirm": "Are you sure you want to delete",
+    "feature_requests_delete_warning": "This action cannot be undone. All votes will also be deleted."
 }

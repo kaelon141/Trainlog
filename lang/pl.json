@@ -563,5 +563,10 @@
     "feature_requests_downvoters": "Osoby głosujące na nie",
     "feature_requests_no_votes": "Jeszcze brak głosów",
     "feature_requests_error_loading": "Błąd podczas ładowania głosujących",
-    "user_dashboard": "Panel użytkownika"
+    "user_dashboard": "Panel użytkownika",
+    "feature_requests_edit_title": "Edytuj prośbę o funkcję",
+    "update": "Aktualizuj",
+    "feature_requests_delete_title": "Usuń prośbę o funkcję",
+    "feature_requests_delete_confirm": "Czy na pewno chcesz usunąć?",
+    "feature_requests_delete_warning": "Tego działania nie można cofnąć. Wszystkie głosy również zostaną usunięte."
 }

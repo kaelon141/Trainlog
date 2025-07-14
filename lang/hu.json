@@ -563,5 +563,10 @@
     "feature_requests_downvoters": "Leértékelők",
     "feature_requests_no_votes": "Még nincs szavazat",
     "feature_requests_error_loading": "Hiba a szavazók betöltésekor",
-    "user_dashboard": "Felhasználói irányítópult"
+    "user_dashboard": "Felhasználói irányítópult",
+    "feature_requests_edit_title": "Funkciókérés szerkesztése",
+    "update": "Frissítés",
+    "feature_requests_delete_title": "Funkciókérés törlése",
+    "feature_requests_delete_confirm": "Biztosan törölni szeretné?",
+    "feature_requests_delete_warning": "Ez a művelet nem vonható vissza. Minden szavazat törlődik."
 }
