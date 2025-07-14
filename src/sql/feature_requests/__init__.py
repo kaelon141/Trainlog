@@ -5,6 +5,11 @@ list_feature_requests = SqlTemplate("src/sql/feature_requests/list_feature_reque
 list_feature_requests_with_votes = SqlTemplate("src/sql/feature_requests/list_feature_requests_with_votes.sql")
 insert_feature_request = SqlTemplate("src/sql/feature_requests/insert_feature_request.sql")
 update_feature_request_status = SqlTemplate("src/sql/feature_requests/update_feature_request_status.sql")
+get_feature_request_author = SqlTemplate("src/sql/feature_requests/get_feature_request_author.sql")
+update_feature_request = SqlTemplate("src/sql/feature_requests/update_feature_request.sql")
+delete_feature_request = SqlTemplate("src/sql/feature_requests/delete_feature_request.sql")
+delete_all_votes_for_request = SqlTemplate("src/sql/feature_requests/delete_all_votes_for_request.sql")
+get_feature_request_details = SqlTemplate("src/sql/feature_requests/get_feature_request_details.sql")
 
 # Voting queries
 insert_vote = SqlTemplate("src/sql/feature_requests/insert_vote.sql")

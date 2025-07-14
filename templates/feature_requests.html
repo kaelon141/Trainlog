@@ -116,7 +116,7 @@
                                     {% endif %}
                                     
                                     <!-- Edit/Delete Buttons -->
-                                    {% if logged_in_user and username and (is_owner or request.author == logged_in_user) %}
+                                    {% if logged_in_user and username and (is_owner or request.author_display == logged_in_user) %}
                                         <div class="btn-group btn-group-sm">
                                             <button type="button" class="btn btn-outline-secondary" 
                                                     onclick="editRequest({{ request.id }}, '{{ request.title|e }}', '{{ request.description|e }}')">
@@ -134,10 +134,10 @@
                             <!-- Vote Details -->
                             <div class="mt-2">
                                 <small class="text-muted">
-                                    <a href="#" class="text-decoration-none" onclick="showVoters({{ request.id }})">
+                                    <span class="text-decoration-none" onclick="showVoters({{ request.id }})" style="cursor: pointer;">
                                         <i class="fa-solid fa-chevron-up text-success"></i> {{ request.upvotes }} 
                                         <i class="fa-solid fa-chevron-down text-danger ms-2"></i> {{ request.downvotes }}
-                                    </a>
+                                    </span>
                                 </small>
                                 
                                 {% if is_owner %}
@@ -178,7 +178,7 @@
                 <h2 class="accordion-header" id="completedHeading">
                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#completedCollapse" aria-expanded="false" aria-controls="completedCollapse">
                         <i class="fa-solid fa-check-circle text-success me-2"></i>
-                        {{feature_requests_status_completed}} ({{ completed_requests|length }})
+                        {{ feature_requests_status_completed }} ({{ completed_requests|length }})
                     </button>
                 </h2>
                 <div id="completedCollapse" class="accordion-collapse collapse" aria-labelledby="completedHeading" data-bs-parent="#completedAccordion">
@@ -228,7 +228,7 @@
                                             
                                             <div class="ms-3 d-flex flex-column align-items-end">
                                                 <span class="badge bg-success mb-2">{{ feature_requests_status_completed }}</span>
-                                                {% if logged_in_user and username and (is_owner or request.author == logged_in_user) %}
+                                                {% if logged_in_user and username and (is_owner or request.author_display == logged_in_user) %}
                                                     <div class="btn-group btn-group-sm">
                                                         <button type="button" class="btn btn-outline-secondary" 
                                                                 onclick="editRequest({{ request.id }}, '{{ request.title|e }}', '{{ request.description|e }}')">
@@ -245,10 +245,10 @@
                                         
                                         <div class="mt-2">
                                             <small class="text-muted">
-                                                <a href="#" class="text-decoration-none" onclick="showVoters({{ request.id }})">
+                                                <span class="text-decoration-none" onclick="showVoters({{ request.id }})" style="cursor: pointer;">
                                                     <i class="fa-solid fa-chevron-up text-success"></i> {{ request.upvotes }} 
                                                     <i class="fa-solid fa-chevron-down text-danger ms-2"></i> {{ request.downvotes }}
-                                                </a>
+                                                </span>
                                             </small>
                                             
                                             {% if is_owner %}
@@ -282,7 +282,7 @@
                 <h2 class="accordion-header" id="notDoingHeading">
                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#notDoingCollapse" aria-expanded="false" aria-controls="notDoingCollapse">
                         <i class="fa-solid fa-times-circle text-secondary me-2"></i>
-                        {{feature_requests_status_not_doing}} ({{ not_doing_requests|length }})
+                        {{ feature_requests_status_not_doing }} ({{ not_doing_requests|length }})
                     </button>
                 </h2>
                 <div id="notDoingCollapse" class="accordion-collapse collapse" aria-labelledby="notDoingHeading" data-bs-parent="#notDoingAccordion">
@@ -332,7 +332,7 @@
                                             
                                             <div class="ms-3 d-flex flex-column align-items-end">
                                                 <span class="badge bg-secondary mb-2">{{ feature_requests_status_not_doing }}</span>
-                                                {% if logged_in_user and username and (is_owner or request.author == logged_in_user) %}
+                                                {% if logged_in_user and username and (is_owner or request.author_display == logged_in_user) %}
                                                     <div class="btn-group btn-group-sm">
                                                         <button type="button" class="btn btn-outline-secondary" 
                                                                 onclick="editRequest({{ request.id }}, '{{ request.title|e }}', '{{ request.description|e }}')">
@@ -386,7 +386,7 @@
                 <h2 class="accordion-header" id="negativeHeading">
                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#negativeCollapse" aria-expanded="false" aria-controls="negativeCollapse">
                         <i class="fa-solid fa-thumbs-down text-danger me-2"></i>
-                        {{feature_requests_downvoters}} ({{ negative_requests|length }})
+                        {{ feature_requests_downvoters }} ({{ negative_requests|length }})
                     </button>
                 </h2>
                 <div id="negativeCollapse" class="accordion-collapse collapse" aria-labelledby="negativeHeading" data-bs-parent="#negativeAccordion">
@@ -467,7 +467,7 @@
                                                     <span class="badge bg-secondary mb-2">{{ feature_requests_status_not_doing }}</span>
                                                 {% endif %}
                                                 
-                                                {% if logged_in_user and username and (is_owner or request.author == logged_in_user) %}
+                                                {% if logged_in_user and username and (is_owner or request.author_display == logged_in_user) %}
                                                     <div class="btn-group btn-group-sm">
                                                         <button type="button" class="btn btn-outline-secondary" 
                                                                 onclick="editRequest({{ request.id }}, '{{ request.title|e }}', '{{ request.description|e }}')">

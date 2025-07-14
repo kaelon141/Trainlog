@@ -51,6 +51,9 @@ def feature_requests(username=None):
             logger.info(f"Feature request: ID={req[0]}, Title={req[1]}")
             request_list.append(request_dict)
 
+            from pprint import pprint
+            pprint(userinfo)
+
     return render_template(
         'feature_requests.html',
         username=current_user,
