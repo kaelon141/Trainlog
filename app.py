@@ -1310,8 +1310,8 @@ def updateTripinDB(formData, tripId=None, updateCreated=False):
 
         if row is None:
             abort(404)  # Trip does not exist
-        elif row["username"] not in (getUser(), owner):
-            abort(404)  # Trip does not belong to the user
+        elif getUser() not in (row["username"], owner):
+            abort(418)  # Trip does not belong to the user
 
     formattedGetUserLines = getUserLines.format(trip_ids=tripId)
     with managed_cursor(pathConn) as cursor:
