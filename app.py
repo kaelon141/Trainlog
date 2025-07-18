@@ -6566,6 +6566,7 @@ def processMFR24(username):
         if trip is not None:
             newTrip["origin_station"] = newTrip["originStation"][1]
             newTrip["destination_station"] = newTrip["destinationStation"][1]
+            newTrip["type"]='air'
             updateTripinDB(newTrip, trip["uid"])
         else:
             saveTripToDb(
