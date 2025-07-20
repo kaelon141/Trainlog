@@ -121,6 +121,18 @@
 
 <script>
 // Global variables
+
+const CACHE_VERSION = 'v1'; // Change this when you need to clear all caches
+
+if (!Cookies.get(`cacheCleared_${CACHE_VERSION}`)) {
+    localforage.clear().then(function() {
+        Cookies.set(`cacheCleared_${CACHE_VERSION}`, 'true', { expires: 30 });
+        console.log(`Cache cleared to ${CACHE_VERSION}`)
+    }).catch(function(err) {
+        console.error('Failed to clear localforage cache:', err);
+    });
+}
+
 let map;
 let trips = [];
 let selectedYears = new Set();
@@ -150,14 +162,24 @@ async function initMap() {
     const serverType = params.get('tileserver') || "{{ tileserver }}";
     const useGlobe = params.has('globe') ? params.get('globe') === 'true' : {{ 'true' if globe else 'false' }};
 
-    // Initialize map using utilities
-   map = await MapLibreUtils.initializeMapLibre({
+    let center = [10, 50], zoom = 5;
+    const saved = localStorage.getItem('mapView');
+
+    if (saved) {
+        try {
+            const v = JSON.parse(saved);
+            center = [v.lng, v.lat];
+            zoom = v.zoom;
+        } catch (e) {}
+    }
+
+    map = await MapLibreUtils.initializeMapLibre({
         container: 'map',
         tileserver: serverType,
-        useGlobe: useGlobe,
+        useGlobe,
         userLanguage: "{{langId}}",
-        center: [10, 50],
-        zoom: 5
+        center,
+        zoom
     });
 
     // Initialize transport filters
@@ -333,7 +355,11 @@ function processTrips() {
         updateFilters();
 
         // Fit bounds only to VISIBLE features after filters are applied
-        MapLibreUtils.fitBoundsToVisibleFeatures(map, features, activeFilters);
+        MapLibreUtils.fitBoundsToVisibleFeatures(map, features, activeFilters).then(({ center, zoom }) => {
+            localStorage.setItem('mapView', JSON.stringify({ lng: center.lng, lat: center.lat, zoom }));
+        });
+
+
 
         hideLoading();
     };

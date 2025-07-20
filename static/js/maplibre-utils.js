@@ -526,6 +526,14 @@ function fitBoundsToVisibleFeatures(map, features, filters, type=null) {
             map.fitBounds(bounds, { padding: 50 });
         }
     }
+    return new Promise(resolve => {
+        map.once('moveend', () => {
+            resolve({
+                center: map.getCenter(),
+                zoom: map.getZoom()
+            });
+        });
+    });
 }
 
 // Utility function to modify vector style sources
