@@ -744,6 +744,24 @@ if (numberedMarkers.length > 0) {
     });
 }
 {% endif %}
+    // Add start marker (green) - first trip's origin
+    if (trips.length > 0) {
+        const firstTrip = trips[0];
+        const lastTrip = trips[trips.length - 1];
+        
+        if (firstTrip.trip.origin_station === lastTrip.trip.destination_station) {
+            // Round trip - same start and end station
+            const startCoords = [firstTrip.path[0][1], firstTrip.path[0][0]];
+            createCustomMarker(startCoords, 'red-green', `${firstTrip.trip.origin_station} - ${lastTrip.trip.destination_station}`);
+        } else {
+            // Different start and end stations - use separate markers
+            const startCoords = [firstTrip.path[0][1], firstTrip.path[0][0]];
+            const endCoords = [lastTrip.path[lastTrip.path.length - 1][1], lastTrip.path[lastTrip.path.length - 1][0]];
+            
+            createCustomMarker(startCoords, 'green', firstTrip.trip.origin_station);
+            createCustomMarker(endCoords, 'red', lastTrip.trip.destination_station);
+        }
+    }
 
     // Handle current trips with position markers
     const currentTripFeatures = [];
