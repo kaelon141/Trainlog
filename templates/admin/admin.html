@@ -243,9 +243,11 @@
                 searchable: false,
                 orderable: false,
                 render: function(data, type, row) {
-                    return `<button class="btn btn-primary linkButton" data-url="{{ url_for('public', username='USERNAME') }}".replace('USERNAME', row.username)">Public link</button> 
-                            <button class="btn btn-secondary linkButton" data-url="{{ url_for('public_trips', username='USERNAME', time='trips') }}".replace('USERNAME', row.username)">Trips</button> 
-                            <button class="btn btn-info linkButton" data-url="{{ url_for('public_stats', username='USERNAME') }}".replace('USERNAME', row.username)">Stats</button>`;
+                    return `
+                        <button class="btn btn-primary linkButton" data-url="${"{{ url_for('public', username='USERNAME') }}".replace('USERNAME', row.username)}">Public link</button>
+                        <button class="btn btn-secondary linkButton" data-url="${"{{ url_for('public_trips', username='USERNAME', time='trips') }}".replace('USERNAME', row.username)}">Trips</button>
+                        <button class="btn btn-info linkButton" data-url="${"{{ url_for('public_stats', username='USERNAME') }}".replace('USERNAME', row.username)}">Stats</button>
+                    `;
                 }
             },
             { 
