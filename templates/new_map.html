@@ -279,8 +279,7 @@ function processTrips() {
 
     // Process trips to extract years and visible types
     trips.forEach(trip => {
-        trip = MapLibreUtils.computeTimeStatus(trip);
-
+        if (trip.trip.uid == 400308){console.log(trip)}
         const checkbox = document.getElementById(`${trip.trip.type}Filter`);
         if (checkbox && checkbox.parentElement) {
             checkbox.parentElement.style.display = 'flex';

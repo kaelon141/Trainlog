@@ -5072,13 +5072,19 @@ def fetchTripsPaths(username, lastLocal, public):
 
     for trip in trips:
         trip = dict(trip)
-        trip.pop("past")
-        trip.pop("plannedFuture")
-        trip.pop("current")
-        trip.pop("future")
+        time = None
+        times = ["past", "plannedFuture", "current", "future"]
+        for key in times:
+            if trip.get(key) == 1:
+                time = key
+                break
+
+        for key in times:
+            trip.pop(key, None)
+
 
         tripList.append(
-            {"trip": trip, "path": json.loads(paths.get(trip["uid"], "{}"))}
+            {"trip": trip, "time":time, "path": json.loads(paths.get(trip["uid"], "{}"))}
         )
 
     print(datetime.now() - now)

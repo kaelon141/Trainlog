@@ -362,7 +362,7 @@ def _update_trip_in_sqlite(
 
         if row is None:
             abort(404)  # Trip does not exist
-        elif row["username"] not in (getUser(), owner):
+        elif getUser() not in (row["username"], owner):
             abort(404)  # Trip does not belong to the user
 
     formattedGetUserLines = getUserLines.format(trip_ids=tripId)
