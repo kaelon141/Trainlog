@@ -60,8 +60,8 @@ def feature_requests(username=None):
         requests=request_list,
         **lang.get(userinfo.get("lang", "en"), {}),
         **userinfo,
-        nav="bootstrap/navigation.html" if current_user is not "public" else "bootstrap/no_user_nav.html",
-        isCurrent=isCurrentTrip(getUser()) if current_user is not "public" else False
+        nav="bootstrap/navigation.html" if current_user != "public" else "bootstrap/no_user_nav.html",
+        isCurrent=isCurrentTrip(getUser()) if current_user != "public" else False
     )
 
 
