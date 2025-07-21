@@ -173,25 +173,36 @@ def sync_trips_from_sqlite(pg_session=None):
 
 
 def compare_all_trips():
+    # Fetch trip IDs from SQLite
     with managed_cursor(mainConn) as cursor:
         cursor.execute("SELECT uid FROM trip ORDER BY uid")
-        sqlite_trips = cursor.fetchall()
-    sqlite_trips = [trip[0] for trip in sqlite_trips]
+        sqlite_trips = {row[0] for row in cursor.fetchall()}
 
+    # Fetch trip IDs from PostgreSQL
     with pg_session() as pg:
-        query = "SELECT count(*) FROM trips"
-        num_trips_pg = pg.execute(query).scalar()
+        pg_trips = {row[0] for row in pg.execute("SELECT trip_id FROM trips ORDER BY trip_id").fetchall()}
 
-        if num_trips_pg != len(sqlite_trips):
-            msg = f"SQLite has {len(sqlite_trips)} trips but PG has {num_trips_pg}!"
-            logger.error(msg)
-            raise Exception(msg)
+    # Compare the counts
+    if len(sqlite_trips) != len(pg_trips):
+        only_in_sqlite = sqlite_trips - pg_trips
+        only_in_pg = pg_trips - sqlite_trips
 
+        msg = (
+            f"Mismatch in trip counts! "
+            f"SQLite has {len(sqlite_trips)} trips, PG has {len(pg_trips)} trips.\n"
+            f"Trips only in SQLite: {sorted(only_in_sqlite)}\n"
+            f"Trips only in PG: {sorted(only_in_pg)}"
+        )
+        logger.error(msg)
+        raise Exception(msg)
+
+    # If counts match, do full comparison
     try:
-        for i, trip_id in enumerate(sqlite_trips):
+        for i, trip_id in enumerate(sorted(sqlite_trips)):
             if i % 20000 == 0:
                 logger.info(f"Checking consistency of trip {i}/{len(sqlite_trips)}")
             compare_trip(trip_id)
     except Exception:
         logger.error(f"Found exception while processing trip {trip_id}")
         raise
+
