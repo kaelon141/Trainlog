@@ -87,6 +87,7 @@ function placePolylines(trips){
             
       // Function to create and bind polylines with popups
       const createPolyline = (time, type) => {
+        trip = computeTimeStatus(trip);
         var special = time;
         if(time.includes('-')){
           time = time.split('-')[1];
