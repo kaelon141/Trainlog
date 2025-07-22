@@ -228,32 +228,6 @@ function createGeodesicLine(start, end, numPoints = 100, splitSegments = false) 
     return splitSegments ? segments : segments.flat();
 }
 
-// Compute time status for a trip
-function computeTimeStatus(trip) {
-    const now = new Date();
-    const startDate = trip.trip.utc_start_datetime || trip.trip.start_datetime;
-    const endDate = trip.trip.utc_end_datetime || trip.trip.end_datetime;
-    
-    if (startDate === -1 || (startDate !== 1 && new Date(startDate) < now)) {
-        trip.time = 'past';
-    } else if (startDate === 1) {
-        trip.time = 'future';
-    } else {
-        trip.time = 'plannedFuture';
-    }
-    
-    // Check if current
-    if (startDate !== -1 && startDate !== 1 && endDate !== -1 && endDate !== 1) {
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-        if (start <= now && now <= end) {
-            trip.time = 'current';
-        }
-    }
-    
-    return trip;
-}
-
 // Build trip layers for the map
 function buildTripLayers(map, trips, transportTypes, options = {}) {
     const {
