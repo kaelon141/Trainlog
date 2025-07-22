@@ -568,5 +568,6 @@
     "update": "Frissítés",
     "feature_requests_delete_title": "Funkciókérés törlése",
     "feature_requests_delete_confirm": "Biztosan törölni szeretné?",
-    "feature_requests_delete_warning": "Ez a művelet nem vonható vissza. Minden szavazat törlődik."
+    "feature_requests_delete_warning": "Ez a művelet nem vonható vissza. Minden szavazat törlődik.",
+    "waypoint": "Útpont"
 }

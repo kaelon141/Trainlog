@@ -568,5 +568,6 @@
     "update": "Mettre à jour",
     "feature_requests_delete_title": "Supprimer la demande de fonctionnalité",
     "feature_requests_delete_confirm": "Êtes-vous sûr de vouloir supprimer",
-    "feature_requests_delete_warning": "Cette action ne peut pas être annulée. Tous les votes seront également supprimés."
+    "feature_requests_delete_warning": "Cette action ne peut pas être annulée. Tous les votes seront également supprimés.",
+    "waypoint": "Marqueur"
 }

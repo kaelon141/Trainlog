@@ -568,5 +568,6 @@
     "update": "Opdater",
     "feature_requests_delete_title": "Slet funktionsanmodning",
     "feature_requests_delete_confirm": "Er du sikker på, at du vil slette?",
-    "feature_requests_delete_warning": "Denne handling kan ikke fortrydes. Alle stemmer vil også blive slettet."
+    "feature_requests_delete_warning": "Denne handling kan ikke fortrydes. Alle stemmer vil også blive slettet.",
+    "waypoint": "Vejpunkt"
 }

@@ -568,5 +568,6 @@
     "update": "Uuenda",
     "feature_requests_delete_title": "Funktsioonisoovi kustutamine",
     "feature_requests_delete_confirm": "Kas olete kindel, et soovite kustutada?",
-    "feature_requests_delete_warning": "Seda toimingut ei saa tagasi võtta. Kõik hääled kustutatakse ka."
+    "feature_requests_delete_warning": "Seda toimingut ei saa tagasi võtta. Kõik hääled kustutatakse ka.",
+    "waypoint": "Vahepunkt"
 }

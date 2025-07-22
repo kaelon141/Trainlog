@@ -568,5 +568,6 @@
     "update": "Оновити",
     "feature_requests_delete_title": "Видалити запит на функцію",
     "feature_requests_delete_confirm": "Ви впевнені, що хочете видалити?",
-    "feature_requests_delete_warning": "Цю дію не можна скасувати. Усі голоси також будуть видалені."
+    "feature_requests_delete_warning": "Цю дію не можна скасувати. Усі голоси також будуть видалені.",
+    "waypoint": "Точка маршруту"
 }

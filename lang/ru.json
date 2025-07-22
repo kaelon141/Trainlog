@@ -568,5 +568,6 @@
     "update": "Обновить",
     "feature_requests_delete_title": "Удалить запрос функции",
     "feature_requests_delete_confirm": "Вы уверены, что хотите удалить?",
-    "feature_requests_delete_warning": "Это действие нельзя отменить. Все голоса также будут удалены."
+    "feature_requests_delete_warning": "Это действие нельзя отменить. Все голоса также будут удалены.",
+    "waypoint": "Путевая точка"
 }

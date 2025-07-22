@@ -568,5 +568,6 @@
     "update": "Update",
     "feature_requests_delete_title": "Delete Feature Request",
     "feature_requests_delete_confirm": "Are you sure you want to delete",
-    "feature_requests_delete_warning": "This action cannot be undone. All votes will also be deleted."
+    "feature_requests_delete_warning": "This action cannot be undone. All votes will also be deleted.",
+    "waypoint": "Waypoint"
 }

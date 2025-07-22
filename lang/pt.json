@@ -568,5 +568,6 @@
     "update": "Atualizar",
     "feature_requests_delete_title": "Excluir solicitação de funcionalidade",
     "feature_requests_delete_confirm": "Tem certeza de que deseja excluir?",
-    "feature_requests_delete_warning": "Esta ação não pode ser desfeita. Todos os votos também serão excluídos."
+    "feature_requests_delete_warning": "Esta ação não pode ser desfeita. Todos os votos também serão excluídos.",
+    "waypoint": "Ponto de passagem"
 }

@@ -568,5 +568,6 @@
     "update": "Aktualizovat",
     "feature_requests_delete_title": "Smazat požadavek na funkci",
     "feature_requests_delete_confirm": "Jste si jistý, že chcete smazat?",
-    "feature_requests_delete_warning": "Tuto akci nelze vrátit zpět. Všechny hlasy budou také smazány."
+    "feature_requests_delete_warning": "Tuto akci nelze vrátit zpět. Všechny hlasy budou také smazány.",
+    "waypoint": "Bod trasy"
 }

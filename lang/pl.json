@@ -568,5 +568,6 @@
     "update": "Aktualizuj",
     "feature_requests_delete_title": "Usuń prośbę o funkcję",
     "feature_requests_delete_confirm": "Czy na pewno chcesz usunąć?",
-    "feature_requests_delete_warning": "Tego działania nie można cofnąć. Wszystkie głosy również zostaną usunięte."
+    "feature_requests_delete_warning": "Tego działania nie można cofnąć. Wszystkie głosy również zostaną usunięte.",
+    "waypoint": "Punkt nawigacyjny"
 }

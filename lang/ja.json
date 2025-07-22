@@ -568,5 +568,6 @@
     "update": "更新",
     "feature_requests_delete_title": "機能リクエストを削除する",
     "feature_requests_delete_confirm": "本当に削除しますか？",
-    "feature_requests_delete_warning": "この操作は元に戻せません。すべての投票も削除されます。"
+    "feature_requests_delete_warning": "この操作は元に戻せません。すべての投票も削除されます。",
+    "waypoint": "ウェイポイント"
 }

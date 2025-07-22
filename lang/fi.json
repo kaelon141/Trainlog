@@ -568,5 +568,6 @@
     "update": "Päivitä",
     "feature_requests_delete_title": "Poista ominaisuuspyyntö",
     "feature_requests_delete_confirm": "Oletko varma, että haluat poistaa?",
-    "feature_requests_delete_warning": "Tätä toimintoa ei voi peruuttaa. Kaikki äänet poistetaan myös."
+    "feature_requests_delete_warning": "Tätä toimintoa ei voi peruuttaa. Kaikki äänet poistetaan myös.",
+    "waypoint": "Reittipiste"
 }

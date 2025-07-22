@@ -568,5 +568,6 @@
     "update": "Uppdatera",
     "feature_requests_delete_title": "Ta bort funktionsbegäran",
     "feature_requests_delete_confirm": "Är du säker på att du vill ta bort?",
-    "feature_requests_delete_warning": "Denna åtgärd kan inte ångras. Alla röster kommer också att tas bort."
+    "feature_requests_delete_warning": "Denna åtgärd kan inte ångras. Alla röster kommer också att tas bort.",
+    "waypoint": "Vägpunkt"
 }

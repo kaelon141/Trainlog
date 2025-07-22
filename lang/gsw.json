@@ -568,5 +568,6 @@
     "update": "Aktualisiere",
     "feature_requests_delete_title": "Funktion Aafroge lösche",
     "feature_requests_delete_confirm": "Bisch sicher, dass du wotsch lösche?",
-    "feature_requests_delete_warning": "Die Aktion cha nüm rückgängig gmacht werde. Alli Stimm werde au glöscht."
+    "feature_requests_delete_warning": "Die Aktion cha nüm rückgängig gmacht werde. Alli Stimm werde au glöscht.",
+    "waypoint": "Wägpunkt"
 }

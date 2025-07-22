@@ -568,5 +568,6 @@
     "update": "Ažuriraj",
     "feature_requests_delete_title": "Izbriši zahtjev za značajku",
     "feature_requests_delete_confirm": "Jeste li sigurni da želite izbrisati?",
-    "feature_requests_delete_warning": "Ova radnja se ne može poništiti. Svi glasovi će također biti izbrisani."
+    "feature_requests_delete_warning": "Ova radnja se ne može poništiti. Svi glasovi će također biti izbrisani.",
+    "waypoint": "Putna točka"
 }

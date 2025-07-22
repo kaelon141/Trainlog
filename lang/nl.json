@@ -568,5 +568,6 @@
     "update": "Bijwerken",
     "feature_requests_delete_title": "Functieverzoek verwijderen",
     "feature_requests_delete_confirm": "Weet je zeker dat je wilt verwijderen?",
-    "feature_requests_delete_warning": "Deze actie kan niet ongedaan gemaakt worden. Alle stemmen zullen ook worden verwijderd."
+    "feature_requests_delete_warning": "Deze actie kan niet ongedaan gemaakt worden. Alle stemmen zullen ook worden verwijderd.",
+    "waypoint": "Routepunt"
 }

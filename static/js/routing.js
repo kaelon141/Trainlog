@@ -150,6 +150,16 @@ function handleGpxUpload(event) {
   reader.readAsText(file);
 }
 
+window.removeWaypoint = function(index) {
+  // Close any open popups
+  map.closePopup();
+  
+  // Find the plan instance
+  if (window.currentPlan) {
+    window.currentPlan.spliceWaypoints(index, 1);
+  }
+};
+
 function routing(map, showSidebar=true, type){
 
   sidebar = L.control.sidebar('sidebar', {
@@ -226,33 +236,43 @@ function routing(map, showSidebar=true, type){
           icon: icon
         });
 
+        // For intermediate waypoints, add popup with delete functionality
         if (i > 0 && i < n - 1) {
-          let pressTimer = null;
-          let dragged = false;
-
-          // Desktop: right-click to remove
-          marker.on('contextmenu', function () {
-            plan.spliceWaypoints(i, 1);
+          // Store the current index with the marker
+          marker.waypointIndex = i;
+          
+          // Create popup content with delete button
+          const popupContent = `
+            <div style="text-align: center; min-width: 120px;">
+              <p style="margin: 5px 0 10px 0;">${texts.waypoint} ${i}</p>
+              <button 
+                onclick="removeWaypoint(${i})" 
+                style="
+                  background-color: #dc3545;
+                  color: white;
+                  border: none;
+                  padding: 5px 15px;
+                  border-radius: 4px;
+                  cursor: pointer;
+                  font-size: 14px;
+                "
+                onmouseover="this.style.backgroundColor='#c82333'"
+                onmouseout="this.style.backgroundColor='#dc3545'"
+              >
+                🗑️ ${texts.remove}
+              </button>
+            </div>
+          `;
+          
+          marker.bindPopup(popupContent, {
+            closeButton: true,
+            autoClose: false,
+            closeOnClick: false
           });
 
-          // Mobile: long-press to remove
-          marker.on('mousedown touchstart', function () {
-            dragged = false;
-            pressTimer = setTimeout(function () {
-              if (!dragged) {
-                plan.spliceWaypoints(i, 1);
-              }
-            }, 500); // 500ms threshold
-          });
-
-          // Cancel on movement
-          marker.on('dragstart', function () {
-            dragged = true;
-            clearTimeout(pressTimer);
-          });
-
-          marker.on('mouseup mouseleave touchend touchcancel', function () {
-            clearTimeout(pressTimer);
+          // Open popup on click (works for both desktop and mobile)
+          marker.on('click', function(e) {
+            e.target.openPopup();
           });
         }
 
@@ -260,6 +280,7 @@ function routing(map, showSidebar=true, type){
       },
       waypointMode: 'snap',
     });
+    window.currentPlan = plan;
 
     if (window.innerWidth > 600){
       var autoPan = true;

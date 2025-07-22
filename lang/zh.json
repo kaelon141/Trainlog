@@ -568,5 +568,6 @@
     "update": "更新",
     "feature_requests_delete_title": "删除功能请求",
     "feature_requests_delete_confirm": "您确定要删除吗？",
-    "feature_requests_delete_warning": "此操作无法撤销。所有投票也将被删除。"
+    "feature_requests_delete_warning": "此操作无法撤销。所有投票也将被删除。",
+    "waypoint": "航点"
 }

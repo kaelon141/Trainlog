@@ -568,5 +568,6 @@
     "update": "Aktualisieren",
     "feature_requests_delete_title": "Funktionsanfrage löschen",
     "feature_requests_delete_confirm": "Sind Sie sicher, dass Sie löschen möchten?",
-    "feature_requests_delete_warning": "Diese Aktion kann nicht rückgängig gemacht werden. Alle Stimmen werden ebenfalls gelöscht."
+    "feature_requests_delete_warning": "Diese Aktion kann nicht rückgängig gemacht werden. Alle Stimmen werden ebenfalls gelöscht.",
+    "waypoint": "Wegpunkt"
 }
