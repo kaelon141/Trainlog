@@ -186,7 +186,8 @@ from src.utils import (
     pathConn,
     readLang,
     sendOwnerEmail,
-    sendEmail,
+    sendEmail,    
+    getLocalDatetime
 )
 from src.trips import (
     Trip,
@@ -770,17 +771,6 @@ def get_country_codes_from_files():
 
 
 app.jinja_env.globals.update(get_country_codes_from_files=get_country_codes_from_files)
-
-
-def getLocalDatetime(lat, lng, dateTime):
-    # Instantiate TimezoneFinder and find timezone for given lat, lng
-    tf = TimezoneFinder()
-    timezone_str = tf.timezone_at(lat=lat, lng=lng)
-
-    # Convert the UTC datetime to the local timezone
-    local_timezone = pytz.timezone(timezone_str)
-    local_datetime = dateTime.astimezone(local_timezone).replace(tzinfo=None)
-    return local_datetime
 
 
 @app.route("/api/localtime", methods=["GET"])

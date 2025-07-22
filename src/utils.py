@@ -111,18 +111,32 @@ def processDates(newTrip, newPath):
 
 
 def getUtcDatetime(lat, lng, dateTime):
+    tf = TimezoneFinder()
+    timezone_str = tf.timezone_at(lat=lat, lng=lng)
+
+    # Handle override for specific zones
+    if timezone_str in ['Asia/Urumqi', 'Asia/Kashgar']:
+        # Force UTC+8 manually
+        timezone = pytz.FixedOffset(480)  # 480 minutes = 8 hours
+        localized_datetime = timezone.localize(dateTime)
+    else:
+        timezone = pytz.timezone(timezone_str)
+        localized_datetime = timezone.localize(dateTime)
+
+    utc_datetime = localized_datetime.astimezone(pytz.utc).replace(tzinfo=None)
+    return utc_datetime
+
+def getLocalDatetime(lat, lng, dateTime):
     # Instantiate TimezoneFinder and find timezone for given lat, lng
     tf = TimezoneFinder()
     timezone_str = tf.timezone_at(lat=lat, lng=lng)
 
-    # Localize the given datetime to the found timezone
-    timezone = pytz.timezone(timezone_str)
-    localized_datetime = timezone.localize(dateTime)
-
-    # Convert the localized datetime to UTC
-    utc_datetime = localized_datetime.astimezone(pytz.utc).replace(tzinfo=None)
-    return utc_datetime
-
+    if timezone_str in ['Asia/Urumqi', 'Asia/Kashgar']:
+        local_timezone = pytz.FixedOffset(480)  # 480 minutes = 8 hours
+    else:
+        local_timezone = pytz.timezone(timezone_str)
+    local_datetime = dateTime.astimezone(local_timezone).replace(tzinfo=None)
+    return local_datetime
 
 def get_user_id(username):
     with managed_cursor(authConn) as cursor:
