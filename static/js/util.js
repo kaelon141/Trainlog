@@ -620,6 +620,34 @@ function manualCopyHandler(){
     });
   });
 }
+ 
+function computeTimeStatus(data) {
+  let trip = data.trip;
+  if (trip.utc_filtered_start_datetime === 1 && trip.utc_filtered_end_datetime === 1) {
+    // Datetimes are both 1
+    data.time = 'future';
+} else if (trip.utc_filtered_start_datetime === -1 && trip.utc_filtered_end_datetime === -1) {
+    // Datetimes are both -1
+    data.time = 'past';
+} else {
+    // Parse the datetimes into moment objects
+    let start = typeof trip.utc_filtered_start_datetime === 'string' ? moment.utc(trip.utc_filtered_start_datetime) : null;
+    let end = typeof trip.utc_filtered_end_datetime === 'string' ? moment.utc(trip.utc_filtered_end_datetime) : null;
+    let now = moment.utc();  // Current UTC time
+
+    if (start && end && now.isBetween(start, end, undefined, '[]')) {
+        // Current date is between start and end (inclusive)
+        data.time = 'current';
+    } else if (start && now.isBefore(start)) {
+        // Start and end are in the future
+        data.time = 'plannedFuture';
+    } else {
+        // All other cases, the trip is in the past
+        data.time = 'past';
+    }
+}
+return data;
+}
 
 function getReadableAge(creationDate) {
   const now = new Date();

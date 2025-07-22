@@ -571,12 +571,11 @@ function buildItinerary(trips, prices) {
 // Calculate position for current trips
 function calculatePosition(trip) {
     const currentTime = new Date().getTime();
-    const tripStartTime = new Date(trip.trip.utc_filtered_start_datetime + "Z").getTime();
-    const tripEndTime = new Date(trip.trip.utc_filtered_end_datetime + "Z").getTime();
+    const tripStartTime = new Date(trip.trip.start_datetime).getTime();
+    const tripEndTime = new Date(trip.trip.end_datetime).getTime();
     const totalTripDuration = tripEndTime - tripStartTime;
     const elapsedTime = currentTime - tripStartTime;
     const progress = elapsedTime / totalTripDuration;
-    console.log("progress = ", progress)
     return Math.min(Math.max(progress, 0), 1);
 }
 
@@ -601,6 +600,11 @@ function placePolylines(trips) {
         $('.spinner-container').hide();
         return;
     }
+
+    // Process trips with time status
+    trips.forEach(trip => {
+        trip = MapLibreUtils.computeTimeStatus(trip);
+    });
 
     // Build trip layers
     const features = MapLibreUtils.buildTripLayers(map, trips, MapLibreUtils.MapConfig.transportTypes, {
@@ -764,193 +768,19 @@ if (numberedMarkers.length > 0) {
     }
 
     // Handle current trips with position markers
-    const currentTripFeatures = [];
-        trips.forEach(trip => {
-            if (trip.time === 'current') {
-                const progress = calculatePosition(trip);
-                const { pastPath, futurePath } = splitPolyline(trip.path, progress);
-                
-                // Ensure coordinates are in the right format [lng, lat]
-                let fullCoords = trip.path.map(c => [c[1], c[0]]);
-                let futureCoords = futurePath.map(c => [c[1], c[0]]);
-                
-                // Handle air routes (geodesic lines)
-                if (trip.trip.type === 'air' && fullCoords.length === 2) {
-                    fullCoords = MapLibreUtils.createGeodesicLine(fullCoords[0], fullCoords[1]);
-                }
-                if (trip.trip.type === 'air' && futureCoords.length === 2) {
-                    futureCoords = MapLibreUtils.createGeodesicLine(futureCoords[0], futureCoords[1]);
-                }
-                
-                // Create full trip feature (will be styled as past)
-                const fullTripFeature = {
-                    type: 'Feature',
-                    geometry: {
-                        type: 'LineString',
-                        coordinates: fullCoords
-                    },
-                    properties: {
-                        id: trip.trip.uid + '_full',
-                        type: trip.trip.type,
-                        time: 'past',
-                        year: trip.trip.start_datetime !== 1 && trip.trip.start_datetime !== -1
-                            ? trip.trip.start_datetime.substring(0, 4)
-                            : null,
-                        origin: trip.trip.origin_station,
-                        destination: trip.trip.destination_station
-                    }
-                };
-                
-                // Create future path feature (will be styled as plannedFuture)
-                if (futureCoords.length > 1) {
-                    const futureFeature = {
-                        type: 'Feature',
-                        geometry: {
-                            type: 'LineString',
-                            coordinates: futureCoords
-                        },
-                        properties: {
-                            id: trip.trip.uid + '_future',
-                            type: trip.trip.type,
-                            time: 'plannedFuture',
-                            year: trip.trip.start_datetime !== 1 && trip.trip.start_datetime !== -1
-                                ? trip.trip.start_datetime.substring(0, 4)
-                                : null,
-                            origin: trip.trip.origin_station,
-                            destination: trip.trip.destination_station
-                        }
-                    };
-                    currentTripFeatures.push(futureFeature);
-                }
-                
-                currentTripFeatures.push(fullTripFeature);
-                
-                // Place marker at current position
-                const pegPosition = pastPath[pastPath.length - 1];
-                createCustomMarker([pegPosition[1], pegPosition[0]], 'calc', 'Current Position');
-            }
-        });
-
-        // Add current trip features to the map
-        if (currentTripFeatures.length > 0) {
-            // Add source for current trips
-            map.addSource('current-trips', {
-                type: 'geojson',
-                data: {
-                    type: 'FeatureCollection',
-                    features: currentTripFeatures
-                }
-            });
+    trips.forEach(trip => {
+        if (trip.time === 'current') {
+            const progress = calculatePosition(trip);
+            const { pastPath, futurePath } = splitPolyline(trip.path, progress);
             
-            // Add layers for current trips
-            MapLibreUtils.MapConfig.transportTypes.forEach(type => {
-                const basePaint = {
-                    'line-color': type.color,
-                    'line-width': (type.id === 'air') ? 1 : 3,
-                    'line-opacity': 0.8
-                };
-                
-                // Current trip past layer (full trip in normal color)
-                const currentPastId = `current-${type.id}-past`;
-                if (!map.getLayer(currentPastId)) {
-                    map.addLayer({
-                        id: currentPastId,
-                        type: 'line',
-                        source: 'current-trips',
-                        filter: ['all',
-                            ['==', ['get', 'type'], type.id],
-                            ['==', ['get', 'time'], 'past']
-                        ],
-                        layout: { 
-                            'line-join': 'round', 
-                            'line-cap': 'round',
-                            'visibility': 'visible'
-                        },
-                        paint: basePaint
-                    });
-                    
-                    // Add interactions
-                    map.on('click', currentPastId, (e) => {
-                        e.originalEvent.stopPropagation();
-                        showTripPopup(e);
-                    });
-                    map.on('mouseenter', currentPastId, () => {
-                        map.getCanvas().style.cursor = 'pointer';
-                    });
-                    map.on('mouseleave', currentPastId, () => {
-                        map.getCanvas().style.cursor = '';
-                    });
-                }
-                
-                // Current trip future base layer
-                const currentFutureBaseId = `current-${type.id}-future-base`;
-                if (!map.getLayer(currentFutureBaseId)) {
-                    map.addLayer({
-                        id: currentFutureBaseId,
-                        type: 'line',
-                        source: 'current-trips',
-                        filter: ['all',
-                            ['==', ['get', 'type'], type.id],
-                            ['==', ['get', 'time'], 'plannedFuture']
-                        ],
-                        layout: { 
-                            'line-join': 'round', 
-                            'line-cap': 'round',
-                            'visibility': 'visible'
-                        },
-                        paint: basePaint
-                    });
-                    
-                    // Add interactions
-                    map.on('click', currentFutureBaseId, (e) => {
-                        e.originalEvent.stopPropagation();
-                        showTripPopup(e);
-                    });
-                    map.on('mouseenter', currentFutureBaseId, () => {
-                        map.getCanvas().style.cursor = 'pointer';
-                    });
-                    map.on('mouseleave', currentFutureBaseId, () => {
-                        map.getCanvas().style.cursor = '';
-                    });
-                }
-                
-                // Current trip future overlay (white dotted)
-                const currentFutureOverlayId = `current-${type.id}-future-overlay`;
-                if (!map.getLayer(currentFutureOverlayId)) {
-                    map.addLayer({
-                        id: currentFutureOverlayId,
-                        type: 'line',
-                        source: 'current-trips',
-                        filter: ['all',
-                            ['==', ['get', 'type'], type.id],
-                            ['==', ['get', 'time'], 'plannedFuture']
-                        ],
-                        layout: { 
-                            'line-join': 'round', 
-                            'line-cap': 'round',
-                            'visibility': 'visible'
-                        },
-                        paint: {
-                            ...basePaint,
-                            'line-color': '#ffffff',
-                            'line-dasharray': [3, 3]
-                        }
-                    });
-                    
-                    // Add interactions
-                    map.on('click', currentFutureOverlayId, (e) => {
-                        e.originalEvent.stopPropagation();
-                        showTripPopup(e);
-                    });
-                    map.on('mouseenter', currentFutureOverlayId, () => {
-                        map.getCanvas().style.cursor = 'pointer';
-                    });
-                    map.on('mouseleave', currentFutureOverlayId, () => {
-                        map.getCanvas().style.cursor = '';
-                    });
-                }
-            });
+            // Update the existing layers to show the split
+            // This would require more complex layer management
+            
+            // Place marker at current position
+            const pegPosition = pastPath[pastPath.length - 1];
+            createCustomMarker([pegPosition[1], pegPosition[0]], 'calc', 'Current Position');
         }
+    });
 
     // Set view to show all trips
     const simpleFilters = {
