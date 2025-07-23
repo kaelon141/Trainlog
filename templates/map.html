@@ -79,6 +79,7 @@ function placePolylines(trips){
     
   if(trips.length > 0){
     trips.forEach(function(trip){
+      trip = computeTimeStatus(trip);
       $(`#${trip.trip.type}Check`).css("display", "block");
       $(`#${trip.time}Check`).css("display", "block");
 
@@ -87,7 +88,6 @@ function placePolylines(trips){
             
       // Function to create and bind polylines with popups
       const createPolyline = (time, type) => {
-        trip = computeTimeStatus(trip);
         var special = time;
         if(time.includes('-')){
           time = time.split('-')[1];
