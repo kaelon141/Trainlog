@@ -1,0 +1,835 @@
+{% extends "bootstrap/layout.html" %}
+{% block content %}
+
+{% include "bootstrap/navigation.html"%}
+
+<div id="form">
+  <h2 class="header">Plan Your Journey</h2>
+  
+  <form id="searchForm" autocomplete="off" action="javascript:void(0);" method="GET">
+    
+    <!-- Origin and Destination -->
+    <div class="location-section">
+      <!-- Origin -->
+      <div class="form-group">
+        <label for="fromPlace" class="form-label">From</label>
+        <div class="autocomplete-container">
+          <input type="text" class="form-control stationSearch" id="fromPlace" name="fromPlace" placeholder="Enter origin" required />
+          <div class="autocomplete-results" id="fromResults"></div>
+        </div>
+      </div>
+
+      <!-- Swap Button -->
+      <button type="button" class="swap-btn" onclick="swapLocations()" title="Swap locations">
+        <i class="fas fa-exchange-alt"></i>
+      </button>
+
+      <!-- Destination -->
+      <div class="form-group">
+        <label for="toPlace" class="form-label">To</label>
+        <div class="autocomplete-container">
+          <input type="text" class="form-control stationSearch" id="toPlace" name="toPlace" placeholder="Enter destination" required />
+          <div class="autocomplete-results" id="toResults"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Date and Time -->
+    <div class="datetime-section">
+      <div class="form-group">
+        <label for="date" class="form-label">Date</label>
+        <input type="date" name="date" id="date" class="form-control" required />
+      </div>
+      
+      <div class="form-group">
+        <label for="time" class="form-label">Time</label>
+        <input type="time" name="time" id="time" class="form-control" required />
+      </div>
+      
+      <div class="form-check arrive-by">
+        <input class="form-check-input" type="checkbox" id="arriveBy" name="arriveBy">
+        <label class="form-check-label" for="arriveBy">Arrive by</label>
+      </div>
+    </div>
+
+    <!-- Transport Modes -->
+    <div class="modes-section">
+      <h3 class="section-title">Transport modes</h3>
+      
+      <div class="mode-groups">
+        <!-- Walking & Cycling -->
+        <div class="mode-group">
+          <div class="group-header">
+            <input type="checkbox" class="group-checkbox" id="group-active" checked>
+            <label for="group-active">
+              <i class="fas fa-walking"></i> Active
+            </label>
+          </div>
+          <div class="group-items">
+            <label><input type="checkbox" class="mode-checkbox" data-group="active" value="WALK" checked> Walk</label>
+            <label><input type="checkbox" class="mode-checkbox" data-group="active" value="BIKE"> Bike</label>
+            <label><input type="checkbox" class="mode-checkbox" data-group="active" value="RENTAL"> Rental</label>
+          </div>
+        </div>
+
+        <!-- Car -->
+        <div class="mode-group">
+          <div class="group-header">
+            <input type="checkbox" class="group-checkbox" id="group-car">
+            <label for="group-car">
+              <i class="fas fa-car"></i> Car
+            </label>
+          </div>
+          <div class="group-items">
+            <label><input type="checkbox" class="mode-checkbox" data-group="car" value="CAR"> Car</label>
+            <label><input type="checkbox" class="mode-checkbox" data-group="car" value="CAR_PARKING"> Park & Ride</label>
+            <label><input type="checkbox" class="mode-checkbox" data-group="car" value="CAR_DROPOFF"> Drop-off</label>
+          </div>
+        </div>
+
+        <!-- Rail -->
+        <div class="mode-group">
+          <div class="group-header">
+            <input type="checkbox" class="group-checkbox" id="group-rail" checked>
+            <label for="group-rail">
+              <i class="fas fa-train"></i> Rail
+            </label>
+          </div>
+          <div class="group-items">
+            <label><input type="checkbox" class="mode-checkbox" data-group="rail" value="RAIL" checked> Rail</label>
+            <label><input type="checkbox" class="mode-checkbox" data-group="rail" value="SUBWAY" checked> Subway</label>
+            <label><input type="checkbox" class="mode-checkbox" data-group="rail" value="METRO" checked> Metro</label>
+            <label><input type="checkbox" class="mode-checkbox" data-group="rail" value="TRAM" checked> Tram</label>
+            <label><input type="checkbox" class="mode-checkbox" data-group="rail" value="HIGHSPEED_RAIL" checked> High-speed</label>
+            <label><input type="checkbox" class="mode-checkbox" data-group="rail" value="LONG_DISTANCE" checked> Long distance</label>
+            <label><input type="checkbox" class="mode-checkbox" data-group="rail" value="NIGHT_RAIL" checked> Night rail</label>
+            <label><input type="checkbox" class="mode-checkbox" data-group="rail" value="REGIONAL_RAIL" checked> Regional</label>
+            <label><input type="checkbox" class="mode-checkbox" data-group="rail" value="REGIONAL_FAST_RAIL" checked> Regional fast</label>
+          </div>
+        </div>
+
+        <!-- Road -->
+        <div class="mode-group">
+          <div class="group-header">
+            <input type="checkbox" class="group-checkbox" id="group-road" checked>
+            <label for="group-road">
+              <i class="fas fa-bus"></i> Road
+            </label>
+          </div>
+          <div class="group-items">
+            <label><input type="checkbox" class="mode-checkbox" data-group="road" value="BUS" checked> Bus</label>
+            <label><input type="checkbox" class="mode-checkbox" data-group="road" value="COACH" checked> Coach</label>
+            <label><input type="checkbox" class="mode-checkbox" data-group="road" value="TRANSIT" checked> Transit</label>
+          </div>
+        </div>
+
+        <!-- Water -->
+        <div class="mode-group">
+          <div class="group-header">
+            <input type="checkbox" class="group-checkbox" id="group-water" checked>
+            <label for="group-water">
+              <i class="fas fa-ship"></i> Water
+            </label>
+          </div>
+          <div class="group-items">
+            <label><input type="checkbox" class="mode-checkbox" data-group="water" value="FERRY" checked> Ferry</label>
+          </div>
+        </div>
+
+        <!-- Air -->
+        <div class="mode-group">
+          <div class="group-header">
+            <input type="checkbox" class="group-checkbox" id="group-air">
+            <label for="group-air">
+              <i class="fas fa-plane"></i> Air
+            </label>
+          </div>
+          <div class="group-items">
+            <label><input type="checkbox" class="mode-checkbox" data-group="air" value="AIRPLANE"> Airplane</label>
+          </div>
+        </div>
+
+        <!-- Cable -->
+        <div class="mode-group">
+          <div class="group-header">
+            <input type="checkbox" class="group-checkbox" id="group-cable">
+            <label for="group-cable">
+              <i class="fas fa-mountain"></i> Cable
+            </label>
+          </div>
+          <div class="group-items">
+            <label><input type="checkbox" class="mode-checkbox" data-group="cable" value="CABLE_CAR"> Cable car</label>
+            <label><input type="checkbox" class="mode-checkbox" data-group="cable" value="FUNICULAR"> Funicular</label>
+            <label><input type="checkbox" class="mode-checkbox" data-group="cable" value="AREAL_LIFT"> Aerial lift</label>
+          </div>
+        </div>
+
+        <!-- Other -->
+        <div class="mode-group">
+          <div class="group-header">
+            <input type="checkbox" class="group-checkbox" id="group-other">
+            <label for="group-other">
+              <i class="fas fa-ellipsis-h"></i> Other
+            </label>
+          </div>
+          <div class="group-items">
+            <label><input type="checkbox" class="mode-checkbox" data-group="other" value="ODM"> On-demand</label>
+            <label><input type="checkbox" class="mode-checkbox" data-group="other" value="FLEX"> Flexible</label>
+            <label><input type="checkbox" class="mode-checkbox" data-group="other" value="OTHER"> Other</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Advanced Options -->
+    <details class="advanced-section">
+      <summary class="advanced-toggle">
+        <i class="fas fa-cog"></i> Advanced options
+      </summary>
+      
+      <div class="advanced-content">
+        <div class="advanced-grid">
+          <div class="form-group">
+            <label for="maxTransfers">Max transfers</label>
+            <input type="number" class="form-control" id="maxTransfers" name="maxTransfers" min="0" max="10" placeholder="No limit">
+          </div>
+          
+          <div class="form-group">
+            <label for="maxTravelTime">Max time (min)</label>
+            <input type="number" class="form-control" id="maxTravelTime" name="maxTravelTime" min="1" placeholder="No limit">
+          </div>
+          
+          <div class="form-group">
+            <label for="numItineraries">Routes to show</label>
+            <input type="number" class="form-control" id="numItineraries" name="numItineraries" min="1" max="20" value="2">
+          </div>
+          
+          <div class="form-group">
+            <label for="searchWindow">Search window (h)</label>
+            <input type="number" class="form-control" id="searchWindow" name="searchWindow" min="0.5" max="24" step="0.5" value="2">
+          </div>
+        </div>
+
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="wheelchairAccessible" name="wheelchairAccessible">
+          <label class="form-check-label" for="wheelchairAccessible">Wheelchair accessible</label>
+        </div>
+      </div>
+    </details>
+
+    <button id="submit" type="submit" class="btn btn-primary btn-search">
+      <i class="fas fa-search"></i> Search routes
+    </button>
+  </form>
+</div>
+
+<style>
+/* Simple and effective styling */
+#form {
+  max-width: 600px;
+  margin: 30px auto;
+  padding: 30px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 30px;
+  color: #333;
+  font-size: 1.8rem;
+  font-weight: normal;
+}
+
+/* Location section */
+.location-section {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.location-section .form-group {
+  flex: 1;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+  color: #555;
+  font-size: 0.9rem;
+}
+
+.form-control {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+}
+
+.swap-btn {
+  width: 36px;
+  height: 36px;
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 27px;
+  transition: all 0.2s;
+}
+
+.swap-btn:hover {
+  border-color: #007bff;
+  color: #007bff;
+}
+
+/* Autocomplete */
+.autocomplete-container {
+  position: relative;
+}
+
+.autocomplete-results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #ddd;
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+  display: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.autocomplete-item {
+  padding: 10px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.autocomplete-item:hover {
+  background-color: #f5f5f5;
+}
+
+.autocomplete-icon {
+  width: 20px;
+  text-align: center;
+  color: #666;
+}
+
+.autocomplete-name {
+  font-weight: 500;
+  color: #333;
+}
+
+.autocomplete-details {
+  font-size: 0.85rem;
+  color: #666;
+  margin-top: 2px;
+}
+
+/* Date time section */
+.datetime-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 15px;
+  margin-bottom: 25px;
+  align-items: end;
+}
+
+.arrive-by {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 8px;
+  white-space: nowrap;
+}
+
+/* Transport modes */
+.modes-section {
+  margin-bottom: 25px;
+}
+
+.section-title {
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.mode-groups {
+  display: grid;
+  gap: 15px;
+}
+
+.mode-group {
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 12px;
+  background: #fafafa;
+}
+
+.group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.group-header label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  cursor: pointer;
+  user-select: none;
+}
+
+.group-header i {
+  font-size: 14px;
+  color: #666;
+}
+
+.group-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+  padding-left: 24px;
+}
+
+.group-items label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.9rem;
+  color: #555;
+  cursor: pointer;
+  user-select: none;
+}
+
+.group-checkbox,
+.mode-checkbox {
+  cursor: pointer;
+}
+
+/* Advanced section */
+.advanced-section {
+  margin-bottom: 20px;
+}
+
+.advanced-toggle {
+  width: 100%;
+  padding: 10px;
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #555;
+}
+
+.advanced-toggle:hover {
+  background: #eeeeee;
+}
+
+.advanced-content {
+  margin-top: 15px;
+  padding: 15px;
+  background: #f9f9f9;
+  border-radius: 4px;
+}
+
+.advanced-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+/* Search button */
+.btn-search {
+  width: 100%;
+  padding: 12px;
+  font-size: 1.1rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background: #007bff;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #0056b3;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  #form {
+    margin: 15px;
+    padding: 20px;
+  }
+  
+  .location-section {
+    flex-direction: column;
+  }
+  
+  .swap-btn {
+    align-self: center;
+    margin: 10px 0;
+  }
+  
+  .datetime-section {
+    grid-template-columns: 1fr;
+  }
+  
+  .group-items {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  }
+}
+</style>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script>
+  // Store selected places
+  let selectedFromPlace = null;
+  let selectedToPlace = null;
+
+  $(document).ready(function() {
+    // Set default date and time
+    const now = new Date();
+    $("#date").val(now.toISOString().split("T")[0]);
+    $("#time").val(now.toTimeString().slice(0, 5));
+
+    // Setup autocomplete
+    setupAutocomplete('fromPlace', 'fromResults');
+    setupAutocomplete('toPlace', 'toResults');
+
+    // Group checkbox logic
+    $('.group-checkbox').on('change', function() {
+      const groupId = $(this).attr('id').replace('group-', '');
+      const isChecked = $(this).prop('checked');
+      $(`.mode-checkbox[data-group="${groupId}"]`).prop('checked', isChecked);
+    });
+
+    // Update group checkbox when individual checkboxes change
+    $('.mode-checkbox').on('change', function() {
+      const group = $(this).data('group');
+      const groupCheckboxes = $(`.mode-checkbox[data-group="${group}"]`);
+      const checkedCount = groupCheckboxes.filter(':checked').length;
+      const totalCount = groupCheckboxes.length;
+      
+      $(`#group-${group}`).prop('checked', checkedCount > 0);
+      $(`#group-${group}`).prop('indeterminate', checkedCount > 0 && checkedCount < totalCount);
+    });
+
+    // Initialize group checkbox states
+    $('.group-checkbox').each(function() {
+      const groupId = $(this).attr('id').replace('group-', '');
+      const groupCheckboxes = $(`.mode-checkbox[data-group="${groupId}"]`);
+      const checkedCount = groupCheckboxes.filter(':checked').length;
+      const totalCount = groupCheckboxes.length;
+      
+      $(this).prop('checked', checkedCount > 0);
+      $(this).prop('indeterminate', checkedCount > 0 && checkedCount < totalCount);
+    });
+
+    // Form submission
+    $("#searchForm").on("submit", function(e) {
+      e.preventDefault();
+      
+      if (!selectedFromPlace || !selectedToPlace) {
+        alert('Please select valid origin and destination from the suggestions.');
+        return;
+      }
+      
+      // Build form data for submission
+      const formData = buildFormData();
+      
+      // Create a form and submit it
+      const form = $('<form>', {
+        method: 'POST',
+        action: `/{{username}}/motis/results`
+      });
+      
+      // Add all form fields
+      Object.entries(formData).forEach(([key, value]) => {
+        if (Array.isArray(value)) {
+          value.forEach(v => {
+            form.append($('<input>', {
+              type: 'hidden',
+              name: key,
+              value: v
+            }));
+          });
+        } else {
+          form.append($('<input>', {
+            type: 'hidden',
+            name: key,
+            value: value
+          }));
+        }
+      });
+      
+      // Submit the form
+      form.appendTo('body').submit();
+    });
+  });
+
+  // Debounce function
+  function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  }
+
+  // Geocode API call
+  async function geocode(text) {
+    try {
+      const response = await fetch(`https://api.transitous.org/api/v1/geocode?text=${encodeURIComponent(text)}`);
+      if (!response.ok) throw new Error('Geocoding failed');
+      return await response.json();
+    } catch (error) {
+      console.error('Geocoding error:', error);
+      return [];
+    }
+  }
+
+  // Setup autocomplete
+  function setupAutocomplete(inputId, resultsId) {
+    const input = document.getElementById(inputId);
+    const results = document.getElementById(resultsId);
+    
+    const debouncedGeocode = debounce(async (text) => {
+      if (text.length < 2) {
+        results.style.display = 'none';
+        return;
+      }
+      
+      const places = await geocode(text);
+      displayResults(places, results, input, inputId);
+    }, 300);
+    
+    input.addEventListener('input', (e) => {
+      debouncedGeocode(e.target.value);
+    });
+    
+    input.addEventListener('focus', () => {
+      if (input.value.length >= 2) {
+        results.style.display = 'block';
+      }
+    });
+    
+    document.addEventListener('click', (e) => {
+      if (!input.contains(e.target) && !results.contains(e.target)) {
+        results.style.display = 'none';
+      }
+    });
+  }
+
+  // Display autocomplete results
+  function displayResults(places, resultsContainer, input, inputId) {
+    resultsContainer.innerHTML = '';
+    
+    if (places.length === 0) {
+      resultsContainer.style.display = 'none';
+      return;
+    }
+    
+    places.slice(0, 8).forEach(place => {
+      const item = document.createElement('div');
+      item.className = 'autocomplete-item';
+      
+      // Icon
+      const icon = document.createElement('i');
+      icon.className = 'autocomplete-icon fas ';
+      switch (place.type) {
+        case 'STOP':
+          icon.className += 'fa-map-pin';
+          break;
+        case 'ADDRESS':
+          icon.className += 'fa-home';
+          break;
+        default:
+          icon.className += 'fa-map-marker-alt';
+      }
+      
+      // Content
+      const content = document.createElement('div');
+      content.className = 'autocomplete-content';
+      
+      const name = document.createElement('div');
+      name.className = 'autocomplete-name';
+      name.textContent = place.name;
+      content.appendChild(name);
+      
+      // Details
+      let detailsText = '';
+      if (place.areas && place.areas.length > 0) {
+        const area = place.areas.find(a => a.default) || place.areas[0];
+        detailsText = area.name;
+      }
+      if (place.street) {
+        detailsText = place.street + (detailsText ? ', ' + detailsText : '');
+      }
+      
+      if (detailsText) {
+        const details = document.createElement('div');
+        details.className = 'autocomplete-details';
+        details.textContent = detailsText;
+        content.appendChild(details);
+      }
+      
+      item.appendChild(icon);
+      item.appendChild(content);
+      
+      item.addEventListener('click', () => {
+        input.value = place.name;
+        resultsContainer.style.display = 'none';
+        
+        if (inputId === 'fromPlace') {
+          selectedFromPlace = place;
+        } else {
+          selectedToPlace = place;
+        }
+      });
+      
+      resultsContainer.appendChild(item);
+    });
+    
+    resultsContainer.style.display = 'block';
+  }
+
+  // Swap locations
+  function swapLocations() {
+    const fromInput = document.getElementById('fromPlace');
+    const toInput = document.getElementById('toPlace');
+    
+    const tempValue = fromInput.value;
+    const tempPlace = selectedFromPlace;
+    
+    fromInput.value = toInput.value;
+    selectedFromPlace = selectedToPlace;
+    
+    toInput.value = tempValue;
+    selectedToPlace = tempPlace;
+  }
+
+  // Build form data
+  function buildFormData() {
+    const formData = {};
+    
+    // From/To places
+    if (selectedFromPlace.id && selectedFromPlace.type === 'STOP') {
+      formData.fromPlace = selectedFromPlace.id;
+    } else {
+      formData.fromPlace = `${selectedFromPlace.lat},${selectedFromPlace.lon}`;
+    }
+
+    if (selectedToPlace.id && selectedToPlace.type === 'STOP') {
+      formData.toPlace = selectedToPlace.id;
+    } else {
+      formData.toPlace = `${selectedToPlace.lat},${selectedToPlace.lon}`;
+    }
+    
+    formData.fromName = selectedFromPlace.name;
+    formData.toName = selectedToPlace.name;
+    
+    // Date and time
+    const date = document.getElementById('date').value;
+    const time = document.getElementById('time').value;
+    if (date && time) {
+      formData.time = `${date}T${time}`;
+    }
+    
+    formData.arriveBy = document.getElementById('arriveBy').checked;
+    
+    // Collect all checked transport modes and separate into transitMode and directMode
+    const transitModes = [];
+    const directModes = [];
+    
+    // Define which modes are direct modes
+    const directModeTypes = ['WALK', 'BIKE', 'RENTAL', 'CAR', 'CAR_PARKING', 'CAR_DROPOFF', 'ODM', 'FLEX'];
+    
+    $('.mode-checkbox:checked').each(function() {
+      const mode = $(this).val();
+      if (directModeTypes.includes(mode)) {
+        directModes.push(mode);
+      } else {
+        transitModes.push(mode);
+      }
+    });
+    
+    // Add modes to form data
+    if (transitModes.length > 0) {
+      formData.transitMode = transitModes;
+    }
+    
+    if (directModes.length > 0) {
+      formData.directMode = directModes;
+    }
+    
+    // Advanced options
+    const optionalFields = ['maxTransfers', 'maxTravelTime', 'numItineraries'];
+    optionalFields.forEach(field => {
+      const element = document.getElementById(field);
+      if (element && element.value) {
+        formData[field] = element.value;
+      }
+    });
+    
+    const searchWindow = document.getElementById('searchWindow').value;
+    if (searchWindow) {
+      formData.searchWindow = Math.round(parseFloat(searchWindow) * 3600);
+    }
+    
+    if (document.getElementById('wheelchairAccessible').checked) {
+      formData.wheelchairAccessible = 'true';
+    }
+    
+    // Add any other necessary parameters
+    formData.detailedTransfers = true; // Default to true for better transfer instructions
+    
+    return formData;
+  }
+</script>
+
+{% endblock %}

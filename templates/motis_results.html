@@ -1,0 +1,1605 @@
+{% extends "bootstrap/layout.html" %}
+{% block content %}
+
+{% include "bootstrap/navigation.html"%}
+
+{% if error %}
+<div id="routing-container">
+  <div class="panel">
+    <div class="panel-content">
+      <div class="text-center py-4">
+        <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
+        <h4>Search Error</h4>
+        <p class="text-muted">{{ error }}</p>
+        <a href="{{ url_for('motis_search', username=username) }}" class="btn btn-primary">
+          <i class="fas fa-arrow-left"></i> Back to Search
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% else %}
+
+<div id="routing-container">
+  <!-- Search Parameters Panel -->
+  <div id="search-panel" class="panel collapsed">
+    <div class="panel-header">
+      <h5>
+        <i class="fas fa-search"></i>
+        Search Parameters
+      </h5>
+      <button class="btn btn-sm btn-outline-secondary toggle-panel" onclick="toggleSearchPanel()">
+        <i class="fas fa-chevron-down"></i>
+      </button>
+    </div>
+    <div class="panel-content">
+      <form id="modifySearchForm">
+        <div class="row">
+          <div class="col-md-6">
+            <div class="form-group">
+              <label>From</label>
+              <input type="text" class="form-control" id="modifyFrom" readonly>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="form-group">
+              <label>To</label>
+              <input type="text" class="form-control" id="modifyTo" readonly>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-4">
+            <div class="form-group">
+              <label>Date</label>
+              <input type="date" class="form-control" id="modifyDate">
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="form-group">
+              <label>Time</label>
+              <input type="time" class="form-control" id="modifyTime">
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="form-group">
+              <label>&nbsp;</label>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="modifyArriveBy">
+                <label class="form-check-label" for="modifyArriveBy">
+                  Arrive by
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-6 mb-2">
+            <div class="form-group">
+              <label>Max transfers</label>
+              <input type="number" class="form-control" id="modifyMaxTransfers" min="0" max="10">
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="form-group">
+              <label>Routes to show</label>
+              <input type="number" class="form-control" id="modifyNumRoutes" min="1" max="20" value="5">
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-search"></i> Update Search
+          </button>
+          <button type="button" class="btn btn-outline-secondary" onclick="resetToOriginal()">
+            <i class="fas fa-undo"></i> Reset
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Results Navigation -->
+  <div id="results-nav" class="panel">
+    <div class="d-flex justify-content-between align-items-center p-2">
+      <div class="route-summary">
+        <h4 id="route-title">Route Results</h4>
+        <p class="text-muted" id="route-date"></p>
+      </div>
+      <div class="nav-controls">
+        <button class="btn btn-outline-secondary" id="prevBtn" onclick="loadPreviousPage()">
+          <i class="fas fa-chevron-left"></i> Earlier
+        </button>
+        <span class="mx-3 text-muted" id="page-info">Page 1</span>
+        <button class="btn btn-outline-secondary" id="nextBtn" onclick="loadNextPage()">
+          Later <i class="fas fa-chevron-right"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content Area -->
+  <div id="main-content">
+    <!-- Itineraries List -->
+    <div id="itineraries-panel" class="panel">
+      <div class="panel-header">
+        <h5>
+          <i class="fas fa-route"></i>
+          Route Options <span id="results-count" class="badge badge-secondary"></span>
+        </h5>
+        <div class="sort-controls">
+          <select class="form-control form-control-sm" id="sortBy" onchange="sortItineraries()">
+            <option value="departure">Sort by departure</option>
+            <option value="arrival">Sort by arrival</option>
+            <option value="duration">Sort by duration</option>
+            <option value="transfers">Sort by transfers</option>
+          </select>
+        </div>
+      </div>
+      <div class="panel-content">
+        <!-- Interactive Routing Controls -->
+        <div class="routing-controls">
+          <div class="d-flex align-items-center">
+            <i class="fas fa-info-circle text-warning me-2"></i>
+            <small><strong>Interactive Routing:</strong> Click routes to view on map. Drag waypoint markers to improve routing accuracy.</small>
+          </div>
+          <div class="waypoint-controls">
+            <button class="btn btn-sm btn-success" onclick="addIntermediateWaypoint()">
+              <i class="fas fa-plus"></i> Add Waypoint
+            </button>
+            <button class="btn btn-sm btn-warning" onclick="resetToOriginalRoute()">
+              <i class="fas fa-undo"></i> Reset Route
+            </button>
+            <button class="btn btn-sm btn-info" onclick="optimizeRoute()">
+              <i class="fas fa-magic"></i> Optimize
+            </button>
+          </div>
+        </div>
+        
+        <div id="itineraries-list">
+          <!-- Itineraries will be populated here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Map Panel -->
+    <div id="map-panel" class="panel">
+      <div class="panel-header">
+        <h5>
+          <i class="fas fa-map"></i>
+          Interactive Route Map
+        </h5>
+        <button class="btn btn-sm btn-outline-secondary" onclick="toggleMapFullscreen()">
+          <i class="fas fa-expand"></i>
+        </button>
+      </div>
+      <div class="panel-content">
+        <div id="map" style="height: 400px;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Loading Overlay -->
+<div id="loading-overlay" style="display: none;">
+  <div class="loading-content">
+    <div class="spinner-border text-primary" role="status">
+      <span class="sr-only">Loading...</span>
+    </div>
+    <p class="mt-3">Routing waypoints...</p>
+  </div>
+</div>
+
+<!-- Save Modal -->
+<div class="modal fade" id="saveModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Save Selected Routes</h5>
+        <button type="button" class="close" data-dismiss="modal">
+          <span>&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div id="save-progress" style="display: none;">
+          <div class="progress mb-3">
+            <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+          </div>
+          <p class="text-center" id="save-status">Preparing to save...</p>
+        </div>
+        <div id="save-selection">
+          <p>Select which routes you want to save:</p>
+          <div id="save-options">
+            <!-- Will be populated with selected itineraries -->
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="saveSelectedRoutes()">
+          <i class="fas fa-save"></i> Save Routes
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Floating Save Button -->
+<div id="floating-save-btn" style="display: none; position: fixed; bottom: 30px; right: 30px; z-index: 1000;">
+  <button class="btn btn-primary btn-lg rounded-circle" onclick="openSaveModal()" title="Save selected routes">
+    <i class="fas fa-save"></i>
+    <span class="badge badge-light" id="selection-count">0</span>
+  </button>
+</div>
+
+<style>
+#routing-container {
+  max-width: 1200px;
+  margin: 20px auto;
+  padding: 0 15px;
+}
+
+.panel {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.panel-header {
+  background: #f8f9fa;
+  padding: 15px 20px;
+  border-bottom: 1px solid #dee2e6;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.panel-header h5 {
+  margin: 0;
+  color: #495057;
+}
+
+.panel-content {
+  padding: 20px;
+}
+
+#search-panel.collapsed .panel-content {
+  display: none;
+}
+
+.toggle-panel {
+  margin-left: auto;
+}
+
+.toggle-panel i {
+  transition: transform 0.3s;
+}
+
+#search-panel.collapsed .toggle-panel i {
+  transform: rotate(-90deg);
+}
+
+.itinerary-card {
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  transition: all 0.3s;
+  cursor: pointer;
+  position: relative;
+}
+
+.itinerary-card:hover {
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  border-color: #007bff;
+}
+
+.itinerary-card.selected {
+  border-color: #007bff;
+  background-color: #f8f9fa;
+}
+
+.itinerary-header {
+  padding: 15px 20px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.itinerary-times {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.time {
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.duration {
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.itinerary-summary {
+  text-align: right;
+}
+
+.transfers {
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.itinerary-body {
+  padding: 15px 20px;
+}
+
+.leg {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f8f9fa;
+}
+
+.leg:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.leg-mode {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 18px;
+  margin-right: 15px;
+}
+
+.leg-details {
+  flex: 1;
+}
+
+.leg-route {
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+.leg-stops {
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.leg-time {
+  text-align: right;
+  min-width: 60px;
+}
+
+.selection-controls {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+}
+
+.route-summary h4 {
+  margin: 0;
+  color: #495057;
+}
+
+.nav-controls {
+  display: flex;
+  align-items: center;
+}
+
+.sort-controls {
+  margin-left: auto;
+}
+
+#main-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+#loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-content {
+  text-align: center;
+  color: white;
+}
+
+.panel.fullscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1000;
+  margin: 0;
+  border-radius: 0;
+}
+
+.panel.fullscreen .panel-header {
+  background: #343a40;
+  color: white;
+}
+
+.panel.fullscreen .panel-header button {
+  color: white;
+}
+
+.routing-controls {
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 5px;
+  padding: 10px;
+  margin-bottom: 15px;
+}
+
+.waypoint-controls {
+  margin-top: 10px;
+}
+
+.waypoint-controls button {
+  margin-right: 5px;
+  margin-bottom: 5px;
+}
+
+/* Hide Leaflet Routing Machine overlays */
+.leaflet-routing-container {
+  display: none !important;
+}
+
+.leaflet-routing-alternatives-container {
+  display: none !important;
+}
+
+.leaflet-control-container .leaflet-routing-container {
+  display: none !important;
+}
+
+@media (max-width: 768px) {
+  #main-content {
+    grid-template-columns: 1fr;
+  }
+  
+  .nav-controls {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .itinerary-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+}
+</style>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.0/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-routing-machine/3.2.12/leaflet-routing-machine.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet-routing-machine/3.2.12/leaflet-routing-machine.min.css" />
+
+<script>
+// Global variables
+let currentItineraries = [];
+let selectedItineraries = new Set();
+let currentSearchParams = {};
+let map = null;
+let currentPage = 1;
+let pageCursor = null;
+let nextPageCursor = null;
+let previousPageCursor = null;
+let currentRouting = null;
+let currentPlan = null;
+let activeItinerary = null;
+
+// Mode mappings
+const modeAliases = {
+    'RAIL': 'train',
+    'HIGHSPEED_RAIL': 'train',
+    'LONG_DISTANCE': 'train',
+    'NIGHT_RAIL': 'train',
+    'REGIONAL_FAST_RAIL': 'train',
+    'REGIONAL_RAIL': 'train',
+    'TRANSIT': 'train',
+    'SUBWAY': 'metro',
+    'METRO': 'metro',
+    'TRAM': 'tram',
+    'BUS': 'bus',
+    'COACH': 'bus',
+    'FERRY': 'ferry',
+    'CABLE_CAR': 'aerialway',
+    'FUNICULAR': 'aerialway',
+    'AREAL_LIFT': 'aerialway',
+    'AERIAL_LIFT': 'aerialway',
+    'CAR': 'car',
+    'WALK': 'walk',
+    'CYCLE': 'cycle',
+    'BIKE': 'cycle',
+    'AIRPLANE': 'air'
+};
+
+// Custom marker icons - green start, red end
+const markerIconStart = L.icon({
+    iconUrl: 'data:image/svg+xml;base64,' + btoa(`
+        <svg width="25" height="41" viewBox="0 0 25 41" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12.5 0C5.6 0 0 5.6 0 12.5c0 10.9 12.5 28.5 12.5 28.5S25 23.4 25 12.5C25 5.6 19.4 0 12.5 0z" fill="#4CAF50"/>
+            <circle cx="12.5" cy="12.5" r="6" fill="white"/>
+        </svg>
+    `),
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34]
+});
+
+const markerIconEnd = L.icon({
+    iconUrl: 'data:image/svg+xml;base64,' + btoa(`
+        <svg width="25" height="41" viewBox="0 0 25 41" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12.5 0C5.6 0 0 5.6 0 12.5c0 10.9 12.5 28.5 12.5 28.5S25 23.4 25 12.5C25 5.6 19.4 0 12.5 0z" fill="#F44336"/>
+            <circle cx="12.5" cy="12.5" r="6" fill="white"/>
+        </svg>
+    `),
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34]
+});
+
+// Numbered marker class (similar to routing.js)
+L.NumberedDivIcon = L.DivIcon.extend({
+    options: {
+        iconSize: [30, 30],
+        iconAnchor: [15, 15],
+        popupAnchor: [0, -15],
+        className: 'numbered-marker',
+        number: ''
+    },
+    
+    createIcon: function(oldIcon) {
+        const div = L.DivIcon.prototype.createIcon.call(this, oldIcon);
+        div.innerHTML = `
+            <div style="
+                background: #007bff;
+                color: white;
+                border-radius: 50%;
+                width: 30px;
+                height: 30px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: bold;
+                font-size: 14px;
+                border: 2px solid white;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+                font-family: Arial, sans-serif;
+            ">${this.options.number}</div>
+        `;
+        return div;
+    }
+});
+
+// Custom marker icons
+const markerIconStart_OLD = L.icon({
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+    shadowSize: [41, 41]
+});
+
+const markerIconEnd_OLD = L.icon({
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+    shadowSize: [41, 41]
+});
+
+// Initialize page
+$(document).ready(function() {
+    initializeMap();
+    
+    {% if motis_data %}
+    // Load data from backend
+    const motisData = {{ motis_data|safe }};
+    const searchParams = {{ search_params|tojson }};
+    
+    loadDataFromBackend(motisData, searchParams);
+    {% else %}
+    // No data, show empty state
+    showEmptyState();
+    {% endif %}
+    
+    setupEventHandlers();
+});
+
+function loadDataFromBackend(motisData, searchParams) {
+    currentItineraries = motisData.itineraries || [];
+    currentSearchParams = searchParams;
+    nextPageCursor = motisData.nextPageCursor;
+    previousPageCursor = motisData.previousPageCursor;
+    
+    populateSearchForm();
+    displayItineraries();
+    updateNavigationControls();
+    
+    if (currentItineraries.length > 0) {
+        // Auto-select and show the first route
+        showInteractiveRoute(0);
+    }
+}
+
+function populateSearchForm() {
+    $('#modifyFrom').val(currentSearchParams.fromName || 'Origin');
+    $('#modifyTo').val(currentSearchParams.toName || 'Destination');
+    
+    // Fix the time parameter handling
+    if (currentSearchParams.time && currentSearchParams.time !== 'None') {
+        try {
+            // Clean the time parameter - remove any "None" prefix
+            let cleanTime = currentSearchParams.time;
+            if (cleanTime.includes('NoneT')) {
+                cleanTime = cleanTime.replace('NoneT', '');
+            }
+            if (cleanTime.startsWith('None')) {
+                cleanTime = cleanTime.replace('None', '');
+            }
+            
+            // Only process if we have a valid time string
+            if (cleanTime && cleanTime.includes('T')) {
+                const datetime = new Date(cleanTime);
+                
+                // Check if the date is valid
+                if (!isNaN(datetime.getTime())) {
+                    $('#modifyDate').val(datetime.toISOString().split('T')[0]);
+                    $('#modifyTime').val(datetime.toTimeString().slice(0, 5));
+                    
+                    // Update route date display
+                    $('#route-date').text(datetime.toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric', 
+                        month: 'long',
+                        day: 'numeric'
+                    }));
+                }
+            }
+        } catch (error) {
+            console.warn('Error parsing time parameter:', currentSearchParams.time, error);
+            // Set default time to now
+            const now = new Date();
+            $('#modifyDate').val(now.toISOString().split('T')[0]);
+            $('#modifyTime').val(now.toTimeString().slice(0, 5));
+        }
+    } else {
+        // Set default time to now if no time parameter
+        const now = new Date();
+        $('#modifyDate').val(now.toISOString().split('T')[0]);
+        $('#modifyTime').val(now.toTimeString().slice(0, 5));
+    }
+    
+    $('#modifyArriveBy').prop('checked', currentSearchParams.arriveBy === 'true' || currentSearchParams.arriveBy === true);
+    $('#modifyMaxTransfers').val(currentSearchParams.maxTransfers || '');
+    $('#modifyNumRoutes').val(currentSearchParams.numItineraries || '5');
+    
+    // Update route title
+    $('#route-title').text(`${currentSearchParams.fromName || 'Origin'} → ${currentSearchParams.toName || 'Destination'}`);
+}
+
+function showEmptyState() {
+    $('#itineraries-list').html(`
+        <div class="text-center py-4">
+            <i class="fas fa-search fa-3x text-muted mb-3"></i>
+            <h5>No search performed</h5>
+            <p class="text-muted">Use the search form to find routes.</p>
+            <a href="{{ url_for('motis_search', username=username) }}" class="btn btn-primary">
+                <i class="fas fa-search"></i> New Search
+            </a>
+        </div>
+    `);
+}
+
+function initializeMap() {
+    map = L.map('map').setView([50.1109, 8.6821], 10);
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+}
+
+function setupEventHandlers() {
+    // Search form submission
+    $('#modifySearchForm').on('submit', function(e) {
+        e.preventDefault();
+        updateSearchFromForm();
+        searchRoutes();
+    });
+    
+    // Itinerary selection
+    $(document).on('change', '.itinerary-checkbox', function() {
+        const itineraryId = $(this).data('itinerary-id');
+        const card = $(this).closest('.itinerary-card');
+        
+        if ($(this).is(':checked')) {
+            selectedItineraries.add(itineraryId);
+            card.addClass('selected');
+        } else {
+            selectedItineraries.delete(itineraryId);
+            card.removeClass('selected');
+        }
+        
+        updateSaveButton();
+    });
+    
+    // Itinerary card clicks
+    $(document).on('click', '.itinerary-card', function(e) {
+        if (!$(e.target).hasClass('itinerary-checkbox')) {
+            const checkbox = $(this).find('.itinerary-checkbox');
+            checkbox.prop('checked', !checkbox.prop('checked')).trigger('change');
+        }
+        
+        const itineraryId = $(this).find('.itinerary-checkbox').data('itinerary-id');
+        showInteractiveRoute(itineraryId);
+    });
+}
+
+function updateSearchFromForm() {
+    const date = $('#modifyDate').val();
+    const time = $('#modifyTime').val();
+    
+    if (date && time) {
+        currentSearchParams.time = `${date}T${time}`;
+    }
+    
+    currentSearchParams.arriveBy = $('#modifyArriveBy').is(':checked');
+    currentSearchParams.maxTransfers = $('#modifyMaxTransfers').val();
+    currentSearchParams.numItineraries = $('#modifyNumRoutes').val();
+    
+    currentPage = 1;
+    pageCursor = null;
+    nextPageCursor = null;
+    previousPageCursor = null;
+}
+
+function searchRoutes() {
+    showLoading(true);
+    
+    const params = new URLSearchParams();
+    
+    Object.entries(currentSearchParams).forEach(([key, value]) => {
+        if (value !== null && value !== undefined && value !== '') {
+            params.append(key, value);
+        }
+    });
+    
+    if (pageCursor) {
+        params.append('pageCursor', pageCursor);
+    }
+    
+    window.location.href = `/${window.username}/motis/results?${params}`;
+}
+
+function displayItineraries() {
+    const container = $('#itineraries-list');
+    container.empty();
+    
+    if (currentItineraries.length === 0) {
+        container.html(`
+            <div class="text-center py-4">
+                <i class="fas fa-exclamation-triangle fa-3x text-muted mb-3"></i>
+                <h5>No routes found</h5>
+                <p class="text-muted">Try adjusting your search parameters.</p>
+            </div>
+        `);
+        $('#results-count').text('0');
+        return;
+    }
+    
+    $('#results-count').text(currentItineraries.length);
+    
+    currentItineraries.forEach((itinerary, index) => {
+        const card = createItineraryCard(itinerary, index);
+        container.append(card);
+    });
+}
+
+function createItineraryCard(itinerary, index) {
+    const startTime = new Date(itinerary.startTime);
+    const endTime = new Date(itinerary.endTime);
+    const duration = Math.round(itinerary.duration / 60);
+    
+    // Filter out all WALK legs - they're useless
+    const legs = itinerary.legs.filter(leg => leg.mode !== 'WALK');
+    
+    let legsHtml = '';
+    legs.forEach(leg => {
+        const modeIcon = getModeIcon(leg.mode);
+        const modeColor = getModeColor(leg.mode);
+        const routeName = leg.routeShortName || leg.mode;
+        
+        legsHtml += `
+            <div class="leg">
+                <div class="leg-mode" style="background: ${modeColor}">
+                    <i class="${modeIcon}"></i>
+                </div>
+                <div class="leg-details">
+                    <div class="leg-route">${routeName}</div>
+                    <div class="leg-stops">${leg.from.name} → ${leg.to.name}</div>
+                </div>
+                <div class="leg-time">
+                    ${Math.round(leg.duration / 60)}min
+                </div>
+            </div>
+        `;
+    });
+    
+    return $(`
+        <div class="itinerary-card" data-itinerary-id="${index}">
+            <div class="selection-controls">
+                <input type="checkbox" class="itinerary-checkbox" data-itinerary-id="${index}">
+            </div>
+            <div class="itinerary-header">
+                <div class="itinerary-times">
+                    <span class="time">${startTime.toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit'})}</span>
+                    <i class="fas fa-arrow-right text-muted"></i>
+                    <span class="time">${endTime.toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit'})}</span>
+                    <span class="duration">(${duration}min)</span>
+                </div>
+                <div class="itinerary-summary">
+                    <div class="transfers">${itinerary.transfers} transfer${itinerary.transfers !== 1 ? 's' : ''}</div>
+                </div>
+            </div>
+            <div class="itinerary-body">
+                ${legsHtml}
+            </div>
+        </div>
+    `);
+}
+
+function showInteractiveRoute(itineraryIndex) {
+    if (!currentItineraries[itineraryIndex]) return;
+    
+    activeItinerary = currentItineraries[itineraryIndex];
+    
+    // Clear existing routing
+    if (currentRouting) {
+        if (Array.isArray(currentRouting)) {
+            currentRouting.forEach(control => map.removeControl(control));
+        } else {
+            map.removeControl(currentRouting);
+        }
+        currentRouting = null;
+    }
+    
+    // Clear existing layers
+    map.eachLayer(layer => {
+        if (layer instanceof L.Polyline || layer instanceof L.Marker) {
+            map.removeLayer(layer);
+        }
+    });
+    
+    // Show loading
+    showLoading(true);
+    
+    // Process each leg separately, but skip WALK legs
+    activeItinerary.legs.forEach((leg, legIndex) => {
+        if (leg.mode !== 'WALK' && leg.waypoints && leg.waypoints.length >= 2) {
+            createInteractiveRouting(leg, legIndex);
+        }
+    });
+    
+    showLoading(false);
+}
+
+function createInteractiveRouting(leg, legIndex) {
+    // Convert waypoints to Leaflet LatLng objects
+    const waypoints = leg.waypoints.map(wp => L.latLng(wp.lat, wp.lng));
+    
+    // Determine routing profile
+    const profile = getRoutingProfile(leg.routingMode);
+    
+    // Create plan with custom markers
+    const plan = new L.Routing.Plan(waypoints, {
+        reverseWaypoints: true,
+        routeWhileDragging: true,
+        createMarker: function(i, wp, n) {
+            let icon;
+            if (i === 0) {
+                icon = markerIconStart;
+            } else if (i === n - 1) {
+                icon = markerIconEnd;
+            } else {
+                // Create numbered marker for intermediate waypoints
+                icon = createNumberedIcon(i);
+            }
+
+            const marker = L.marker(wp.latLng, {
+                draggable: true,
+                icon: icon
+            });
+
+            // Add popup for intermediate waypoints
+            if (i > 0 && i < n - 1) {
+                const popupContent = `
+                    <div style="text-align: center; min-width: 120px;">
+                        <p style="margin: 5px 0 10px 0;">Waypoint ${i}</p>
+                        <button 
+                            onclick="removeWaypoint(${legIndex}, ${i})" 
+                            style="
+                                background-color: #dc3545;
+                                color: white;
+                                border: none;
+                                padding: 5px 15px;
+                                border-radius: 4px;
+                                cursor: pointer;
+                                font-size: 14px;
+                            "
+                            onmouseover="this.style.backgroundColor='#c82333'"
+                            onmouseout="this.style.backgroundColor='#dc3545'"
+                        >
+                            🗑️ Remove
+                        </button>
+                    </div>
+                `;
+                
+                marker.bindPopup(popupContent, {
+                    closeButton: true,
+                    autoClose: false,
+                    closeOnClick: false
+                });
+
+                marker.on('click', function(e) {
+                    e.target.openPopup();
+                });
+            }
+
+            return marker;
+        },
+        waypointMode: 'snap',
+    });
+
+    // Create routing control
+    const routingControl = L.Routing.control({
+        routeWhileDragging: true,
+        plan: plan,
+        show: false, // Hide the instructions panel
+        addWaypoints: false, // Prevent adding waypoints by clicking on the route
+        routeWhileDragging: true,
+        lineOptions: {
+            styles: [
+                {
+                    color: 'transparent', // Invisible wider line for interaction
+                    weight: 30, // Adjust the weight to create a larger clickable area
+                    interactive: true // Ensure it is interactive
+                },
+                {
+                    color: 'black',
+                    opacity: 0.6,
+                    weight: 6 // Visible line
+                },
+                {
+                    color: getModeColor(leg.routingMode),
+                    opacity: 0.9,
+                    weight: 3
+                }
+            ],
+            addWaypoints: false, // Prevent adding waypoints on line click
+            extendToWaypoints: false, // Don't extend lines to waypoints
+            missingRouteTolerance: 0 // Don't show connecting lines for missing routes
+        },
+        router: createCustomRouter(profile),
+        formatter: new L.Routing.Formatter({
+            language: 'en',
+            units: 'metric'
+        }),
+        createMarker: function(i, waypoint, n) {
+            // Return the markers we already created in the plan
+            return null; // Let the plan handle marker creation
+        }
+    }).on('routeselected', function(e) {
+        // Update leg data with new route
+        const route = e.route;
+        leg.computedDistance = route.summary.totalDistance;
+        leg.computedDuration = route.summary.totalTime;
+        leg.computedCoordinates = route.coordinates;
+        
+        // Update waypoints with new positions
+        leg.waypoints = route.waypoints.map((wp, i) => ({
+            lat: wp.latLng.lat,
+            lng: wp.latLng.lng,
+            name: leg.waypoints[i] ? leg.waypoints[i].name : `Waypoint ${i}`,
+            type: i === 0 ? 'from' : (i === route.waypoints.length - 1 ? 'to' : 'intermediate')
+        }));
+        
+        console.log(`Route updated for leg ${legIndex}:`, {
+            distance: Math.round(route.summary.totalDistance),
+            duration: Math.round(route.summary.totalTime / 60),
+            waypoints: leg.waypoints.length
+        });
+        
+    }).on('routingerror', function(e) {
+        console.error(`Routing error for leg ${legIndex}:`, e);
+    });
+
+    routingControl.addTo(map);
+    
+    // Store reference for cleanup
+    if (!currentRouting) {
+        currentRouting = [];
+    }
+    currentRouting.push(routingControl);
+    
+    // Fit map to show all waypoints
+    if (waypoints.length > 0) {
+        const group = new L.featureGroup(waypoints.map(wp => L.marker(wp)));
+        map.fitBounds(group.getBounds().pad(0.1));
+    }
+}
+
+// Simple polyline decoding function
+function decodePolyline(str, precision = 5) {
+    let index = 0,
+        lat = 0,
+        lng = 0,
+        coordinates = [],
+        shift = 0,
+        result = 0,
+        byte = null,
+        latitude_change,
+        longitude_change,
+        factor = Math.pow(10, precision || 5);
+
+    while (index < str.length) {
+        byte = null;
+        shift = 0;
+        result = 0;
+
+        do {
+            byte = str.charCodeAt(index++) - 63;
+            result |= (byte & 0x1f) << shift;
+            shift += 5;
+        } while (byte >= 0x20);
+
+        latitude_change = ((result & 1) ? ~(result >> 1) : (result >> 1));
+
+        shift = result = 0;
+
+        do {
+            byte = str.charCodeAt(index++) - 63;
+            result |= (byte & 0x1f) << shift;
+            shift += 5;
+        } while (byte >= 0x20);
+
+        longitude_change = ((result & 1) ? ~(result >> 1) : (result >> 1));
+
+        lat += latitude_change;
+        lng += longitude_change;
+
+        coordinates.push([lat / factor, lng / factor]);
+    }
+
+    return coordinates;
+}
+
+function createCustomRouter(profile) {
+    // Create a completely custom router that doesn't use OSRM URLs
+    return {
+        route: function(waypoints, callback, context, options) {
+            console.log('Router called with waypoints:', waypoints);
+            
+            // Convert waypoints to coordinate string
+            // waypoints might be LatLng objects or have different structure
+            const coordinates = waypoints.map(wp => {
+                let lat, lng;
+                if (wp.lat !== undefined && wp.lng !== undefined) {
+                    lat = wp.lat;
+                    lng = wp.lng;
+                } else if (wp.latLng) {
+                    lat = wp.latLng.lat;
+                    lng = wp.latLng.lng;
+                } else if (Array.isArray(wp) && wp.length >= 2) {
+                    lat = wp[0];
+                    lng = wp[1];
+                } else {
+                    console.error('Invalid waypoint format:', wp);
+                    return null;
+                }
+                return `${lng},${lat}`;
+            }).filter(coord => coord !== null).join(';');
+            
+            if (!coordinates || coordinates.includes('undefined')) {
+                console.error('Invalid coordinates generated:', coordinates);
+                callback.call(context, new Error('Invalid waypoint coordinates'));
+                return;
+            }
+            
+            // Map routing profile to trip type
+            const tripTypeMap = {
+                'train': 'train',
+                'driving': 'bus', // or 'car' depending on your preference
+                'ferry': 'ferry',
+                'foot': 'walk',
+                'cycling': 'cycle'
+            };
+            const tripType = tripTypeMap[profile] || 'train';
+            
+            // Build the path for your forwardRouting endpoint with trip type
+            const routePath = `${tripType}/route/v1/${profile}/${coordinates}`;
+            
+            console.log(`Calling forwardRouting: /forwardRouting/${routePath}`);
+            
+            // Call your existing forwardRouting endpoint
+            fetch(`/forwardRouting/${routePath}?overview=full`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Routing response:', data);
+                
+                // Convert OSRM response to Leaflet Routing Machine format
+                if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+                    const route = data.routes[0];
+                    
+                    // Decode polyline geometry
+                    let routeCoordinates = [];
+                    if (route.geometry) {
+                        try {
+                            // Decode the polyline geometry
+                            routeCoordinates = decodePolyline(route.geometry).map(coord => L.latLng(coord[0], coord[1]));
+                        } catch (e) {
+                            console.error('Error decoding polyline:', e);
+                            // Fallback: create straight lines between waypoints
+                            routeCoordinates = waypoints.map(wp => {
+                                if (wp.lat !== undefined && wp.lng !== undefined) {
+                                    return L.latLng(wp.lat, wp.lng);
+                                } else if (wp.latLng) {
+                                    return wp.latLng;
+                                } else {
+                                    return wp;
+                                }
+                            });
+                        }
+                    }
+                    
+                    // Create properly formatted waypoints for Leaflet Routing Machine
+                    const formattedWaypoints = waypoints.map((wp, i) => {
+                        let latLng;
+                        if (wp.lat !== undefined && wp.lng !== undefined) {
+                            latLng = L.latLng(wp.lat, wp.lng);
+                        } else if (wp.latLng) {
+                            latLng = wp.latLng;
+                        } else if (Array.isArray(wp) && wp.length >= 2) {
+                            latLng = L.latLng(wp[0], wp[1]);
+                        } else {
+                            latLng = wp; // Assume it's already a LatLng
+                        }
+                        return {
+                            latLng: latLng,
+                            name: `Waypoint ${i}`,
+                            options: {}
+                        };
+                    });
+                    
+                    const routeResult = {
+                        name: 'Route',
+                        coordinates: routeCoordinates,
+                        summary: {
+                            totalDistance: route.distance || 0,
+                            totalTime: route.duration || 0
+                        },
+                        waypoints: formattedWaypoints,
+                        instructions: [],
+                        inputWaypoints: formattedWaypoints,
+                        waypointIndices: waypoints.map((wp, i) => i),
+                        // Ensure the route coordinates start and end exactly at waypoints
+                        coordinates: routeCoordinates.length > 0 ? routeCoordinates : formattedWaypoints.map(wp => wp.latLng)
+                    };
+                    
+                    callback.call(context, null, [routeResult]);
+                } else {
+                    const errorMsg = data.message || data.error || 'Routing failed';
+                    console.error('Routing failed:', errorMsg);
+                    callback.call(context, new Error(errorMsg));
+                }
+            })
+            .catch(error => {
+                console.error('Routing request failed:', error);
+                callback.call(context, error);
+            });
+        }
+    };
+}
+
+function getRoutingProfile(mode) {
+    const canonical = modeAliases[mode] || mode.toLowerCase();
+    
+    switch (canonical) {
+        case 'train':
+        case 'metro':
+        case 'tram':
+            return 'train';
+        case 'bus':
+        case 'car':
+            return 'driving';
+        case 'ferry':
+            return 'ferry';
+        case 'walk':
+            return 'foot';
+        case 'cycle':
+            return 'cycling';
+        default:
+            return 'train';
+    }
+}
+
+function createNumberedIcon(number) {
+    return new L.NumberedDivIcon({
+        number: number
+    });
+}
+
+function getModeIcon(mode) {
+    const icons = {
+        'train': 'fas fa-train',
+        'metro': 'fas fa-subway',
+        'tram': 'fas fa-tram',
+        'bus': 'fas fa-bus',
+        'ferry': 'fas fa-ship',
+        'aerialway': 'fas fa-cable-car',
+        'car': 'fas fa-car',
+        'walk': 'fas fa-walking',
+        'cycle': 'fas fa-bicycle',
+        'air': 'fas fa-plane'
+    };
+
+    const canonical = modeAliases[mode] || mode.toLowerCase();
+    return icons[canonical] || 'fas fa-circle';
+}
+
+function getModeColor(mode) {
+    const colors = {
+        air: '#40b91f',
+        train: '#52b0fe',
+        tram: '#a2d7ff',
+        metro: '#004595',
+        bus: '#9f4bbb',
+        ferry: '#1e1e7c',
+        car: '#a68fcd',
+        cycle: '#6e211a',
+        walk: '#e88c00',
+        aerialway: '#afcf3b'
+    };
+
+    const canonical = modeAliases[mode] || mode.toLowerCase();
+    return colors[canonical] || '#e88c00';
+}
+
+function addIntermediateWaypoint() {
+    if (!activeItinerary || !currentRouting || currentRouting.length === 0) {
+        alert('Please select a route first');
+        return;
+    }
+    
+    // Add waypoint to the center of the current map view
+    const center = map.getCenter();
+    
+    // Add to the first leg for simplicity (you might want to make this more sophisticated)
+    const firstLeg = activeItinerary.legs[0];
+    if (firstLeg && firstLeg.waypoints) {
+        // Insert in the middle
+        const middleIndex = Math.floor(firstLeg.waypoints.length / 2);
+        firstLeg.waypoints.splice(middleIndex, 0, {
+            lat: center.lat,
+            lng: center.lng,
+            name: `Added Waypoint`,
+            type: 'intermediate'
+        });
+        
+        // Refresh the route
+        showInteractiveRoute(currentItineraries.indexOf(activeItinerary));
+    }
+}
+
+function removeWaypoint(legIndex, waypointIndex) {
+    if (!activeItinerary) return;
+    
+    map.closePopup();
+    
+    const leg = activeItinerary.legs[legIndex];
+    if (leg && leg.waypoints && waypointIndex > 0 && waypointIndex < leg.waypoints.length - 1) {
+        leg.waypoints.splice(waypointIndex, 1);
+        
+        // Refresh the route
+        showInteractiveRoute(currentItineraries.indexOf(activeItinerary));
+    }
+}
+
+function resetToOriginalRoute() {
+    if (!activeItinerary) {
+        alert('Please select a route first');
+        return;
+    }
+    
+    // Reset to original waypoints (you'd need to store original data)
+    // For now, just reload the route
+    showInteractiveRoute(currentItineraries.indexOf(activeItinerary));
+}
+
+function optimizeRoute() {
+    if (!activeItinerary) {
+        alert('Please select a route first');
+        return;
+    }
+    
+    // Simple optimization: remove waypoints that are very close to each other
+    activeItinerary.legs.forEach(leg => {
+        if (leg.waypoints && leg.waypoints.length > 2) {
+            const optimized = [leg.waypoints[0]]; // Keep start
+            
+            for (let i = 1; i < leg.waypoints.length - 1; i++) {
+                const prev = optimized[optimized.length - 1];
+                const current = leg.waypoints[i];
+                const distance = L.latLng(prev.lat, prev.lng).distanceTo(L.latLng(current.lat, current.lng));
+                
+                // Only keep waypoints that are more than 100m apart
+                if (distance > 100) {
+                    optimized.push(current);
+                }
+            }
+            
+            optimized.push(leg.waypoints[leg.waypoints.length - 1]); // Keep end
+            leg.waypoints = optimized;
+        }
+    });
+    
+    // Refresh the route
+    showInteractiveRoute(currentItineraries.indexOf(activeItinerary));
+}
+
+function sortItineraries() {
+    const sortBy = $('#sortBy').val();
+    
+    currentItineraries.sort((a, b) => {
+        switch (sortBy) {
+            case 'departure':
+                return new Date(a.startTime) - new Date(b.startTime);
+            case 'arrival':
+                return new Date(a.endTime) - new Date(b.endTime);
+            case 'duration':
+                return a.duration - b.duration;
+            case 'transfers':
+                return a.transfers - b.transfers;
+            default:
+                return 0;
+        }
+    });
+    
+    displayItineraries();
+}
+
+function toggleSearchPanel() {
+    $('#search-panel').toggleClass('collapsed');
+}
+
+function resetToOriginal() {
+    populateSearchForm();
+}
+
+function toggleMapFullscreen() {
+    const mapPanel = $('#map-panel');
+    const mapContainer = $('#map');
+    
+    if (mapPanel.hasClass('fullscreen')) {
+        mapPanel.removeClass('fullscreen');
+        mapContainer.css('height', '400px');
+    } else {
+        mapPanel.addClass('fullscreen');
+        mapContainer.css('height', '80vh');
+    }
+    
+    setTimeout(() => {
+        map.invalidateSize();
+    }, 300);
+}
+
+function showLoading(show) {
+    if (show) {
+        $('#loading-overlay').fadeIn();
+    } else {
+        $('#loading-overlay').fadeOut();
+    }
+}
+
+function updateNavigationControls() {
+    $('#prevBtn').prop('disabled', !previousPageCursor);
+    $('#nextBtn').prop('disabled', !nextPageCursor);
+    $('#page-info').text(`Page ${currentPage}`);
+}
+
+function loadPreviousPage() {
+    if (previousPageCursor) {
+        pageCursor = previousPageCursor;
+        currentPage--;
+        searchRoutes();
+    }
+}
+
+function loadNextPage() {
+    if (nextPageCursor) {
+        pageCursor = nextPageCursor;
+        currentPage++;
+        searchRoutes();
+    }
+}
+
+function updateSaveButton() {
+    const count = selectedItineraries.size;
+    $('#selection-count').text(count);
+    
+    if (count > 0) {
+        $('#floating-save-btn').fadeIn();
+    } else {
+        $('#floating-save-btn').fadeOut();
+    }
+}
+
+function openSaveModal() {
+    if (selectedItineraries.size === 0) {
+        alert('Please select at least one route to save.');
+        return;
+    }
+    
+    const options = $('#save-options');
+    options.empty();
+    
+    selectedItineraries.forEach(index => {
+        const itinerary = currentItineraries[index];
+        const startTime = new Date(itinerary.startTime);
+        const endTime = new Date(itinerary.endTime);
+        
+        options.append(`
+            <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" checked data-save-index="${index}">
+                <label class="form-check-label">
+                    <strong>${startTime.toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit'})} - ${endTime.toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit'})}</strong>
+                    (${Math.round(itinerary.duration / 60)}min, ${itinerary.transfers} transfers)
+                </label>
+            </div>
+        `);
+    });
+    
+    $('#saveModal').modal('show');
+}
+
+function saveSelectedRoutes() {
+    const toSave = [];
+    $('#save-options input:checked').each(function() {
+        const index = $(this).data('save-index');
+        toSave.push(index);
+    });
+    
+    if (toSave.length === 0) {
+        alert('Please select at least one route to save.');
+        return;
+    }
+    
+    $('#save-selection').hide();
+    $('#save-progress').show();
+    
+    // Get the actual itineraries to save
+    const itinerariesToSave = toSave.map(index => currentItineraries[index]);
+    
+    // Save to server
+    saveRoutesToServer(itinerariesToSave);
+}
+
+function saveRoutesToServer(itineraries) {
+    fetch(`/${window.username}/motis/save`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({itineraries: itineraries})
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            updateSaveProgress(result.saved, result.saved);
+            setTimeout(() => {
+                $('#saveModal').modal('hide');
+                if (confirm(`${result.saved} routes saved successfully! Would you like to view your saved trips?`)) {
+                    window.location.href = `/${window.username}/trips/projects`;
+                }
+            }, 1000);
+        } else {
+            throw new Error(result.error || 'Save failed');
+        }
+    })
+    .catch(error => {
+        console.error('Save error:', error);
+        $('#save-status').text('Error saving routes: ' + error.message);
+        $('.progress-bar').removeClass('bg-info').addClass('bg-danger');
+    });
+}
+
+function updateSaveProgress(completed, total, hasError = false) {
+    const percentage = (completed / total) * 100;
+    $('.progress-bar').css('width', percentage + '%');
+    
+    if (completed === total) {
+        $('#save-status').text(hasError ? 'Completed with some errors' : 'All routes saved successfully!');
+        $('.progress-bar').removeClass('bg-info').addClass(hasError ? 'bg-warning' : 'bg-success');
+    } else {
+        $('#save-status').text(`Saving route ${completed + 1} of ${total}...`);
+    }
+}
+
+// Keyboard shortcuts
+$(document).keydown(function(e) {
+    if (e.ctrlKey || e.metaKey) {
+        switch(e.keyCode) {
+            case 70: // Ctrl+F - Toggle search panel
+                e.preventDefault();
+                toggleSearchPanel();
+                break;
+            case 83: // Ctrl+S - Save selected
+                e.preventDefault();
+                if (selectedItineraries.size > 0) {
+                    openSaveModal();
+                }
+                break;
+        }
+    }
+    
+    switch(e.keyCode) {
+        case 37: // Left arrow - Previous page
+            if (previousPageCursor) {
+                loadPreviousPage();
+            }
+            break;
+        case 39: // Right arrow - Next page  
+            if (nextPageCursor) {
+                loadNextPage();
+            }
+            break;
+    }
+});
+
+// Export username for routing functionality
+window.username = '{{ username }}';
+
+</script>
+
+{% endif %}
+{% endblock %}

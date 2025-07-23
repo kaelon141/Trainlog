@@ -137,6 +137,12 @@ from py.stats import (
     getStatsGeneral,
     getStatsYears,
 )
+from py.motis import (
+    convert_motis_to_trip,
+    call_motis_api,
+    handle_search_form,
+    handle_search_params,
+)
 from py.svg import generate_sprite
 from py.track import CustomMatomo
 from py.transit_routing import (
@@ -2803,6 +2809,37 @@ def user_home(username):
         **lang[session["userinfo"]["lang"]],
         **session["userinfo"],
     )
+
+# 1. SEARCH PAGE - Shows the search form
+@app.route("/<username>/motis")
+@login_required
+def motis_search(username):
+    """
+    Display the MOTIS search form
+    """
+    return render_template(
+        "motis_search.html",  # This is your first artifact
+        title="Plan Journey",
+        username=username,
+        nav="bootstrap/navigation.html",
+        **lang[session["userinfo"]["lang"]],
+        **session["userinfo"],
+    )
+
+# 2. RESULTS PAGE - Shows routing results and handles search
+@app.route("/<username>/motis/results", methods=["GET", "POST"])
+@login_required 
+def motis_results(username):
+    """
+    Handle search and display results
+    """
+    if request.method == "POST":
+        # Handle form submission from search page
+        return handle_search_form(username)
+    else:
+        # Handle direct GET requests (from URL parameters)
+        return handle_search_params(username, forwardRouting, lang)
+
 
 
 @app.route("/getVectorStyle/<language>/<style>.json")
