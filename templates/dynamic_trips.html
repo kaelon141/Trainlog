@@ -368,19 +368,11 @@ function renderFlags(data, type, row) {
     return data;
 }
 
-/* relocated to static/js/util.js
-function renderOperators(data, type, row) {
-    if (type === 'display') {
-        // If there is a logo URL, display the logo, otherwise, display the operator name
-        if (row.logo_url) {
-            return `<img title="" data-toggle="tooltip" data-placement="top" class="operatorLogo" src="/static/${row.logo_url}" data-bs-original-title="${row.operator}" aria-label="${row.operator}">`
-        } else {
-            return row.operator; // Fallback to operator name if no logo is available
-        }
-    }
-    return data;
+const TRANSLATIONS = {
+    walk: "{{ walk }}",
+    cycle: "{{ cycle }}",
+    car: "{{ car }}"
 }
- */
 
 function renderButton(data, type, row){
   var modalId = `actionModal${data.uid}`;

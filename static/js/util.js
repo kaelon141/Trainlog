@@ -919,13 +919,26 @@ function processCountryCode(cc, positions = null, mode = "auto") {
 }
 
 function renderOperators(data, type, row) {
-    if (type === 'display') {
-        // If there is a logo URL, display the logo, otherwise, display the operator name
-        if (row.logo_url) {
-            return `<img title="" data-toggle="tooltip" data-placement="top" class="operatorLogo" src="/static/${row.logo_url}" data-bs-original-title="${row.operator}" aria-label="${row.operator}">`
-        } else {
-            return row.operator; // Fallback to operator name if no logo is available
-        }
+    if (type !== 'display') return data;
+
+    // Map transport types to icons and translations
+    const iconMap = {
+        walk: { icon: "fa-shoe-prints", label: TRANSLATIONS.walk },
+        cycle: { icon: "fa-bicycle", label: TRANSLATIONS.cycle },
+        car: { icon: "fa-car", label: TRANSLATIONS.car }
+    };
+
+    // If type is in iconMap and there's no logo, show icon
+    if (iconMap[row.type] && !row.logo_url) {
+        const { icon, label } = iconMap[row.type];
+        return `<i class="fas ${icon}" title="${label}" data-toggle="tooltip" data-placement="top" aria-label="${label}"></i>`;
     }
-    return data;
+
+    // Show logo if available
+    if (row.logo_url) {
+        return `<img title="" data-toggle="tooltip" data-placement="top" class="operatorLogo" src="/static/${row.logo_url}" data-bs-original-title="${row.operator}" aria-label="${row.operator}">`;
+    }
+
+    // Fallback to operator name
+    return row.operator;
 }
