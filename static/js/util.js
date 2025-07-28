@@ -929,7 +929,7 @@ function renderOperators(data, type, row) {
     };
 
     // If type is in iconMap and there's no logo, show icon
-    if (iconMap[row.type] && !row.logo_url) {
+    if (iconMap[row.type] && !row.operator) {
         const { icon, label } = iconMap[row.type];
         return `<i class="fas ${icon}" title="${label}" data-toggle="tooltip" data-placement="top" aria-label="${label}"></i>`;
     }
