@@ -6698,7 +6698,7 @@ def p_timeline(username):
 @app.route("/<username>/import", methods=["POST"])
 @login_required
 def importAll(username):
-    if getUser() != username:
+    if getUser() not in (username, owner):
         abort(403)
 
     data = list(request.form.to_dict().items())[0][0]
