@@ -2693,6 +2693,10 @@ def landing():
                 return redirect(
                     url_for("dynamic_trips", username=username, time="projects")
                 )
+            elif user.default_landing == "new_map":
+                return redirect(
+                    url_for("new_map", username=username)
+                )
             else:  # Default to map
                 return redirect(url_for("user_home", username=username))
 

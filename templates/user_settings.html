@@ -49,6 +49,7 @@
       <label for="default_landing">{{defaultLanding}}</label>
       <select class="form-select" name="default_landing" id="default_landing">
         <option value="map" {% if default_landing=="map" %}selected{% endif %}>🗺️ {{map}}</option>
+        <option value="new_map" {% if default_landing=="new_map" %}selected{% endif %}>🌍 {{map}} β</option>
         <option value="trips" {% if default_landing=="trips" %}selected{% endif %}>🕰️ {{trips}}</option>
         <option value="projects" {% if default_landing=="projects" %}selected{% endif %}>🕒 {{projectList}}</option>
       </select>
