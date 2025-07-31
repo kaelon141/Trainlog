@@ -370,7 +370,7 @@ def generate_cut_lines(polygons: list) -> list:
     # for correct angle/perpendicular math. As EPSG:4326/WGS84 is a geodesic system and EPSG:3857/Web Mercator is a flat metric projection, 
     # angles get distorted as latitude moves away from the equator. Projecting to Web Mercator helps avoid distortion.
     gdf = gpd.GeoDataFrame(geometry=polygons, crs="EPSG:4326").to_crs("EPSG:3857")
-    merged = gdf.unary_union
+    merged = gdf.union_all()
 
     outlines = []
     if isinstance(merged, MultiPolygon):
