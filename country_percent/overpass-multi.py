@@ -366,8 +366,12 @@ def generate_cut_lines(polygons: list) -> list:
     if not polygons:
         return []
 
-    gdf = gpd.GeoDataFrame(geometry=polygons, crs="EPSG:4326")
-    merged = gdf.union_all()
+    # Project polygons to EPSG:3857 (Web mercator, flat metric projection) which is used by web-based maps such as Google Maps, Mapbox etc
+    # for correct angle/perpendicular math. As EPSG:4326/WGS84 is a geodesic system and EPSG:3857/Web Mercator is a flat metric projection, 
+    # angles get distorted as latitude moves away from the equator. Projecting to Web Mercator helps avoid distortion.
+    gdf = gpd.GeoDataFrame(geometry=polygons, crs="EPSG:4326").to_crs("EPSG:3857")
+    merged = gdf.unary_union
+
     outlines = []
     if isinstance(merged, MultiPolygon):
         for poly in merged.geoms:
@@ -408,13 +412,17 @@ def generate_cut_lines(polygons: list) -> list:
         if angle2 > 90:
             perp2 = -perp2
 
-        cut1_end = p_corner + perp1 * 0.002
-        cut2_end = p_corner + perp2 * 0.002
+        # Extend lines by 200 meters. As Web mercator is a flat metric projection, this can just be expressed as 200.
+        cut1_end = p_corner + perp1 * 200
+        cut2_end = p_corner + perp2 * 200
 
         cut_lines.append(
             LineString([tuple(cut1_end), tuple(p_corner), tuple(cut2_end)])
         )
-    return cut_lines
+
+    # Project cut lines from EPSG:3857/Web Mercator back to EPSG:4326/WGS84.
+    cut_gdf = gpd.GeoDataFrame(geometry=cut_lines, crs="EPSG:3857").to_crs("EPSG:4326")
+    return list(cut_gdf.geometry)
 
 
 def merge_overlapping_polygons(
