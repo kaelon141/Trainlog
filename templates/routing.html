@@ -90,6 +90,10 @@ async function saveTrip(continueTrip=false){
         }
     });
 }
+
+window.addEventListener('beforeunload', function (e) {
+    e.preventDefault();
+})
   </script>
 {% endblock %}
 

@@ -1445,5 +1445,18 @@
     });
 
 </script>
+<script defer>
+function beforeUnload(event) {
+    event.preventDefault();
+}
+
+//When the map modal is opened to edit the path, hook up window.beforeunload to ask the user if they really want to leave
+//When navigating away from the page.
+//removeEventListener -> addEventListener is to avoid multiple handler registrations.
+document.getElementById('mapModalButton').addEventListener('click', () => {
+    window.removeEventListener('beforeunload', beforeUnload);
+    window.addEventListener('beforeunload', beforeUnload);
+});
+</script>
 
 {% endblock %}
