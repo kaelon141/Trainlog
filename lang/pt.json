@@ -569,5 +569,15 @@
     "feature_requests_delete_title": "Excluir solicitação de funcionalidade",
     "feature_requests_delete_confirm": "Tem certeza de que deseja excluir?",
     "feature_requests_delete_warning": "Esta ação não pode ser desfeita. Todos os votos também serão excluídos.",
-    "waypoint": "Ponto de passagem"
+    "waypoint": "Ponto de passagem",
+    "direction": "Direção",
+    "coordinates": "Coordenadas",
+    "location": "Localização",
+    "north": "Norte",
+    "south": "Sul",
+    "east": "Leste",
+    "west": "Oeste",
+    "loading": "Carregando...",
+    "travel_bounds_header": "Limites de viagem",
+    "travel_bounds_text": "Aqui estão os pontos mais ao norte, ao sul, ao oeste e ao leste das suas viagens."
 }

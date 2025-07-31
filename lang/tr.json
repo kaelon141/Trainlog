@@ -569,5 +569,15 @@
     "feature_requests_delete_title": "Özellik Talebini Sil",
     "feature_requests_delete_confirm": "Silmek istediğinizden emin misiniz?",
     "feature_requests_delete_warning": "Bu işlem geri alınamaz. Tüm oylar da silinecektir.",
-    "waypoint": "Yol noktası"
+    "waypoint": "Yol noktası",
+    "direction": "Yön",
+    "coordinates": "Koordinatlar",
+    "location": "Konum",
+    "north": "Kuzey",
+    "south": "Güney",
+    "east": "Doğu",
+    "west": "Batı",
+    "loading": "Yükleniyor...",
+    "travel_bounds_header": "Seyahat Sınırları",
+    "travel_bounds_text": "İşte seyahatlerinizin en kuzeyi, en güneyi, en batısı ve en doğusu."
 }

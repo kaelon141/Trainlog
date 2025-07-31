@@ -8696,10 +8696,10 @@ def get_bounds(username):
 
     # Dictionary to store boundary values
     bounds = {
-        "north": {"coordinates": None, "place": None},
-        "west": {"coordinates": None, "place": None},
-        "south": {"coordinates": None, "place": None},
-        "east": {"coordinates": None, "place": None},
+        "north": {"coordinates": None, "place": None, "trip_id": None},
+        "west": {"coordinates": None, "place": None, "trip_id": None},
+        "south": {"coordinates": None, "place": None, "trip_id": None},
+        "east": {"coordinates": None, "place": None, "trip_id": None},
     }
 
     with managed_cursor(mainConn) as main_cursor:
@@ -8723,7 +8723,6 @@ def get_bounds(username):
                         OR utc_filtered_start_datetime = -1
                     )
                     AND utc_filtered_start_datetime != 1
-                AND type != 'ferry'
                 AND username = :username
             """,
             {"username": username},
@@ -8736,7 +8735,7 @@ def get_bounds(username):
     with managed_cursor(pathConn) as path_cursor:
         # Fetch all paths associated with the user's trips using IN
         path_cursor.execute(
-            f"SELECT path FROM paths WHERE trip_id IN ({','.join(['?'] * len(trip_ids))})",
+            f"SELECT trip_id, path FROM paths WHERE trip_id IN ({','.join(['?'] * len(trip_ids))})",
             trip_ids,
         )
         paths = path_cursor.fetchall()
@@ -8745,31 +8744,35 @@ def get_bounds(username):
         return jsonify({"error": "No paths found for this user's trips"}), 404
 
     # Process each path to update the boundary values
-    for path_row in paths:
-        path = json.loads(path_row[0])  # path is a list of lists with coordinates
+    for trip_id, path_row in paths:
+        path = json.loads(path_row)  # path is a list of lists with coordinates
         for coord in path:
             lat, lon = coord
-            # Update bounds with coordinates and place information
+            # Update bounds with coordinates, place information, and trip_id
             if (
                 bounds["north"]["coordinates"] is None
                 or lat > bounds["north"]["coordinates"][0]
             ):
                 bounds["north"]["coordinates"] = (lat, lon)
+                bounds["north"]["trip_id"] = trip_id
             if (
                 bounds["west"]["coordinates"] is None
                 or lon < bounds["west"]["coordinates"][1]
             ):
                 bounds["west"]["coordinates"] = (lat, lon)
+                bounds["west"]["trip_id"] = trip_id
             if (
                 bounds["south"]["coordinates"] is None
                 or lat < bounds["south"]["coordinates"][0]
             ):
                 bounds["south"]["coordinates"] = (lat, lon)
+                bounds["south"]["trip_id"] = trip_id
             if (
                 bounds["east"]["coordinates"] is None
                 or lon > bounds["east"]["coordinates"][1]
             ):
                 bounds["east"]["coordinates"] = (lat, lon)
+                bounds["east"]["trip_id"] = trip_id
 
     # Fetch place names for each boundary using the stored coordinates
     for direction in bounds:

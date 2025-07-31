@@ -569,5 +569,15 @@
     "feature_requests_delete_title": "Delete Feature Request",
     "feature_requests_delete_confirm": "Are you sure you want to delete",
     "feature_requests_delete_warning": "This action cannot be undone. All votes will also be deleted.",
-    "waypoint": "Waypoint"
+    "waypoint": "Waypoint",
+    "direction": "Direction",
+    "coordinates": "Coordinates",
+    "location": "Location",
+    "north": "North",
+    "south": "South",
+    "east": "East",
+    "west": "West",
+    "loading": "Loading...",
+    "travel_bounds_header": "Travel Bounds",
+    "travel_bounds_text": "Here are the northernmost, southernmost, westernmost, and easternmost points of your travels."
 }

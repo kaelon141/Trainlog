@@ -569,5 +569,15 @@
     "feature_requests_delete_title": "Funktionsanfrage löschen",
     "feature_requests_delete_confirm": "Sind Sie sicher, dass Sie löschen möchten?",
     "feature_requests_delete_warning": "Diese Aktion kann nicht rückgängig gemacht werden. Alle Stimmen werden ebenfalls gelöscht.",
-    "waypoint": "Wegpunkt"
+    "waypoint": "Wegpunkt",
+    "direction": "Richtung",
+    "coordinates": "Koordinaten",
+    "location": "Standort",
+    "north": "Norden",
+    "south": "Süden",
+    "east": "Osten",
+    "west": "Westen",
+    "loading": "Laden...",
+    "travel_bounds_header": "Reisegrenzen",
+    "travel_bounds_text": "Hier sind die nördlichsten, südlichsten, westlichsten und östlichsten Punkte deiner Reisen."
 }

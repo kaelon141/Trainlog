@@ -569,5 +569,15 @@
     "feature_requests_delete_title": "Ta bort funktionsbegäran",
     "feature_requests_delete_confirm": "Är du säker på att du vill ta bort?",
     "feature_requests_delete_warning": "Denna åtgärd kan inte ångras. Alla röster kommer också att tas bort.",
-    "waypoint": "Vägpunkt"
+    "waypoint": "Vägpunkt",
+    "direction": "Riktning",
+    "coordinates": "Koordinater",
+    "location": "Plats",
+    "north": "Norr",
+    "south": "Söder",
+    "east": "Öster",
+    "west": "Väster",
+    "loading": "Laddar...",
+    "travel_bounds_header": "Resegränser",
+    "travel_bounds_text": "Här är de nordligaste, sydligaste, västligaste och östligaste punkterna på dina resor."
 }

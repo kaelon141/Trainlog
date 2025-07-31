@@ -16,7 +16,8 @@
             {{ translations['loading'] or "Loading..." }}
         </div>
         <div id="bounds-error" class="error my-3 text-center" style="display:none;"></div>
-        <div id="bounds-table-container" style="display:none;">
+        <div id="bounds-map-container" style="display:none;">
+            <div id="map" style="height: 500px; width: 100%; margin-bottom: 20px; border: 1px solid #dee2e6; border-radius: 0.375rem;"></div>
             <table class="table table-bordered bounds-table">
                 <thead>
                     <tr>
@@ -24,6 +25,7 @@
                         <th style="color:unset;">{{ translations['coordinates'] or "Coordinates" }}</th>
                         <th style="color:unset;">{{ translations['location'] or "Place" }}</th>
                         <th style="color:unset;">{{ translations['map'] or "Map" }}</th>
+                        <th style="color:unset;">{{ translations['singularTrip'] or "Trip" }}</th>
                     </tr>
                 </thead>
                 <tbody id="bounds-table-body">
@@ -34,9 +36,135 @@
     </div>
 </div>
 
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+<style>
+.custom-marker {
+    background: none !important;
+    border: none !important;
+}
+</style>
+
 <script>
+let map;
+let boundsLayer;
+
+// Colors for different directions
+const directionColors = {
+    north: '#dc3545',
+    south: '#28a745',
+    east: '#ffc107',
+    west: '#17a2b8'
+};
+
+function createCustomIcon(direction) {
+    return L.divIcon({
+        className: 'custom-marker',
+        html: `<div style="
+            background-color: ${directionColors[direction]};
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+        ">${direction[0].toUpperCase()}</div>`,
+        iconSize: [26, 26],
+        iconAnchor: [13, 13]
+    });
+}
+
+function initMap() {
+    map = L.map('map', {
+        preferCanvas: true,
+        zoomControl: true
+    }).setView([40.0, 0.0], 2);
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 18,
+        minZoom: 1
+    }).addTo(map);
+    
+    boundsLayer = L.layerGroup().addTo(map);
+}
+
+function displayBoundsOnMap(data) {
+    // Clear existing markers
+    boundsLayer.clearLayers();
+    
+    const validBounds = [];
+    
+    // Add markers for each direction
+    for (const dir of ['north', 'south', 'west', 'east']) {
+        const bound = data[dir];
+        if (bound && bound.coordinates) {
+            const [lat, lng] = bound.coordinates;
+            const location = bound.place?.location || "{{ translations['unknown'] or 'Unknown' }}";
+            
+            const marker = L.marker([lat, lng], {
+                icon: createCustomIcon(dir)
+            });
+            
+            const directionNames = {
+                north: "{{ translations['north'] or 'North' }}",
+                south: "{{ translations['south'] or 'South' }}",
+                east:  "{{ translations['east'] or 'East' }}",
+                west:  "{{ translations['west'] or 'West' }}"
+            };
+            
+            const tripLink = bound.trip_id ? 
+                `{{ url_for("public_trip", tripIds="") }}${bound.trip_id}` : null;
+            
+            const popupContent = `
+                <div style="font-family: inherit; min-width: 200px;">
+                    <h6 style="margin: 0 0 10px 0; color: ${directionColors[dir]};">
+                        ${directionNames[dir]}
+                    </h6>
+                    <p style="margin: 5px 0; font-size: 0.9rem;"><strong>{{ translations['location'] or "Place" }}:</strong> ${location}</p>
+                    <p style="margin: 5px 0; font-size: 0.9rem;"><strong>{{ translations['coordinates'] or "Coordinates" }}:</strong><br>
+                        <code>${lat.toFixed(5)}, ${lng.toFixed(5)}</code>
+                    </p>
+                    <div style="margin-top: 10px;">
+                        ${bound.place?.osm_link ? 
+                            `<a href="${bound.place.osm_link}" target="_blank" class="btn btn-sm btn-outline-primary" style="margin-right: 5px;">OSM</a>` : ''
+                        }
+                        ${tripLink ? 
+                            `<a href="${tripLink}" class="btn btn-sm btn-outline-success">{{ translations['singularTrip'] or 'Trip' }}</a>` : ''
+                        }
+                    </div>
+                </div>
+            `;
+            
+            marker.bindPopup(popupContent);
+            boundsLayer.addLayer(marker);
+            validBounds.push([lat, lng]);
+        }
+    }
+    
+    // Fit map to show all bounds with better handling
+    if (validBounds.length > 0) {
+        const group = new L.LatLngBounds(validBounds);
+        // Ensure map container is properly sized before fitting bounds
+        map.invalidateSize();
+        setTimeout(() => {
+            map.fitBounds(group, { 
+                padding: [20, 20], 
+                maxZoom: 12
+            });
+        }, 100);
+    }
+}
+
 document.addEventListener("DOMContentLoaded", function() {
     const username = "{{ username }}";
+    
     fetch(`/getBounds/${username}`)
         .then(r => r.json())
         .then(data => {
@@ -46,9 +174,18 @@ document.addEventListener("DOMContentLoaded", function() {
                 document.getElementById("bounds-error").style.display = "block";
                 return;
             }
-            const tableContainer = document.getElementById("bounds-table-container");
-            tableContainer.style.display = "block";
+            const mapContainer = document.getElementById("bounds-map-container");
+            mapContainer.style.display = "block";
             const tableBody = document.getElementById("bounds-table-body");
+
+            // Initialize map only after container is visible
+            setTimeout(() => {
+                initMap();
+                // Wait a bit more for map to be fully ready, then add bounds
+                setTimeout(() => {
+                    displayBoundsOnMap(data);
+                }, 500);
+            }, 100);
 
             // Map directions to human-readable, you can add translations here
             const directionNames = {
@@ -69,11 +206,15 @@ document.addEventListener("DOMContentLoaded", function() {
                 let osmLink = bound.place && bound.place.osm_link
                     ? `<a href="${bound.place.osm_link}" target="_blank" class="btn btn-sm btn-outline-primary">OSM</a>`
                     : '';
+                let tripLink = bound.trip_id
+                    ? `<a href="{{ url_for("public_trip", tripIds="") }}${bound.trip_id}" class="btn btn-sm btn-outline-success">{{ translations['singularTrip'] or 'Trip' }}</a>`
+                    : '';
                 let row = `<tr>
                     <td><b>${directionNames[dir]}</b></td>
                     <td><code>${coord}</code></td>
                     <td>${location}</td>
                     <td>${osmLink}</td>
+                    <td>${tripLink}</td>
                 </tr>`;
                 tableBody.insertAdjacentHTML('beforeend', row);
             }

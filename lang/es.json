@@ -569,5 +569,15 @@
     "feature_requests_delete_title": "Eliminar Solicitud de Función",
     "feature_requests_delete_confirm": "¿Estás seguro de que deseas eliminar?",
     "feature_requests_delete_warning": "Esta acción no se puede deshacer. Todos los votos también serán eliminados.",
-    "waypoint": "Punto de referencia"
+    "waypoint": "Punto de referencia",
+    "direction": "Dirección",
+    "coordinates": "Coordenadas",
+    "location": "Ubicación",
+    "north": "Norte",
+    "south": "Sur",
+    "east": "Este",
+    "west": "Oeste",
+    "loading": "Cargando...",
+    "travel_bounds_header": "Límites de viaje",
+    "travel_bounds_text": "Aquí están los puntos más al norte, más al sur, más al oeste y más al este de tus viajes."
 }

@@ -569,5 +569,15 @@
     "feature_requests_delete_title": "機能リクエストを削除する",
     "feature_requests_delete_confirm": "本当に削除しますか？",
     "feature_requests_delete_warning": "この操作は元に戻せません。すべての投票も削除されます。",
-    "waypoint": "ウェイポイント"
+    "waypoint": "ウェイポイント",
+    "direction": "方向",
+    "coordinates": "座標",
+    "location": "場所",
+    "north": "北",
+    "south": "南",
+    "east": "東",
+    "west": "西",
+    "loading": "読み込み中...",
+    "travel_bounds_header": "旅行範囲",
+    "travel_bounds_text": "こちらがあなたの旅行の最北端、最南端、最西端、最東端のポイントです。"
 }

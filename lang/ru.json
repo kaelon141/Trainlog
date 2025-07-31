@@ -569,5 +569,15 @@
     "feature_requests_delete_title": "Удалить запрос функции",
     "feature_requests_delete_confirm": "Вы уверены, что хотите удалить?",
     "feature_requests_delete_warning": "Это действие нельзя отменить. Все голоса также будут удалены.",
-    "waypoint": "Путевая точка"
+    "waypoint": "Путевая точка",
+    "direction": "Направление",
+    "coordinates": "Координаты",
+    "location": "Местоположение",
+    "north": "Север",
+    "south": "Юг",
+    "east": "Восток",
+    "west": "Запад",
+    "loading": "Загрузка...",
+    "travel_bounds_header": "Пределы путешествий",
+    "travel_bounds_text": "Вот самые северные, южные, западные и восточные точки ваших путешествий."
 }

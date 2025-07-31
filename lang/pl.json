@@ -569,5 +569,15 @@
     "feature_requests_delete_title": "Usuń prośbę o funkcję",
     "feature_requests_delete_confirm": "Czy na pewno chcesz usunąć?",
     "feature_requests_delete_warning": "Tego działania nie można cofnąć. Wszystkie głosy również zostaną usunięte.",
-    "waypoint": "Punkt nawigacyjny"
+    "waypoint": "Punkt nawigacyjny",
+    "direction": "Kierunek",
+    "coordinates": "Współrzędne",
+    "location": "Lokalizacja",
+    "north": "Północ",
+    "south": "Południe",
+    "east": "Wschód",
+    "west": "Zachód",
+    "loading": "Ładowanie...",
+    "travel_bounds_header": "Granice podróży",
+    "travel_bounds_text": "Oto najbardziej wysunięte na północ, południe, zachód i wschód punkty Twoich podróży."
 }

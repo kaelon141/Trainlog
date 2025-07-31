@@ -569,5 +569,15 @@
     "feature_requests_delete_title": "删除功能请求",
     "feature_requests_delete_confirm": "您确定要删除吗？",
     "feature_requests_delete_warning": "此操作无法撤销。所有投票也将被删除。",
-    "waypoint": "航点"
+    "waypoint": "航点",
+    "direction": "方向",
+    "coordinates": "坐标",
+    "location": "位置",
+    "north": "北",
+    "south": "南",
+    "east": "东",
+    "west": "西",
+    "loading": "加载中...",
+    "travel_bounds_header": "旅行范围",
+    "travel_bounds_text": "这是您旅行中最北、最南、最西和最东的点。"
 }

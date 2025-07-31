@@ -569,5 +569,15 @@
     "feature_requests_delete_title": "Видалити запит на функцію",
     "feature_requests_delete_confirm": "Ви впевнені, що хочете видалити?",
     "feature_requests_delete_warning": "Цю дію не можна скасувати. Усі голоси також будуть видалені.",
-    "waypoint": "Точка маршруту"
+    "waypoint": "Точка маршруту",
+    "direction": "Напрямок",
+    "coordinates": "Координати",
+    "location": "Місцезнаходження",
+    "north": "Північ",
+    "south": "Південь",
+    "east": "Схід",
+    "west": "Захід",
+    "loading": "Завантаження...",
+    "travel_bounds_header": "Межі подорожі",
+    "travel_bounds_text": "Ось найпівнічніша, найпівденніша, найзахідніша і найсхідніша точки ваших подорожей."
 }

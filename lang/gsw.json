@@ -569,5 +569,15 @@
     "feature_requests_delete_title": "Funktion Aafroge lösche",
     "feature_requests_delete_confirm": "Bisch sicher, dass du wotsch lösche?",
     "feature_requests_delete_warning": "Die Aktion cha nüm rückgängig gmacht werde. Alli Stimm werde au glöscht.",
-    "waypoint": "Wägpunkt"
+    "waypoint": "Wägpunkt",
+    "direction": "Richtig",
+    "coordinates": "Koordinate",
+    "location": "Standort",
+    "north": "Nord",
+    "south": "Süd",
+    "east": "Ost",
+    "west": "West",
+    "loading": "Lade...",
+    "travel_bounds_header": "Reisegrenze",
+    "travel_bounds_text": "Da sind die nördlichste, südlichste, westlichste und östlichste Punkte vo dine Riese."
 }

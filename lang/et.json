@@ -569,5 +569,15 @@
     "feature_requests_delete_title": "Funktsioonisoovi kustutamine",
     "feature_requests_delete_confirm": "Kas olete kindel, et soovite kustutada?",
     "feature_requests_delete_warning": "Seda toimingut ei saa tagasi võtta. Kõik hääled kustutatakse ka.",
-    "waypoint": "Vahepunkt"
+    "waypoint": "Vahepunkt",
+    "direction": "Suund",
+    "coordinates": "Koordinaadid",
+    "location": "Asukoht",
+    "north": "Põhi",
+    "south": "Lõuna",
+    "east": "Ida",
+    "west": "Lääs",
+    "loading": "Laadimine...",
+    "travel_bounds_header": "Reisipiirid",
+    "travel_bounds_text": "Siin on sinu reiside põhjapoolseim, lõunapoolseim, läänepoolseim ja idapoolseim punkt."
 }

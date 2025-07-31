@@ -569,5 +569,15 @@
     "feature_requests_delete_title": "Elimina richiesta di funzionalità",
     "feature_requests_delete_confirm": "Sei sicuro di voler eliminare?",
     "feature_requests_delete_warning": "Questa azione non può essere annullata. Tutti i voti saranno inoltre eliminati.",
-    "waypoint": "Punto di passaggio"
+    "waypoint": "Punto di passaggio",
+    "direction": "Direzione",
+    "coordinates": "Coordinate",
+    "location": "Posizione",
+    "north": "Nord",
+    "south": "Sud",
+    "east": "Est",
+    "west": "Ovest",
+    "loading": "Caricamento...",
+    "travel_bounds_header": "Limiti di viaggio",
+    "travel_bounds_text": "Ecco i punti più a nord, sud, ovest ed est dei tuoi viaggi."
 }

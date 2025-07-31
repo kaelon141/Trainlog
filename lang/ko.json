@@ -569,5 +569,15 @@
     "feature_requests_delete_title": "기능 요청 삭제",
     "feature_requests_delete_confirm": "삭제하시겠습니까?",
     "feature_requests_delete_warning": "이 작업은 되돌릴 수 없습니다. 모든 투표도 삭제됩니다.",
-    "waypoint": "웨이포인트"
+    "waypoint": "웨이포인트",
+    "direction": "방향",
+    "coordinates": "좌표",
+    "location": "위치",
+    "north": "북쪽",
+    "south": "남쪽",
+    "east": "동쪽",
+    "west": "서쪽",
+    "loading": "로딩 중...",
+    "travel_bounds_header": "여행 범위",
+    "travel_bounds_text": "여기 당신의 여행 중 가장 북쪽, 남쪽, 서쪽 및 동쪽에 위치한 지점들이 있습니다."
 }

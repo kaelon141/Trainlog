@@ -569,5 +569,15 @@
     "feature_requests_delete_title": "Smazat požadavek na funkci",
     "feature_requests_delete_confirm": "Jste si jistý, že chcete smazat?",
     "feature_requests_delete_warning": "Tuto akci nelze vrátit zpět. Všechny hlasy budou také smazány.",
-    "waypoint": "Bod trasy"
+    "waypoint": "Bod trasy",
+    "direction": "Směr",
+    "coordinates": "Souřadnice",
+    "location": "Umístění",
+    "north": "Sever",
+    "south": "Jih",
+    "east": "Východ",
+    "west": "Západ",
+    "loading": "Načítání...",
+    "travel_bounds_header": "Hranice cestování",
+    "travel_bounds_text": "Zde jsou nejsevernější, nejjižnější, nejzápadnější a nejvýchodnější body vašich cest."
 }

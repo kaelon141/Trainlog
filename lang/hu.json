@@ -569,5 +569,15 @@
     "feature_requests_delete_title": "Funkciókérés törlése",
     "feature_requests_delete_confirm": "Biztosan törölni szeretné?",
     "feature_requests_delete_warning": "Ez a művelet nem vonható vissza. Minden szavazat törlődik.",
-    "waypoint": "Útpont"
+    "waypoint": "Útpont",
+    "direction": "Irány",
+    "coordinates": "Koordináták",
+    "location": "Helyszín",
+    "north": "Észak",
+    "south": "Dél",
+    "east": "Kelet",
+    "west": "Nyugat",
+    "loading": "Betöltés...",
+    "travel_bounds_header": "Utazási határok",
+    "travel_bounds_text": "Itt vannak az utazásaid legészakibb, legdélibb, legnyugatibb és legkeletibb pontjai."
 }

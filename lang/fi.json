@@ -569,5 +569,15 @@
     "feature_requests_delete_title": "Poista ominaisuuspyyntö",
     "feature_requests_delete_confirm": "Oletko varma, että haluat poistaa?",
     "feature_requests_delete_warning": "Tätä toimintoa ei voi peruuttaa. Kaikki äänet menetetään.",
-    "waypoint": "Reittipiste"
+    "waypoint": "Reittipiste",
+    "direction": "Suunta",
+    "coordinates": "Koordinaatit",
+    "location": "Sijainti",
+    "north": "Pohjoinen",
+    "south": "Etelä",
+    "east": "Itä",
+    "west": "Länsi",
+    "loading": "Ladataan...",
+    "travel_bounds_header": "Matkarajat",
+    "travel_bounds_text": "Tässä ovat matkasi pohjoisin, eteläisin, läntisin ja itäisin piste."
 }
