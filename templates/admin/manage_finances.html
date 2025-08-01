@@ -15,6 +15,33 @@
                     <i class="fas fa-sync"></i> Sync Stripe
                 </button>
             </form>
+            <button class="btn btn-outline-secondary" 
+                    type="button" 
+                    data-bs-toggle="collapse" 
+                    data-bs-target="#csvImportCollapse">
+                <i class="fas fa-file-csv"></i> Import CSV
+            </button>
+            <div class="collapse" id="csvImportCollapse">
+                <div class="card border-secondary">
+                    <div class="card-header bg-light text-dark d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0"><i class="fas fa-upload"></i> CSV Import</h6>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ url_for('finance.ingest_csv') }}" enctype="multipart/form-data">
+                            <div class="row g-2 align-items-center">
+                                <div class="col-md-8">
+                                    <input type="file" name="file" accept=".csv" class="form-control form-control-sm" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <button type="submit" class="btn btn-secondary btn-sm w-100">
+                                        <i class="fas fa-upload"></i> Upload
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 

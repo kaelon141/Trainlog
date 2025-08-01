@@ -1,5 +1,5 @@
 # src/api/finance.py - Fixed routes with proper separation
-
+import csv
 from datetime import datetime, date
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 
@@ -212,4 +212,75 @@ def sync_stripe():
     except Exception as e:
         flash(f"Error syncing Stripe data: {str(e)}", "error")
     
+    return redirect(url_for("finance.manage"))
+
+    import csv
+from io import StringIO
+
+@finance_blueprint.route("/finances/ingest-csv", methods=["POST"])
+@owner_required
+def ingest_csv():
+    """Ingest hosting, translation, and API subscription expenses from CSV"""
+    try:
+        if "file" not in request.files:
+            flash("No CSV file uploaded", "error")
+            return redirect(url_for("finance.manage"))
+
+        file = request.files["file"]
+        if file.filename == "":
+            flash("No file selected", "error")
+            return redirect(url_for("finance.manage"))
+
+        stream = StringIO(file.stream.read().decode("utf-8"))
+        reader = csv.DictReader(stream)
+
+        added_count = 0
+        skipped_count = 0
+
+        for row in reader:
+            expense_type = row.get("type", "").strip()
+            amount = float(row.get("amount", 0))
+            currency = row.get("currency", "EUR").upper()
+            from_date = row.get("from_date")
+            to_date = row.get("to_date")
+            date_field = row.get("date")
+
+            if not expense_type or amount <= 0:
+                skipped_count += 1
+                continue
+
+            # Recurring expense (hosting or API subscription)
+            if from_date:
+                start_date = datetime.strptime(from_date, "%Y-%m-%d").date()
+                end_date = None
+                if to_date and to_date.strip().lower() != "none":
+                    end_date = datetime.strptime(to_date, "%Y-%m-%d").date()
+
+                SimpleFinanceService.add_recurring_expense(
+                    name=expense_type,
+                    amount=amount,
+                    currency=currency,
+                    start_date=start_date,
+                    end_date=end_date,
+                )
+                added_count += 1
+
+            # One-time expense (translation)
+            elif date_field:
+                expense_date = datetime.strptime(date_field, "%Y-%m-%d %H:%M:%S").date()
+                SimpleFinanceService.add_one_time_expense(
+                    name=expense_type or "Translation",
+                    amount=amount,
+                    currency=currency,
+                    expense_date=expense_date,
+                )
+                added_count += 1
+            else:
+                skipped_count += 1
+
+        flash(f"CSV ingestion complete: {added_count} added, {skipped_count} skipped", "success")
+    except Exception as e:
+        raise(e)
+        flash(f"Error ingesting CSV: {str(e)}", "error")
+
     return redirect(url_for("finance.manage"))
