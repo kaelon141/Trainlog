@@ -87,7 +87,8 @@
     "user_settings": "Postavke",
     "language": "Jezik prikaza",
     "en": "🇬🇧 Engleski",
-    "pt": "🇵🇹 Portugalski",
+    "pt-PT": "🇵🇹 Portugalski",
+    "pt-BR": "🇧🇷 Brazilski portugalski",
     "ko": "🇰🇴 Korejski",
     "uk": "🇺🇦 Ukrajinski",
     "da": "🇩🇰 Danski",
@@ -569,5 +570,15 @@
     "feature_requests_delete_title": "Izbriši zahtjev za značajku",
     "feature_requests_delete_confirm": "Jeste li sigurni da želite izbrisati?",
     "feature_requests_delete_warning": "Ova radnja se ne može poništiti. Svi glasovi će također biti izbrisani.",
-    "waypoint": "Putna točka"
+    "waypoint": "Putna točka",
+    "direction": "Smjer",
+    "coordinates": "Koordinate",
+    "location": "Lokacija",
+    "north": "Sjever",
+    "south": "Jug",
+    "east": "Istok",
+    "west": "Zapad",
+    "loading": "Učitavanje...",
+    "travel_bounds_header": "Granice putovanja",
+    "travel_bounds_text": "Ovdje su najsjevernija, najjužnija, najzapadnija i najistočnija točka vaših putovanja."
 }

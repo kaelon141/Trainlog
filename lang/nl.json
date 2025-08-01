@@ -87,7 +87,8 @@
     "user_settings": "Instellingen",
     "language": "Taal",
     "en": "🇬🇧 Engels",
-    "pt": "🇵🇹 Portugees",
+    "pt-PT": "🇵🇹 Portugees",
+    "pt-BR": "🇧🇷 Braziliaans Portugees",
     "ko": "🇰🇴 Koreaans",
     "uk": "🇺🇦 Oekraïens",
     "da": "🇩🇰 Deens",
@@ -569,5 +570,15 @@
     "feature_requests_delete_title": "Functieverzoek verwijderen",
     "feature_requests_delete_confirm": "Weet je zeker dat je wilt verwijderen?",
     "feature_requests_delete_warning": "Deze actie kan niet ongedaan gemaakt worden. Alle stemmen zullen ook worden verwijderd.",
-    "waypoint": "Routepunt"
+    "waypoint": "Routepunt",
+    "direction": "Richting",
+    "coordinates": "Coördinaten",
+    "location": "Locatie",
+    "north": "Noord",
+    "south": "Zuid",
+    "east": "Oost",
+    "west": "West",
+    "loading": "Laden...",
+    "travel_bounds_header": "Reisgrenzen",
+    "travel_bounds_text": "Hier zijn de noordelijkste, zuidelijkste, westelijkste en oostelijkste punten van je reizen."
 }

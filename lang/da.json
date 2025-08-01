@@ -87,7 +87,8 @@
     "user_settings": "Indstillinger",
     "language": "Visningssprog",
     "en": "🇬🇧 Engelsk",
-    "pt": "🇵🇹 Portugisisk",
+    "pt-PT": "🇵🇹 Portugisisk",
+    "pt-BR": "🇧🇷 Brasiliansk portugisisk",
     "ko": "🇰🇴 Koreansk",
     "uk": "🇺🇦 Ukrainsk",
     "da": "🇩🇰 Dansk",
@@ -569,5 +570,15 @@
     "feature_requests_delete_title": "Slet funktionsanmodning",
     "feature_requests_delete_confirm": "Er du sikker på, at du vil slette?",
     "feature_requests_delete_warning": "Denne handling kan ikke fortrydes. Alle stemmer vil også blive slettet.",
-    "waypoint": "Vejpunkt"
+    "waypoint": "Vejpunkt",
+    "direction": "Retning",
+    "coordinates": "Koordinater",
+    "location": "Placering",
+    "north": "Nord",
+    "south": "Syd",
+    "east": "Øst",
+    "west": "Vest",
+    "loading": "Indlæser...",
+    "travel_bounds_header": "Rejsegrænser",
+    "travel_bounds_text": "Her er de nordligste, sydligste, vestligste og østligste punkter på dine rejser."
 }

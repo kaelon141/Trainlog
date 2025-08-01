@@ -1,0 +1,422 @@
+{% extends "bootstrap/layout.html" %}
+{% block content %}
+
+{% include "bootstrap/navigation.html"%}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Manage Finances</h2>
+        <div>
+            <a href="{{ url_for('finance.finances') }}" class="btn btn-outline-primary me-2">
+                <i class="fas fa-chart-line"></i> Dashboard
+            </a>
+            <form method="POST" action="{{ url_for('finance.sync_stripe') }}" class="d-inline">
+                <button type="submit" class="btn btn-outline-info">
+                    <i class="fas fa-sync"></i> Sync Stripe
+                </button>
+            </form>
+            <button class="btn btn-outline-secondary" 
+                    type="button" 
+                    data-bs-toggle="collapse" 
+                    data-bs-target="#csvImportCollapse">
+                <i class="fas fa-file-csv"></i> Import CSV
+            </button>
+            <div class="collapse" id="csvImportCollapse">
+                <div class="card border-secondary">
+                    <div class="card-header bg-light text-dark d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0"><i class="fas fa-upload"></i> CSV Import</h6>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ url_for('finance.ingest_csv') }}" enctype="multipart/form-data">
+                            <div class="row g-2 align-items-center">
+                                <div class="col-md-8">
+                                    <input type="file" name="file" accept=".csv" class="form-control form-control-sm" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <button type="submit" class="btn btn-secondary btn-sm w-100">
+                                        <i class="fas fa-upload"></i> Upload
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Add Forms -->
+    <div class="row mb-4">
+        <!-- Add Recurring Expense -->
+        <div class="col-md-4 mb-3">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h6 class="mb-0"><i class="fas fa-repeat"></i> Add Recurring Expense</h6>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('finance.add_recurring') }}">
+                        <div class="mb-2">
+                            <input type="text" class="form-control form-control-sm" name="name" placeholder="Name" required>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-8">
+                                <input type="number" step="0.01" min="0.01" class="form-control form-control-sm" name="amount" placeholder="Amount" required>
+                            </div>
+                            <div class="col-4">
+                                <select class="form-select form-select-sm" name="currency">
+                                    <option value="EUR" selected>EUR</option>
+                                    <option value="USD">USD</option>
+                                    <option value="GBP">GBP</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-6">
+                                <input type="date" class="form-control form-control-sm" name="start_date" required>
+                            </div>
+                            <div class="col-6">
+                                <input type="date" class="form-control form-control-sm" name="end_date" placeholder="End (optional)">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-danger btn-sm w-100">Add Recurring</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add One-Time Expense -->
+        <div class="col-md-4 mb-3">
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="mb-0"><i class="fas fa-money-bill"></i> Add One-Time Expense</h6>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('finance.add_onetime') }}">
+                        <div class="mb-2">
+                            <input type="text" class="form-control form-control-sm" name="name" placeholder="Name" required>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-8">
+                                <input type="number" step="0.01" min="0.01" class="form-control form-control-sm" name="amount" placeholder="Amount" required>
+                            </div>
+                            <div class="col-4">
+                                <select class="form-select form-select-sm" name="currency">
+                                    <option value="EUR" selected>EUR</option>
+                                    <option value="USD">USD</option>
+                                    <option value="GBP">GBP</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-2">
+                            <input type="date" class="form-control form-control-sm" name="expense_date" required>
+                        </div>
+                        <button type="submit" class="btn btn-warning btn-sm w-100">Add One-Time</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Revenue -->
+        <div class="col-md-4 mb-3">
+            <div class="card border-success">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0"><i class="fas fa-plus-circle"></i> Add Revenue</h6>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('finance.add_revenue') }}">
+                        <div class="mb-2">
+                            <input type="text" class="form-control form-control-sm" name="name" placeholder="Name" required>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-8">
+                                <input type="number" step="0.01" min="0.01" class="form-control form-control-sm" name="amount" placeholder="Amount" required>
+                            </div>
+                            <div class="col-4">
+                                <select class="form-select form-select-sm" name="currency">
+                                    <option value="EUR" selected>EUR</option>
+                                    <option value="USD">USD</option>
+                                    <option value="GBP">GBP</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-2">
+                            <input type="date" class="form-control form-control-sm" name="revenue_date" required>
+                        </div>
+                        <button type="submit" class="btn btn-success btn-sm w-100">Add Revenue</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Tables -->
+    <div class="row">
+        <!-- Recurring Expenses -->
+        <div class="col-lg-4 mb-4">
+            <div class="card">
+                <div class="card-header bg-danger text-white d-flex justify-content-between">
+                    <h6 class="mb-0">Recurring Expenses</h6>
+                    <span class="badge bg-light text-dark">{{ recurring_expenses|length }}</span>
+                </div>
+                <div class="card-body p-0">
+                    {% if recurring_expenses %}
+                        <div style="max-height: 400px; overflow-y: auto;">
+                            {% for expense in recurring_expenses %}
+                            <div class="d-flex justify-content-between align-items-center p-2 border-bottom {{ 'bg-light' if not expense.is_active else '' }}">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex align-items-center">
+                                        <span class="expense-dot me-2" data-name="{{ expense.name.lower() }}"></span>
+                                        <div>
+                                            <strong class="d-block">{{ expense.name }}</strong>
+                                            <small class="text-muted">
+                                                {{ "%.2f"|format(expense.amount) }} {{ expense.currency }} 
+                                                | {{ expense.start_date.strftime('%m/%y') }} - {{ expense.end_date.strftime('%m/%y') if expense.end_date else 'ongoing' }}
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="btn-group btn-group-sm">
+                                    <form method="POST" action="{{ url_for('finance.toggle_expense', expense_id=expense.id) }}" class="d-inline">
+                                        <button type="submit" class="btn btn-outline-{{ 'secondary' if expense.is_active else 'success' }} btn-sm" 
+                                                title="{{ 'Pause' if expense.is_active else 'Resume' }}">
+                                            <i class="fas fa-{{ 'pause' if expense.is_active else 'play' }}"></i>
+                                        </button>
+                                    </form>
+                                    <form method="POST" action="{{ url_for('finance.delete_expense', expense_id=expense.id) }}" 
+                                          class="d-inline" onsubmit="return confirm('Delete {{ expense.name }}?')">
+                                        <button type="submit" class="btn btn-outline-danger btn-sm">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="p-3 text-center text-muted">
+                            <i class="fas fa-inbox mb-2"></i>
+                            <p class="mb-0">No recurring expenses</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- One-Time Expenses -->
+        <div class="col-lg-4 mb-4">
+            <div class="card">
+                <div class="card-header bg-warning text-dark d-flex justify-content-between">
+                    <h6 class="mb-0">One-Time Expenses</h6>
+                    <span class="badge bg-dark text-white">{{ one_time_expenses|length }}</span>
+                </div>
+                <div class="card-body p-0">
+                    {% if one_time_expenses %}
+                        <div style="max-height: 400px; overflow-y: auto;">
+                            {% for expense in one_time_expenses|sort(attribute='expense_date', reverse=True) %}
+                            <div class="d-flex justify-content-between align-items-center p-2 border-bottom">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex align-items-center">
+                                        <span class="expense-dot me-2" data-name="{{ expense.name.lower() }}"></span>
+                                        <div>
+                                            <strong class="d-block">{{ expense.name }}</strong>
+                                            <small class="text-muted">
+                                                {{ "%.2f"|format(expense.amount) }} {{ expense.currency }} 
+                                                | {{ expense.expense_date.strftime('%m/%d/%y') }}
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <form method="POST" action="{{ url_for('finance.delete_expense', expense_id=expense.id) }}" 
+                                          class="d-inline" onsubmit="return confirm('Delete {{ expense.name }}?')">
+                                        <button type="submit" class="btn btn-outline-danger btn-sm">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="p-3 text-center text-muted">
+                            <i class="fas fa-inbox mb-2"></i>
+                            <p class="mb-0">No one-time expenses</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Revenue -->
+        <div class="col-lg-4 mb-4">
+            <div class="card">
+                <div class="card-header bg-success text-white d-flex justify-content-between">
+                    <h6 class="mb-0">Revenue</h6>
+                    <span class="badge bg-light text-dark">{{ revenues|length }}</span>
+                </div>
+                <div class="card-body p-0">
+                    {% if revenues %}
+                        <div style="max-height: 400px; overflow-y: auto;">
+                            {% for revenue in revenues|sort(attribute='revenue_date', reverse=True) %}
+                            <div class="d-flex justify-content-between align-items-center p-2 border-bottom">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex align-items-center">
+                                        <span class="revenue-dot me-2" data-name="{{ revenue.name.lower() }}"></span>
+                                        <div>
+                                            <strong class="d-block">{{ revenue.name }}</strong>
+                                            <small class="text-muted">
+                                                {{ "%.2f"|format(revenue.amount) }} {{ revenue.currency }} 
+                                                | {{ revenue.revenue_date.strftime('%m/%d/%y') }}
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <form method="POST" action="{{ url_for('finance.delete_revenue', revenue_id=revenue.id) }}" 
+                                          class="d-inline" onsubmit="return confirm('Delete {{ revenue.name }}?')">
+                                        <button type="submit" class="btn btn-outline-danger btn-sm">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="p-3 text-center text-muted">
+                            <i class="fas fa-inbox mb-2"></i>
+                            <p class="mb-0">No revenue entries</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-3 col-6">
+                            <h4 class="text-success">{{ recurring_expenses|selectattr('is_active')|list|length }}</h4>
+                            <small class="text-muted">Active Recurring</small>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <h4 class="text-warning">{{ one_time_expenses|length }}</h4>
+                            <small class="text-muted">One-Time Expenses</small>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <h4 class="text-primary">{{ revenues|length }}</h4>
+                            <small class="text-muted">Revenue Entries</small>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <h4 class="text-info">3</h4>
+                            <small class="text-muted">Currencies</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Category-based colors for expense dots */
+.expense-dot, .revenue-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+/* Default colors */
+.expense-dot { background-color: #6c757d; }
+.revenue-dot { background-color: #28a745; }
+
+/* Hosting-related */
+.expense-dot[data-name*="hosting"], 
+.expense-dot[data-name*="server"], 
+.expense-dot[data-name*="ovh"], 
+.expense-dot[data-name*="infomaniak"] { 
+    background-color: #dc3545; 
+}
+
+/* Translation-related */
+.expense-dot[data-name*="translation"], 
+.expense-dot[data-name*="translate"] { 
+    background-color: #fd7e14; 
+}
+
+/* API-related */
+.expense-dot[data-name*="api"], 
+.expense-dot[data-name*="subscription"] { 
+    background-color: #6f42c1; 
+}
+
+/* Development-related */
+.expense-dot[data-name*="development"], 
+.expense-dot[data-name*="software"], 
+.expense-dot[data-name*="license"] { 
+    background-color: #20c997; 
+}
+
+/* Marketing-related */
+.expense-dot[data-name*="marketing"], 
+.expense-dot[data-name*="advertising"], 
+.expense-dot[data-name*="promotion"] { 
+    background-color: #17a2b8; 
+}
+
+/* Stripe Revenue */
+.revenue-dot[data-name*="stripe"], 
+.revenue-dot[data-name*="coffee"], 
+.revenue-dot[data-name*="subscription"] { 
+    background-color: #ffc107; 
+}
+
+/* Manual Revenue */
+.revenue-dot[data-name*="manual"], 
+.revenue-dot[data-name*="direct"] { 
+    background-color: #28a745; 
+}
+</style>
+
+<script>
+// Auto-fill today's date
+document.addEventListener('DOMContentLoaded', function() {
+    const today = new Date().toISOString().split('T')[0];
+    document.querySelectorAll('input[type="date"]').forEach(input => {
+        if (!input.value && (input.name === 'expense_date' || input.name === 'revenue_date' || input.name === 'start_date')) {
+            input.value = today;
+        }
+    });
+});
+
+// Form validation
+document.querySelectorAll('form').forEach(form => {
+    form.addEventListener('submit', function(e) {
+        const amountInput = form.querySelector('input[name="amount"]');
+        if (amountInput && parseFloat(amountInput.value) <= 0) {
+            e.preventDefault();
+            alert('Amount must be greater than 0');
+        }
+    });
+});
+</script>
+
+{% endblock %}

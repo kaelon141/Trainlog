@@ -87,7 +87,8 @@
     "user_settings": "Préférences",
     "language": "Langue",
     "en": "🇬🇧 Anglais",
-    "pt": "🇵🇹 Portugais",
+    "pt-PT": "🇵🇹 Portugais",
+    "pt-BR": "🇧🇷 Portugais brésilien",
     "ko": "🇰🇴 Coréen",
     "uk": "🇺🇦 Ukrainien",
     "da": "🇩🇰 Danois",
@@ -569,5 +570,15 @@
     "feature_requests_delete_title": "Supprimer la demande de fonctionnalité",
     "feature_requests_delete_confirm": "Êtes-vous sûr de vouloir supprimer",
     "feature_requests_delete_warning": "Cette action ne peut pas être annulée. Tous les votes seront également supprimés.",
-    "waypoint": "Marqueur"
+    "waypoint": "Marqueur",
+    "direction": "Direction",
+    "coordinates": "Coordonnées",
+    "location": "Lieu",
+    "north": "Nord",
+    "south": "Sud",
+    "east": "Est",
+    "west": "Ouest",
+    "loading": "Chargement...",
+    "travel_bounds_header": "Limites de voyage",
+    "travel_bounds_text": "Voici les points les plus au nord, au sud, à l'ouest et à l'est de vos voyages."
 }

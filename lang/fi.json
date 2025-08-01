@@ -87,7 +87,8 @@
     "user_settings": "Asetukset",
     "language": "Kieli",
     "en": "🇬🇧 Englanti",
-    "pt": "🇵🇹 Portugali",
+    "pt-PT": "🇵🇹 Portugali",
+    "pt-BR": "🇧🇷 Brasilianportugali",
     "ko": "🇰🇴 Korea",
     "uk": "🇺🇦 Ukraina",
     "da": "🇩🇰 Tanskan kieli",
@@ -569,5 +570,15 @@
     "feature_requests_delete_title": "Poista ominaisuuspyyntö",
     "feature_requests_delete_confirm": "Oletko varma, että haluat poistaa?",
     "feature_requests_delete_warning": "Tätä toimintoa ei voi peruuttaa. Kaikki äänet menetetään.",
-    "waypoint": "Reittipiste"
+    "waypoint": "Reittipiste",
+    "direction": "Suunta",
+    "coordinates": "Koordinaatit",
+    "location": "Sijainti",
+    "north": "Pohjoinen",
+    "south": "Etelä",
+    "east": "Itä",
+    "west": "Länsi",
+    "loading": "Ladataan...",
+    "travel_bounds_header": "Ääripisteet",
+    "travel_bounds_text": "Tässä ovat matkojesi pohjoisimmat, eteläisimmät, läntisimmät ja itäisimmät pisteet."
 }

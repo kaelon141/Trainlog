@@ -12,6 +12,12 @@
 
 <!-- Displaying Totals Below the Chart using Bootstrap 5 cards -->
 <div class="container mt-4">
+     <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Monthly Trainlog's Finances</h2>
+        <a href="{{ url_for('finance.manage') }}" class="btn btn-outline-success">
+            <i class="fas fa-cog"></i> Manage Expenses
+        </a>
+    </div>
     <div class="row text-center">
         <div class="col-md-4 mb-3">
             <div class="card shadow-sm border-primary">

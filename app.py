@@ -172,6 +172,7 @@ from py.utils import (
 )
 from src.api.admin import admin_blueprint
 from src.api.feature_requests import feature_requests_blueprint
+from src.api.finance import finance_blueprint
 from src.consts import DbNames, TripTypes
 from src.pg import setup_db
 from src.suspicious_activity import (
@@ -216,6 +217,7 @@ app.url_map.strict_slashes = False
 
 app.register_blueprint(admin_blueprint, url_prefix="/admin")
 app.register_blueprint(feature_requests_blueprint)
+app.register_blueprint(finance_blueprint)
 
 app.config["CACHE_TYPE"] = "SimpleCache"
 app.config["CACHE_DEFAULT_TIMEOUT"] = 864000
@@ -1175,10 +1177,10 @@ def before_request():
     # Check if language is set in session
     if "userinfo" in session:
         language = session["userinfo"]["lang"]
-        # Temp fix for de_CH to gsw
-        if language == "de_CH":
-            session["userinfo"]["lang"] = "gsw"
-            language = "gsw"
+        # Temp fix for pt to pt-PT
+        if language == "pt":
+            session["userinfo"]["lang"] = "pt-PT"
+            language = "pt-PT"
     else:
         # Get the list of accepted languages from the request
         accepted_languages = [lang[0] for lang in request.accept_languages]
@@ -7719,37 +7721,6 @@ def admin_user_growth():
     )
 
 
-@app.route("/admin/finances")
-@admin_required
-def finances():
-    (
-        labels,
-        revenue_data_points,
-        hosting_spending_data_points,
-        translation_spending_data_points,
-        api_subscription_spending_data_points,
-        api_topup_spending_data_points,
-        total_spending_data_points,
-        profit_data_points,
-        totals,
-    ) = get_finances()
-    return render_template(
-        "admin/finances.html",
-        labels=labels,
-        revenue_data_points=revenue_data_points,
-        hosting_spending_data_points=hosting_spending_data_points,
-        translation_spending_data_points=translation_spending_data_points,
-        api_subscription_spending_data_points=api_subscription_spending_data_points,
-        api_topup_spending_data_points=api_topup_spending_data_points,
-        total_spending_data_points=total_spending_data_points,
-        profit_data_points=profit_data_points,
-        totals=totals,
-        username=getUser(),
-        title="Finances",
-        **lang[session["userinfo"]["lang"]],
-        **session["userinfo"],
-    )
-
 
 @app.route("/<username>/friends")
 @login_required
@@ -8696,10 +8667,10 @@ def get_bounds(username):
 
     # Dictionary to store boundary values
     bounds = {
-        "north": {"coordinates": None, "place": None},
-        "west": {"coordinates": None, "place": None},
-        "south": {"coordinates": None, "place": None},
-        "east": {"coordinates": None, "place": None},
+        "north": {"coordinates": None, "place": None, "trip_id": None},
+        "west": {"coordinates": None, "place": None, "trip_id": None},
+        "south": {"coordinates": None, "place": None, "trip_id": None},
+        "east": {"coordinates": None, "place": None, "trip_id": None},
     }
 
     with managed_cursor(mainConn) as main_cursor:
@@ -8723,7 +8694,6 @@ def get_bounds(username):
                         OR utc_filtered_start_datetime = -1
                     )
                     AND utc_filtered_start_datetime != 1
-                AND type != 'ferry'
                 AND username = :username
             """,
             {"username": username},
@@ -8736,7 +8706,7 @@ def get_bounds(username):
     with managed_cursor(pathConn) as path_cursor:
         # Fetch all paths associated with the user's trips using IN
         path_cursor.execute(
-            f"SELECT path FROM paths WHERE trip_id IN ({','.join(['?'] * len(trip_ids))})",
+            f"SELECT trip_id, path FROM paths WHERE trip_id IN ({','.join(['?'] * len(trip_ids))})",
             trip_ids,
         )
         paths = path_cursor.fetchall()
@@ -8745,31 +8715,35 @@ def get_bounds(username):
         return jsonify({"error": "No paths found for this user's trips"}), 404
 
     # Process each path to update the boundary values
-    for path_row in paths:
-        path = json.loads(path_row[0])  # path is a list of lists with coordinates
+    for trip_id, path_row in paths:
+        path = json.loads(path_row)  # path is a list of lists with coordinates
         for coord in path:
             lat, lon = coord
-            # Update bounds with coordinates and place information
+            # Update bounds with coordinates, place information, and trip_id
             if (
                 bounds["north"]["coordinates"] is None
                 or lat > bounds["north"]["coordinates"][0]
             ):
                 bounds["north"]["coordinates"] = (lat, lon)
+                bounds["north"]["trip_id"] = trip_id
             if (
                 bounds["west"]["coordinates"] is None
                 or lon < bounds["west"]["coordinates"][1]
             ):
                 bounds["west"]["coordinates"] = (lat, lon)
+                bounds["west"]["trip_id"] = trip_id
             if (
                 bounds["south"]["coordinates"] is None
                 or lat < bounds["south"]["coordinates"][0]
             ):
                 bounds["south"]["coordinates"] = (lat, lon)
+                bounds["south"]["trip_id"] = trip_id
             if (
                 bounds["east"]["coordinates"] is None
                 or lon > bounds["east"]["coordinates"][1]
             ):
                 bounds["east"]["coordinates"] = (lat, lon)
+                bounds["east"]["trip_id"] = trip_id
 
     # Fetch place names for each boundary using the stored coordinates
     for direction in bounds:
