@@ -1177,10 +1177,10 @@ def before_request():
     # Check if language is set in session
     if "userinfo" in session:
         language = session["userinfo"]["lang"]
-        # Temp fix for de_CH to gsw
-        if language == "de_CH":
-            session["userinfo"]["lang"] = "gsw"
-            language = "gsw"
+        # Temp fix for pt to pt-PT
+        if language == "pt":
+            session["userinfo"]["lang"] = "pt-PT"
+            language = "pt-PT"
     else:
         # Get the list of accepted languages from the request
         accepted_languages = [lang[0] for lang in request.accept_languages]

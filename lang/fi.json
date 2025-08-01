@@ -87,7 +87,8 @@
     "user_settings": "Asetukset",
     "language": "Kieli",
     "en": "🇬🇧 Englanti",
-    "pt": "🇵🇹 Portugali",
+    "pt-PT": "🇵🇹 Portugali",
+    "pt-BR": "🇧🇷 Brasilianportugali",
     "ko": "🇰🇴 Korea",
     "uk": "🇺🇦 Ukraina",
     "da": "🇩🇰 Tanskan kieli",
@@ -578,6 +579,6 @@
     "east": "Itä",
     "west": "Länsi",
     "loading": "Ladataan...",
-    "travel_bounds_header": "Matkarajat",
-    "travel_bounds_text": "Tässä ovat matkasi pohjoisin, eteläisin, läntisin ja itäisin piste."
+    "travel_bounds_header": "Ääripisteet",
+    "travel_bounds_text": "Tässä ovat matkojesi pohjoisimmat, eteläisimmät, läntisimmät ja itäisimmät pisteet."
 }
