@@ -22,6 +22,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
+import gzip
+import os
+
 from geopip._geopip import GeoPIP
 
 __all__ = [
@@ -32,6 +35,16 @@ __all__ = [
 ]
 
 _INSTANCE = None
+_GEOJSON_PATH = "static/data/countries-filtered.geojson"
+_GEOJSON_GZ_PATH = _GEOJSON_PATH + ".gz"
+
+
+def _ensure_decompressed():
+    if not os.path.exists(_GEOJSON_PATH):
+        if not os.path.exists(_GEOJSON_GZ_PATH):
+            raise FileNotFoundError(f"Neither {_GEOJSON_PATH} nor {_GEOJSON_GZ_PATH} found")
+        with gzip.open(_GEOJSON_GZ_PATH, "rb") as f_in, open(_GEOJSON_PATH, "wb") as f_out:
+            f_out.write(f_in.read())
 
 
 def instance():  # noqa: E302
@@ -43,7 +56,8 @@ def instance():  # noqa: E302
     if _INSTANCE is not None:
         return _INSTANCE
 
-    _INSTANCE = GeoPIP(filename="static/data/countries-filtered.geojson")
+    _ensure_decompressed()
+    _INSTANCE = GeoPIP(filename=_GEOJSON_PATH)
 
     return _INSTANCE
 

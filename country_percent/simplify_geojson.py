@@ -134,14 +134,9 @@ def set_output_crs(data):
     data["crs"] = {"type": "name", "properties": {"name": OUTPUT_CRS}}
 
 
-def process(country_code):
-    raw_path = f"countries/processed/{country_code}.geojson"
-    path = raw_path
+def process_file(path):
     if not os.path.exists(path):
-        path = f"countries/processed/{country_code.lower()}.geojson"
-    if not os.path.exists(path):
-        print(f"Geojson file not found for {country_code}")
-        return
+        raise FileNotFoundError(f"Geojson file not found: {path}")
 
     with open(path, "r") as file:
         data = json.load(file)
@@ -207,7 +202,16 @@ def process(country_code):
     print("Writing output file...")
     with open(path, "w") as file:
         json.dump(data, file)
-        print(f"Simplified {path}")
+    print(f"Simplified {path}")
 
 
-process(sys.argv[1])
+def process(country_code):
+    base = os.path.join(os.path.dirname(os.path.abspath(__file__)), "countries/processed")
+    path = os.path.join(base, f"{country_code}.geojson")
+    if not os.path.exists(path):
+        path = os.path.join(base, f"{country_code.lower()}.geojson")
+    process_file(path)
+
+
+if __name__ == "__main__":
+    process(sys.argv[1])

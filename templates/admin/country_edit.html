@@ -49,6 +49,12 @@
                 <i class="fas fa-undo"></i>
                 Clear Selection
             </button>
+            <label class="action-btn" style="cursor:pointer;" title="Upload a new GeoJSON to replace the current file">
+                <i class="fas fa-upload"></i>
+                Replace GeoJSON
+                <input type="file" id="uploadGeojsonInput" accept=".geojson" style="display:none;">
+            </label>
+            <span id="uploadGeojsonStatus" style="font-size:0.8em;"></span>
         </div>
     </div>
     
@@ -331,6 +337,30 @@ fetch('{{url_for("get_full_geojson", cc=cc)}}')
         console.error('Error loading GeoJSON:', error);
         document.querySelector('.spinner-container').style.display = 'none';
     });
+
+document.getElementById('uploadGeojsonInput').addEventListener('change', function() {
+    const file = this.files[0];
+    if (!file) return;
+    const status = document.getElementById('uploadGeojsonStatus');
+    status.style.color = '';
+    status.textContent = 'Uploading…';
+    const fd = new FormData();
+    fd.append('cc', '{{ cc }}');
+    fd.append('file', file);
+    fetch('/admin/uploadGeojson', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(res => {
+            if (res.success) {
+                status.style.color = 'green';
+                status.textContent = '✓ Done — reload to see changes';
+            } else {
+                status.style.color = 'red';
+                status.textContent = res.message;
+            }
+        })
+        .catch(() => { status.style.color = 'red'; status.textContent = 'Upload failed'; });
+    this.value = '';
+});
 </script>
 
 <style>

@@ -1,6 +1,22 @@
+import gzip
 import json
 import os
 from glob import glob
+
+
+def _geojson_exists(path):
+    return os.path.exists(path) or os.path.exists(path + ".gz")
+
+
+def _open_geojson(path):
+    if os.path.exists(path):
+        return open(path, "r")
+    gz_path = path + ".gz"
+    with gzip.open(gz_path, "rb") as gz_f:
+        data = gz_f.read()
+    with open(path, "wb") as f:
+        f.write(data)
+    return open(path, "r")
 
 
 def has_coverage_file(cc, immediate_only=False):
@@ -29,11 +45,11 @@ def get_coverage_file_path(cc):
 
 
 def has_coverage_file_immediate(cc):
-    return os.path.exists(get_coverage_file_path(cc))
+    return _geojson_exists(get_coverage_file_path(cc))
 
 
 def get_coverage_geojson_dict_immediate(cc):
-    with open(get_coverage_file_path(cc), "r") as file:
+    with _open_geojson(get_coverage_file_path(cc)) as file:
         data = json.load(file)
     if "total_area_m2" not in data:
         data["total_area_m2"] = sum(
@@ -44,8 +60,11 @@ def get_coverage_geojson_dict_immediate(cc):
 
 def get_coverage_region_file_paths(cc):
     directory_path = "country_percent/countries/processed/"
-    pattern = os.path.join(directory_path, f"{cc.upper()}-*.geojson")
-    return sorted(glob(pattern))
+    plain = sorted(glob(os.path.join(directory_path, f"{cc.upper()}-*.geojson")))
+    if plain:
+        return plain
+    gz = sorted(glob(os.path.join(directory_path, f"{cc.upper()}-*.geojson.gz")))
+    return [p[:-3] for p in gz]  # strip .gz so callers always see .geojson paths
 
 
 def has_coverage_file_from_regions(cc):
@@ -65,7 +84,7 @@ def get_coverage_geojson_dict_from_regions(cc):
     merged_features = []
 
     for file_index, file_path in enumerate(region_file_paths):
-        with open(file_path, "r") as file:
+        with _open_geojson(file_path) as file:
             geojson_data = json.load(file)
 
         if geojson_data.get("type") != "FeatureCollection":

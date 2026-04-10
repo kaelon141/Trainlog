@@ -6,6 +6,8 @@ import calendar
 import csv
 import logging.config
 import os
+import sys
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "country_percent"))
 import pathlib
 import re
 import secrets
@@ -3623,6 +3625,44 @@ def editCountriesList():
 @app.route("/getGeojson/<cc>", methods=["GET"])
 def get_full_geojson(cc):
     return jsonify(get_coverage_geojson_dict(cc))
+
+
+@app.route("/admin/uploadGeojson", methods=["POST"])
+@admin_required
+def upload_geojson():
+    import gzip as gzip_mod
+    from simplify_geojson import process_file
+
+    cc = request.form.get("cc", "").strip()
+    if not re.fullmatch(r"[A-Za-z0-9_-]{1,16}", cc):
+        return jsonify({"success": False, "message": "Invalid country code"}), 400
+
+    file = request.files.get("file")
+    if not file or not file.filename.endswith(".geojson"):
+        return jsonify({"success": False, "message": "A .geojson file is required"}), 400
+
+    dest_path = os.path.join("country_percent/countries/processed", f"{cc}.geojson")
+    if not os.path.exists(dest_path) and not os.path.exists(dest_path + ".gz"):
+        return jsonify({"success": False, "message": "Country code not found — only existing files can be replaced"}), 400
+    file.save(dest_path)
+
+    try:
+        process_file(dest_path)
+    except Exception as e:
+        os.remove(dest_path)
+        return jsonify({"success": False, "message": f"Simplification failed: {e}"}), 500
+
+    gz_path = dest_path + ".gz"
+    with open(dest_path, "rb") as f_in:
+        with gzip_mod.open(gz_path, "wb") as f_out:
+            f_out.write(f_in.read())
+
+    # Invalidate geopip cache for this cc
+    geopip_country._INSTANCE.pop(cc, None)
+    geopip_country._INSTANCE.pop(cc.upper(), None)
+    geopip_country._INSTANCE.pop(cc.lower(), None)
+
+    return jsonify({"success": True, "message": f"{cc} uploaded and processed"})
 
 
 @app.route("/processQueue/<cc>", methods=["POST"])
