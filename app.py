@@ -593,8 +593,10 @@ def get_country_codes_from_files(immediate_only=False):
 
     # Iterate over all files in the directory to collect country codes
     for filename in os.listdir(path):
-        if filename.endswith(".geojson"):
-            # Extract country code from filename
+        if filename.endswith(".geojson.gz"):
+            name = filename.replace(".geojson.gz", "")
+            add_to_country_codes(name)
+        elif filename.endswith(".geojson"):
             name = filename.replace(".geojson", "")
             add_to_country_codes(name)
 
