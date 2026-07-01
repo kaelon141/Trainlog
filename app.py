@@ -836,6 +836,7 @@ def saveTripToDb(username, newTrip, newPath, trip_type="train", altitude=None, t
         co2_override=float(newTrip["co2Override"]) if newTrip.get("co2Override") else None,
         altitude=altitude,
         timestamps=timestamps,
+        route_source=newTrip.get("route_source") or "router",
     )
 
     create_trip(trip)
@@ -1996,6 +1997,7 @@ def saveTripFromGPX(username, gpx_id):
             {"uid": gpx_id, "username": username},
         )
 
+    newTrip["route_source"] = "gpx_routed" if use_routing else "gpx"
     saveTripToDb(username=username, newTrip=newTrip, newPath=path, trip_type=trip_type)
 
     return jsonify({
@@ -2566,6 +2568,7 @@ def save_gpx_advanced(username):
                 "onlyDateDuration": "",
                 "unknownType": "past",
                 "waypoints": json.dumps([]),
+                "route_source": "gpx",
             }
 
             # Save trip
@@ -3052,20 +3055,6 @@ def air_routing(username, type):
         username=username,
         trip_data=trip_data,
         from_app=from_app,
-        **lang[session["userinfo"]["lang"]],
-        **session["userinfo"],
-    )
-
-
-@app.route("/u/<username>/freehand")
-@login_required
-def freehand(username):
-    user_obj = User.query.filter_by(username=username).first()
-    colorblind = getattr(user_obj, "colorblind", False) if user_obj else False
-    return render_template(
-        "freehand.html",
-        username=username,
-        colorblind=colorblind,
         **lang[session["userinfo"]["lang"]],
         **session["userinfo"],
     )
@@ -4720,7 +4709,7 @@ def saveTrip(username):
             newPath=newPath,
             trip_type=newTrip["type"],
         )
-        if request.form["fromApp"] == "true":
+        if request.form.get("fromApp") == "true":
             return jsonify({
                 "newTrip": trip.to_dict(),
             }), 200
@@ -5774,6 +5763,8 @@ def saveFlight(username, type):
         # each parallel to newPath. Passed through as JSON strings (or None).
         altitude = request.form.get("altitude") or None
         timestamps = request.form.get("timestamps") or None
+        # FR24 imports carry a real 3D track (altitude/timestamps); a bare geodesic does not.
+        newTrip.setdefault("route_source", "fr24" if altitude else "router")
         trip = saveTripToDb(
             username=username,
             newTrip=newTrip,
@@ -5782,7 +5773,7 @@ def saveFlight(username, type):
             altitude=altitude,
             timestamps=timestamps,
         )
-        if request.form["fromApp"] == "true":
+        if request.form.get("fromApp") == "true":
             return jsonify({
                 "newTrip": trip.to_dict(),
             }), 200
@@ -5896,6 +5887,7 @@ def get_trip(trip_id):
         path=path,
         departure_delay=trip.get("departure_delay"),
         arrival_delay=trip.get("arrival_delay"),
+        route_source=trip.get("route_source") or "router",
     )
 
 
@@ -6014,6 +6006,8 @@ def update_trip_values_from_form_data(trip_id, formData, update_created_ts=False
         arrival_delay=sanitize_param(formData.get("arrival_delay")),
         power_type=power_type,
         co2_override=co2_override,
+        # Re-drawing/importing sends a fresh source; plain metadata edits keep the stored one.
+        route_source=formData.get("route_source") or original_trip.route_source,
     )
 
     # Fresh 3D flight track when the route was (re-)imported from FR24; absent on
@@ -8365,6 +8359,7 @@ def edit_copy_trip(username, tripId, edit_copy_type):
         tripType=tripType,
         tripTicketId=tripTicketId or "",
         wplist=wplist,
+        route_source=trip.get("route_source") or "router",
         tripNotes=tripNotes or "",
         colorblind=colorblind,
         tripDepartureDelay=tripDepartureDelay,
